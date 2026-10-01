@@ -1,0 +1,409 @@
+# Local Wazuh rule knowledge base (Rule Intelligence).
+# Rule IDs and descriptions follow the default Wazuh ruleset (ossec/wazuh rules 4.x).
+# "mitre" lists the techniques Wazuh itself attaches to the rule, or - when the
+# ruleset has none - the technique that the rule's detection logic directly describes.
+# Users may extend this file in their data directory (rule_knowledge.yaml, same format).
+rules:
+  "1002":
+    description: Unknown problem somewhere in the system
+    category: other
+    typical_level: 2
+    explanation: A generic error message matched the syslog "error" pattern. It is rarely security-relevant on its own.
+    false_positives: [Application errors, misconfigured services, verbose logging]
+    investigation: [Read the full log line to identify the program that reported the error, Check whether the error repeats or coincides with other alerts on the host]
+    remediation: [Fix the underlying service issue or tune the rule for noisy programs]
+  "502":
+    description: Wazuh server started
+    category: system
+    typical_level: 3
+    explanation: The Wazuh manager service started. Expected after maintenance or reboot.
+    false_positives: [Planned restarts, upgrades]
+    investigation: [Confirm the restart was planned]
+    remediation: []
+  "503":
+    description: Wazuh agent started
+    category: system
+    typical_level: 3
+    explanation: A Wazuh agent started and connected. Normal after reboots and agent upgrades.
+    false_positives: [Reboots, agent upgrades]
+    investigation: [Correlate with change management if unexpected]
+    remediation: []
+  "506":
+    description: Wazuh agent stopped
+    category: defense_evasion
+    typical_level: 3
+    mitre: [T1562.001]
+    explanation: A Wazuh agent stopped. Usually maintenance, but attackers stop security agents to avoid detection.
+    false_positives: [Reboots, maintenance windows, agent upgrades]
+    investigation: [Check who stopped the agent and whether the host rebooted, Verify the agent came back online, Look for suspicious activity right before the agent stopped]
+    remediation: [Restart the agent and protect its service from unauthorised changes]
+  "510":
+    description: Host-based anomaly detection event (rootcheck)
+    category: malware
+    typical_level: 7
+    mitre: [T1014]
+    explanation: Rootcheck found an anomaly such as a hidden file, process or a known rootkit signature.
+    false_positives: [Legitimate files in unusual locations, kernel modules from third-party software]
+    investigation: [Review the rootcheck output for the exact file or process, Compare the file hash with known-good software, Check the host for unexpected processes and kernel modules]
+    remediation: [Isolate the host if a rootkit is confirmed, Rebuild the system from trusted media when the kernel is compromised]
+  "521":
+    description: Possible kernel level rootkit
+    category: malware
+    typical_level: 11
+    mitre: [T1014]
+    explanation: Rootcheck detected behaviour that indicates a possible kernel-level rootkit, for example processes or ports hidden from system tools.
+    false_positives: [Race conditions on very busy systems, some security or virtualization drivers]
+    investigation: [Re-run rootcheck and compare results, Inspect loaded kernel modules, Check for hidden ports with an external scan]
+    remediation: [Isolate the host, Perform offline forensic analysis, Rebuild from trusted media]
+  "550":
+    description: Integrity checksum changed
+    category: fim
+    typical_level: 7
+    mitre: [T1565.001]
+    explanation: File Integrity Monitoring detected that the content of a monitored file changed.
+    false_positives: [Software updates, configuration management (Ansible, Puppet, GPO), administrators editing files]
+    investigation: [Identify which file changed and compare old/new hashes, Check whether a patch or deployment ran at that time, Review who was logged in when the change happened]
+    remediation: [Restore the file from a trusted source if the change was unauthorised]
+  "553":
+    description: File deleted
+    category: fim
+    typical_level: 7
+    mitre: [T1070.004, T1485]
+    explanation: A monitored file was deleted.
+    false_positives: [Log rotation, package upgrades, cleanup scripts]
+    investigation: [Identify the deleted file and its importance, Check for related process or user activity]
+    remediation: [Restore from backup if the deletion was unauthorised]
+  "554":
+    description: File added to the system
+    category: fim
+    typical_level: 5
+    explanation: A new file appeared in a monitored directory.
+    false_positives: [Software installation, updates, new configuration files]
+    investigation: [Check the file path, owner and hash, Look up the hash in threat intelligence if the location is unusual]
+    remediation: [Remove the file if it is unauthorised]
+  "2502":
+    description: "syslog: User missed the password more than one time"
+    category: auth_failure
+    typical_level: 10
+    mitre: [T1110]
+    explanation: The same user entered a wrong password several times in a row.
+    false_positives: [Users who forgot or recently changed their password, scripts using an expired password]
+    investigation: [Check whether a successful login followed, Contact the user to confirm the activity]
+    remediation: [Reset the password if the user did not make these attempts]
+  "5104":
+    description: Interface entered in promiscuous(sniffing) mode
+    category: credential_access
+    typical_level: 8
+    mitre: [T1040]
+    explanation: A network interface was switched to promiscuous mode, which allows capturing traffic not addressed to the host.
+    false_positives: [Network troubleshooting with tcpdump/Wireshark, virtualization bridges, IDS sensors]
+    investigation: [Identify the process and user that enabled promiscuous mode, Check whether packet capture tools are installed or running]
+    remediation: [Stop unauthorised sniffing tools and review credentials that crossed that segment]
+  "5401":
+    description: Three failed attempts to run sudo
+    category: privilege_escalation
+    typical_level: 5
+    mitre: [T1548.003]
+    explanation: A user failed to authenticate to sudo three times.
+    false_positives: [Users mistyping their password]
+    investigation: [Check whether the same user later succeeded with sudo, Confirm the activity with the user]
+    remediation: [Lock the account if the user denies the activity]
+  "5402":
+    description: Successful sudo to ROOT executed
+    category: privilege_escalation
+    typical_level: 3
+    mitre: [T1548.003]
+    explanation: A user executed a command as root via sudo.
+    false_positives: [Normal administration]
+    investigation: [Review the executed command, Confirm the user is an authorised administrator]
+    remediation: [Restrict sudo rights to the minimum required]
+  "5403":
+    description: First time user executed sudo
+    category: privilege_escalation
+    typical_level: 4
+    mitre: [T1548.003]
+    explanation: A user executed sudo for the first time on this host.
+    false_positives: [New administrators, new automation accounts]
+    investigation: [Verify the user should have administrative rights]
+    remediation: [Remove the user from sudoers if not authorised]
+  "5501":
+    description: "PAM: Login session opened."
+    category: auth_success
+    typical_level: 3
+    mitre: [T1078]
+    explanation: A login session was opened on the host.
+    false_positives: [Normal user and service activity]
+    investigation: [Check the source of the session if it follows failed logins]
+    remediation: []
+  "5502":
+    description: "PAM: Login session closed."
+    category: system
+    typical_level: 3
+    explanation: A login session was closed.
+    false_positives: [Normal activity]
+    investigation: []
+    remediation: []
+  "5503":
+    description: "PAM: User login failed."
+    category: auth_failure
+    typical_level: 5
+    mitre: [T1110.001]
+    explanation: PAM reported a failed login for a user.
+    false_positives: [Mistyped passwords]
+    investigation: [Check the number of failures and the source host]
+    remediation: [Enforce lockout policies]
+  "5551":
+    description: "PAM: Multiple failed logins in a small period of time."
+    category: brute_force
+    typical_level: 10
+    mitre: [T1110]
+    explanation: Wazuh correlated several PAM login failures in a short period, which is typical of password guessing.
+    false_positives: [Misconfigured services retrying with a wrong password]
+    investigation: [Identify source and targeted accounts, Check whether any login from the same source succeeded]
+    remediation: [Block the source if malicious, Enforce account lockout and MFA]
+  "5701":
+    description: "sshd: Possible attack on the ssh server (or version gathering)."
+    category: scan
+    typical_level: 8
+    mitre: [T1595]
+    explanation: The SSH server received a malformed or probing connection typical of scanners and version gathering.
+    false_positives: [Monitoring systems, vulnerability scanners]
+    investigation: [Check whether the source is a known scanner, Look for later authentication attempts from the same IP]
+    remediation: [Restrict SSH exposure with a firewall or VPN]
+  "5710":
+    description: "sshd: Attempt to login using a non-existent user"
+    category: auth_failure
+    typical_level: 5
+    mitre: [T1110]
+    explanation: Someone tried to log in over SSH with an account that does not exist on the host. Attackers do this to guess common usernames (admin, root, test, oracle).
+    false_positives: [Users mistyping their login name, automation configured with a wrong account, internal vulnerability scanners]
+    investigation: [Count the attempts and distinct usernames from the source IP, Check whether any login from the same IP succeeded, Check whether other hosts were targeted from the same IP]
+    remediation: [Block the source IP at the firewall if malicious, Disable password authentication for SSH and use keys, Restrict SSH access to VPN/management networks]
+  "5712":
+    description: "sshd: brute force trying to get access to the system. Non existent user."
+    category: brute_force
+    typical_level: 10
+    mitre: [T1110]
+    explanation: Wazuh correlated many SSH login attempts with non-existent usernames from the same source - a typical brute-force / username enumeration pattern.
+    false_positives: [Internal vulnerability scanners, misconfigured automation]
+    investigation: [Identify all targeted usernames and hosts, Check for a successful login from the same IP, Look up the IP reputation]
+    remediation: [Block the source IP, Disable SSH password authentication, Deploy fail2ban or Wazuh active response]
+  "5715":
+    description: "sshd: authentication success."
+    category: auth_success
+    typical_level: 3
+    mitre: [T1078, T1021.004]
+    explanation: A user successfully logged in over SSH.
+    false_positives: [Normal administration]
+    investigation: [Verify the login is expected when it follows failed attempts or comes from an external IP, Review commands executed after the login]
+    remediation: [Reset credentials and terminate sessions if the login is unauthorised]
+  "5716":
+    description: "sshd: authentication failed."
+    category: auth_failure
+    typical_level: 5
+    mitre: [T1110.001, T1021.004]
+    explanation: An SSH login attempt with an existing user failed (wrong password or key).
+    false_positives: [Mistyped passwords, expired keys]
+    investigation: [Count failures per source and per user, Check for later successful logins]
+    remediation: [Use key-based authentication and MFA]
+  "5720":
+    description: "sshd: Multiple authentication failures."
+    category: brute_force
+    typical_level: 10
+    mitre: [T1110]
+    explanation: Wazuh correlated multiple SSH authentication failures for existing users from the same source - possible password guessing.
+    false_positives: [Users with a changed password and cached sessions, misconfigured automation]
+    investigation: [Identify the source, the targeted accounts and whether any login succeeded]
+    remediation: [Block the source, enforce key-based authentication and lockout]
+  "5758":
+    description: "Maximum authentication attempts exceeded."
+    category: brute_force
+    typical_level: 8
+    mitre: [T1110]
+    explanation: The SSH server closed a connection after too many authentication attempts in a single session.
+    false_positives: [SSH clients offering many keys]
+    investigation: [Check the source IP and other failures from it]
+    remediation: [Limit SSH exposure and use fail2ban/active response]
+  "5760":
+    description: "sshd: authentication failed."
+    category: auth_failure
+    typical_level: 5
+    mitre: [T1110.001, T1021.004]
+    explanation: An SSH authentication attempt failed.
+    false_positives: [Mistyped passwords]
+    investigation: [Check for repeated failures and later successes from the same source]
+    remediation: []
+  "5763":
+    description: "sshd: brute force trying to get access to the system. Authentication failed."
+    category: brute_force
+    typical_level: 10
+    mitre: [T1110]
+    explanation: Wazuh correlated repeated failed SSH authentications from one source - a brute-force pattern.
+    false_positives: [Automation with stale credentials]
+    investigation: [Check for successful logins from the same IP, Determine targeted accounts]
+    remediation: [Block the source IP, Rotate passwords of targeted accounts]
+  "5901":
+    description: New group added to the system.
+    category: account_change
+    typical_level: 8
+    mitre: [T1098]
+    explanation: A new local group was created.
+    false_positives: [Package installation, provisioning]
+    investigation: [Identify who created the group and why]
+    remediation: [Remove the group if unauthorised]
+  "5902":
+    description: New user added to the system.
+    category: account_change
+    typical_level: 8
+    mitre: [T1136.001]
+    explanation: A new local user account was created. Attackers create accounts to keep access.
+    false_positives: [Provisioning, package installation creating service users]
+    investigation: [Identify who created the account and from which session, Check the account's groups and shell, Confirm with change management]
+    remediation: [Disable/remove the account if unauthorised and investigate the session that created it]
+  "5904":
+    description: Information from the user was changed.
+    category: account_change
+    typical_level: 8
+    mitre: [T1098]
+    explanation: Attributes of a local user account were changed (shell, home, groups).
+    false_positives: [Administrator maintenance]
+    investigation: [Review what changed and who made the change]
+    remediation: [Revert unauthorised changes]
+  "31101":
+    description: "Web server 400 error code."
+    category: web_attack
+    typical_level: 5
+    explanation: The web server returned a 4xx error. Large numbers from one source usually mean scanning.
+    false_positives: [Broken links, crawlers, monitoring]
+    investigation: [Review requested URLs from the source IP]
+    remediation: [Rate-limit or block abusive sources]
+  "31103":
+    description: SQL injection attempt.
+    category: web_attack
+    typical_level: 7
+    mitre: [T1190]
+    explanation: A web request contained patterns typical of SQL injection.
+    false_positives: [Security scanners, legitimate requests containing SQL keywords]
+    investigation: [Check the HTTP response code - 200 may indicate success, Review application and database logs for the same time, Look for other attacks from the same IP]
+    remediation: [Use parameterised queries, Deploy or tune a WAF, Block the source IP]
+  "31104":
+    description: Common web attack.
+    category: web_attack
+    typical_level: 6
+    mitre: [T1190]
+    explanation: A web request matched common attack patterns (path traversal, command injection, etc.).
+    false_positives: [Vulnerability scanners]
+    investigation: [Check whether the request returned 200 and inspect the target application]
+    remediation: [Patch the application, apply WAF rules]
+  "31105":
+    description: XSS (Cross Site Scripting) attempt.
+    category: web_attack
+    typical_level: 6
+    mitre: [T1189]
+    explanation: A web request contained script injection patterns.
+    false_positives: [Scanners, applications that accept HTML]
+    investigation: [Check whether the payload is reflected or stored by the application]
+    remediation: [Encode output and validate input; apply a WAF]
+  "31106":
+    description: A web attack returned code 200 (success).
+    category: web_attack
+    typical_level: 12
+    mitre: [T1190]
+    explanation: A request containing an attack pattern received HTTP 200 - the attack may have been processed by the application.
+    false_positives: [Applications that return 200 for errors, scanners against static pages]
+    investigation: [Inspect the full request and response, Review application logs and database queries, Check the web server for new files (web shells)]
+    remediation: [Patch/fix the vulnerable endpoint, Block the source, Search for web shells]
+  "31151":
+    description: Multiple web server 400 error codes from same source ip.
+    category: scan
+    typical_level: 10
+    mitre: [T1595.002]
+    explanation: One source generated many HTTP 4xx errors - typical of directory brute forcing or vulnerability scanning.
+    false_positives: [Authorised scanners, broken clients]
+    investigation: [Check whether the scanner is authorised, Look for successful requests (200) after the scan]
+    remediation: [Rate-limit or block the source]
+  "4101":
+    description: Firewall drop event.
+    category: network
+    typical_level: 5
+    explanation: The firewall dropped a connection.
+    false_positives: [Normal Internet background noise]
+    investigation: [Only relevant in bulk or when the destination is sensitive]
+    remediation: []
+  "4151":
+    description: Multiple Firewall drop events from same source.
+    category: scan
+    typical_level: 10
+    mitre: [T1046]
+    explanation: Many connections from one source were dropped - often port scanning.
+    false_positives: [Misconfigured clients, Internet background noise]
+    investigation: [Check targeted ports and hosts, Check IP reputation]
+    remediation: [Block persistent scanners at the perimeter]
+  "60106":
+    description: Windows logon success.
+    category: auth_success
+    typical_level: 3
+    mitre: [T1078]
+    explanation: A successful Windows logon (event 4624).
+    false_positives: [Normal user and service logons]
+    investigation: [Check logon type and source when it follows failed logons]
+    remediation: []
+  "60122":
+    description: Logon Failure - Unknown user or bad password.
+    category: auth_failure
+    typical_level: 5
+    mitre: [T1110.001]
+    explanation: A Windows logon failed because of an unknown user name or a wrong password (event 4625).
+    false_positives: [Mistyped passwords, services with expired passwords, mapped drives with old credentials]
+    investigation: [Check the logon type, workstation and source IP, Count failures per account]
+    remediation: [Enforce account lockout, review the failing service account]
+  "60204":
+    description: Multiple Windows Logon Failures.
+    category: brute_force
+    typical_level: 10
+    mitre: [T1110]
+    explanation: Wazuh correlated multiple Windows logon failures - possible password guessing or spraying.
+    false_positives: [Service accounts with expired passwords]
+    investigation: [Identify targeted accounts and source workstation/IP, Check for successful logons (4624) from the same source]
+    remediation: [Block the source, reset affected credentials, enforce lockout and MFA]
+  "87105":
+    description: "VirusTotal: Alert - file detected as malicious by multiple engines"
+    category: malware
+    typical_level: 12
+    mitre: [T1204.002]
+    explanation: Wazuh's VirusTotal integration looked up the hash of a new or changed file and several antivirus engines flagged it as malicious.
+    false_positives: [Penetration testing tools, generic heuristic detections on admin tools (PsExec, nmap)]
+    investigation: [Check the file path, owner and creation time, Check whether the file was executed (process creation events), Look for the same hash on other hosts]
+    remediation: [Quarantine/delete the file, Isolate the host if the file was executed, Run a full EDR/AV scan]
+  "23503":
+    description: Vulnerability detector - Low severity vulnerability
+    category: vulnerability
+    typical_level: 5
+    explanation: An installed package has a known low-severity vulnerability.
+    false_positives: [Backported fixes in distribution packages]
+    investigation: [Verify the installed version against the vendor advisory]
+    remediation: [Update during the next maintenance window]
+  "23504":
+    description: Vulnerability detector - Medium severity vulnerability
+    category: vulnerability
+    typical_level: 7
+    explanation: An installed package has a known medium-severity vulnerability.
+    false_positives: [Backported fixes]
+    investigation: [Check exposure of the affected service]
+    remediation: [Plan the update]
+  "23505":
+    description: Vulnerability detector - High severity vulnerability
+    category: vulnerability
+    typical_level: 10
+    explanation: An installed package has a known high-severity vulnerability.
+    false_positives: [Backported fixes, package installed but unused]
+    investigation: [Check whether the vulnerable component is exposed or running, Check CISA KEV for active exploitation]
+    remediation: [Patch with priority]
+  "23506":
+    description: Vulnerability detector - Critical severity vulnerability
+    category: vulnerability
+    typical_level: 13
+    explanation: An installed package has a known critical vulnerability.
+    false_positives: [Backported fixes]
+    investigation: [Check exposure and CISA KEV status, Look for exploitation attempts against the host]
+    remediation: [Patch immediately or apply vendor mitigations]

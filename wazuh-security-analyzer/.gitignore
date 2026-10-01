@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+*.db
+*.db-wal
+*.db-shm
+logs/
+reports_out/
+.wsa_home/

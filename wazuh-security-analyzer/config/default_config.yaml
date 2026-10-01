@@ -1,0 +1,127 @@
+# Wazuh Security Analyzer - default configuration.
+# The application merges this file with config.yaml in the user data folder
+# (%LOCALAPPDATA%\WazuhSecurityAnalyzer\config.yaml on Windows).
+# API keys are NEVER stored here: use Settings > API keys (Windows Credential Manager).
+
+network:
+  mode: offline            # offline | online
+  proxy: ""                # e.g. http://proxy.corp.example:8080
+  timeout_seconds: 15
+  verify_tls: true         # keep enabled; use ca_bundle for corporate TLS inspection
+  ca_bundle: ""
+  max_response_mb: 25
+
+risk_thresholds:           # score ranges: 0-19 Info, 20-39 Low, 40-59 Medium, 60-79 High, 80-100 Critical
+  critical: 80
+  high: 60
+  medium: 40
+  low: 20
+
+risk_weights:
+  wazuh_level_max: 40              # level 15 -> 40 points
+  frequency_max: 10
+  frequency_saturation: 1000       # occurrences at which the frequency factor is maximal
+  external_source: 8
+  bruteforce_pattern: 10
+  successful_auth_after_failures: 20
+  successful_auth_external: 5
+  ioc_malicious: 20
+  ioc_suspicious: 8
+  cve_max: 15                      # CVSS 10 -> 15 points
+  cve_known_exploited: 10          # CISA KEV
+  mitre_max: 10
+  correlation_chain: 15
+  correlation_chain_per_extra_stage: 5
+  correlation_campaign: 6
+  false_positive_dampening: 0.3    # score reduced by fp_probability * this factor
+  asset_criticality: {low: 0, medium: 5, high: 10, critical: 15}
+
+wazuh:
+  # Networks treated as internal in addition to RFC1918/loopback/link-local/CGNAT.
+  internal_networks: []
+  # Authorised scanners (IP or CIDR); their activity gets a high false-positive probability.
+  known_scanners: []
+  default_asset_criticality: medium
+  # First matching glob pattern (case-insensitive) on the agent name wins.
+  asset_criticality:
+    - {pattern: "dc*", criticality: critical, description: Domain controllers}
+    - {pattern: "*-dc-*", criticality: critical, description: Domain controllers}
+    - {pattern: "*db*", criticality: high, description: Database servers}
+    - {pattern: "*sql*", criticality: high, description: Database servers}
+    - {pattern: "*fin*", criticality: high, description: Finance systems}
+    - {pattern: "fs-*", criticality: high, description: File servers}
+    - {pattern: "ws-*", criticality: medium, description: Workstations}
+  dashboard_url: ""
+
+correlation:
+  chain_window_minutes: 60
+  min_chain_stages: 3
+  bruteforce_threshold: 5
+  success_after_failure_window_minutes: 60
+  campaign_min_events: 10
+  max_groups: 200000
+  max_incidents: 2000
+  significant_risk: 40
+
+ai:
+  provider: none            # none | openai | anthropic | ollama | openai_compatible
+  openai_model: gpt-4o-mini
+  anthropic_model: claude-sonnet-5-5
+  ollama_url: http://localhost:11434
+  ollama_model: qwen2.5:7b
+  compatible_base_url: http://localhost:1234/v1
+  compatible_model: local-model
+  timeout_seconds: 120
+  temperature: 0.1
+  max_tokens: 2000
+  anonymize_external: true  # always sanitize data sent to cloud AI providers
+  anonymize_local: false    # set true to sanitize also for Ollama / local endpoints
+  max_related_events: 20
+  auto_analyze_top_n: 0
+
+threat_intel:
+  virustotal_enabled: false
+  abuseipdb_enabled: false
+  otx_enabled: false
+  nvd_enabled: true
+  cisa_kev_enabled: true
+  max_ioc_lookups: 50
+  max_cve_lookups: 25
+  cache_ttl_hours: 24
+  concurrency: 4
+  active_domain_checks: false   # DNS/TLS checks contact the suspicious domain directly
+
+privacy:
+  mask_usernames: true
+  mask_emails: true
+  mask_internal_ips: true
+  mask_external_ips: false
+  mask_hostnames: true
+  mask_domains: true
+  mask_personal_data: true
+  internal_domains: []          # e.g. [corp.example, company.uz]
+
+limits:
+  max_file_size_mb: 4096
+  max_archive_total_mb: 8192
+  max_archive_entries: 10000
+  max_compression_ratio: 200
+  max_files: 10000
+  max_line_mb: 16
+  batch_size: 5000
+
+storage:
+  state_database_url: ""        # empty = SQLite state.db; or postgresql+psycopg://user@host/db
+  store_raw_events: true
+  max_raw_event_kb: 16
+  deduplicate: true
+  keep_workspaces: 5
+
+logging:
+  level: INFO
+  max_file_mb: 10
+  backup_count: 5
+
+ui:
+  first_run: true
+  page_size: 500

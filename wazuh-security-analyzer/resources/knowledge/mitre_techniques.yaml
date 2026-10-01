@@ -1,0 +1,119 @@
+# Local MITRE ATT&CK (Enterprise) reference subset used for offline mapping and validation.
+# Source: https://attack.mitre.org  - names/tactics per ATT&CK Enterprise.
+# Tactic short names follow ATT&CK STIX "x_mitre_shortname".
+tactics:
+  reconnaissance: {id: TA0043, name: Reconnaissance}
+  resource-development: {id: TA0042, name: Resource Development}
+  initial-access: {id: TA0001, name: Initial Access}
+  execution: {id: TA0002, name: Execution}
+  persistence: {id: TA0003, name: Persistence}
+  privilege-escalation: {id: TA0004, name: Privilege Escalation}
+  defense-evasion: {id: TA0005, name: Defense Evasion}
+  credential-access: {id: TA0006, name: Credential Access}
+  discovery: {id: TA0007, name: Discovery}
+  lateral-movement: {id: TA0008, name: Lateral Movement}
+  collection: {id: TA0009, name: Collection}
+  command-and-control: {id: TA0011, name: Command and Control}
+  exfiltration: {id: TA0010, name: Exfiltration}
+  impact: {id: TA0040, name: Impact}
+
+techniques:
+  T1595: {name: Active Scanning, tactics: [reconnaissance]}
+  T1595.001: {name: Scanning IP Blocks, tactics: [reconnaissance]}
+  T1595.002: {name: Vulnerability Scanning, tactics: [reconnaissance]}
+  T1592: {name: Gather Victim Host Information, tactics: [reconnaissance]}
+  T1190: {name: Exploit Public-Facing Application, tactics: [initial-access]}
+  T1133: {name: External Remote Services, tactics: [persistence, initial-access]}
+  T1189: {name: Drive-by Compromise, tactics: [initial-access]}
+  T1566: {name: Phishing, tactics: [initial-access]}
+  T1566.001: {name: Spearphishing Attachment, tactics: [initial-access]}
+  T1078: {name: Valid Accounts, tactics: [defense-evasion, persistence, privilege-escalation, initial-access]}
+  T1078.002: {name: Domain Accounts, tactics: [defense-evasion, persistence, privilege-escalation, initial-access]}
+  T1078.003: {name: Local Accounts, tactics: [defense-evasion, persistence, privilege-escalation, initial-access]}
+  T1059: {name: Command and Scripting Interpreter, tactics: [execution]}
+  T1059.001: {name: PowerShell, tactics: [execution]}
+  T1059.003: {name: Windows Command Shell, tactics: [execution]}
+  T1059.004: {name: Unix Shell, tactics: [execution]}
+  T1059.005: {name: Visual Basic, tactics: [execution]}
+  T1059.006: {name: Python, tactics: [execution]}
+  T1047: {name: Windows Management Instrumentation, tactics: [execution]}
+  T1053: {name: Scheduled Task/Job, tactics: [execution, persistence, privilege-escalation]}
+  T1053.003: {name: Cron, tactics: [execution, persistence, privilege-escalation]}
+  T1053.005: {name: Scheduled Task, tactics: [execution, persistence, privilege-escalation]}
+  T1203: {name: Exploitation for Client Execution, tactics: [execution]}
+  T1204: {name: User Execution, tactics: [execution]}
+  T1204.002: {name: Malicious File, tactics: [execution]}
+  T1569.002: {name: Service Execution, tactics: [execution]}
+  T1098: {name: Account Manipulation, tactics: [persistence, privilege-escalation]}
+  T1136: {name: Create Account, tactics: [persistence]}
+  T1136.001: {name: Local Account, tactics: [persistence]}
+  T1136.002: {name: Domain Account, tactics: [persistence]}
+  T1543: {name: Create or Modify System Process, tactics: [persistence, privilege-escalation]}
+  T1543.002: {name: Systemd Service, tactics: [persistence, privilege-escalation]}
+  T1543.003: {name: Windows Service, tactics: [persistence, privilege-escalation]}
+  T1547: {name: Boot or Logon Autostart Execution, tactics: [persistence, privilege-escalation]}
+  T1547.001: {name: Registry Run Keys / Startup Folder, tactics: [persistence, privilege-escalation]}
+  T1505.003: {name: Web Shell, tactics: [persistence]}
+  T1574: {name: Hijack Execution Flow, tactics: [persistence, privilege-escalation, defense-evasion]}
+  T1548: {name: Abuse Elevation Control Mechanism, tactics: [privilege-escalation, defense-evasion]}
+  T1548.003: {name: Sudo and Sudo Caching, tactics: [privilege-escalation, defense-evasion]}
+  T1068: {name: Exploitation for Privilege Escalation, tactics: [privilege-escalation]}
+  T1484: {name: Domain or Tenant Policy Modification, tactics: [defense-evasion, privilege-escalation]}
+  T1014: {name: Rootkit, tactics: [defense-evasion]}
+  T1027: {name: Obfuscated Files or Information, tactics: [defense-evasion]}
+  T1036: {name: Masquerading, tactics: [defense-evasion]}
+  T1070: {name: Indicator Removal, tactics: [defense-evasion]}
+  T1070.001: {name: Clear Windows Event Logs, tactics: [defense-evasion]}
+  T1070.002: {name: Clear Linux or Mac System Logs, tactics: [defense-evasion]}
+  T1070.004: {name: File Deletion, tactics: [defense-evasion]}
+  T1112: {name: Modify Registry, tactics: [defense-evasion, persistence]}
+  T1140: {name: Deobfuscate/Decode Files or Information, tactics: [defense-evasion]}
+  T1218: {name: System Binary Proxy Execution, tactics: [defense-evasion]}
+  T1218.005: {name: Mshta, tactics: [defense-evasion]}
+  T1218.010: {name: Regsvr32, tactics: [defense-evasion]}
+  T1218.011: {name: Rundll32, tactics: [defense-evasion]}
+  T1562: {name: Impair Defenses, tactics: [defense-evasion]}
+  T1562.001: {name: Disable or Modify Tools, tactics: [defense-evasion]}
+  T1562.004: {name: Disable or Modify System Firewall, tactics: [defense-evasion]}
+  T1110: {name: Brute Force, tactics: [credential-access]}
+  T1110.001: {name: Password Guessing, tactics: [credential-access]}
+  T1110.003: {name: Password Spraying, tactics: [credential-access]}
+  T1110.004: {name: Credential Stuffing, tactics: [credential-access]}
+  T1003: {name: OS Credential Dumping, tactics: [credential-access]}
+  T1003.001: {name: LSASS Memory, tactics: [credential-access]}
+  T1003.002: {name: Security Account Manager, tactics: [credential-access]}
+  T1003.008: {name: /etc/passwd and /etc/shadow, tactics: [credential-access]}
+  T1040: {name: Network Sniffing, tactics: [credential-access, discovery]}
+  T1552: {name: Unsecured Credentials, tactics: [credential-access]}
+  T1558.003: {name: Kerberoasting, tactics: [credential-access]}
+  T1046: {name: Network Service Discovery, tactics: [discovery]}
+  T1082: {name: System Information Discovery, tactics: [discovery]}
+  T1083: {name: File and Directory Discovery, tactics: [discovery]}
+  T1087: {name: Account Discovery, tactics: [discovery]}
+  T1018: {name: Remote System Discovery, tactics: [discovery]}
+  T1021: {name: Remote Services, tactics: [lateral-movement]}
+  T1021.001: {name: Remote Desktop Protocol, tactics: [lateral-movement]}
+  T1021.002: {name: SMB/Windows Admin Shares, tactics: [lateral-movement]}
+  T1021.004: {name: SSH, tactics: [lateral-movement]}
+  T1021.006: {name: Windows Remote Management, tactics: [lateral-movement]}
+  T1550.002: {name: Pass the Hash, tactics: [defense-evasion, lateral-movement]}
+  T1570: {name: Lateral Tool Transfer, tactics: [lateral-movement]}
+  T1210: {name: Exploitation of Remote Services, tactics: [lateral-movement]}
+  T1005: {name: Data from Local System, tactics: [collection]}
+  T1071: {name: Application Layer Protocol, tactics: [command-and-control]}
+  T1071.001: {name: Web Protocols, tactics: [command-and-control]}
+  T1071.004: {name: DNS, tactics: [command-and-control]}
+  T1105: {name: Ingress Tool Transfer, tactics: [command-and-control]}
+  T1219: {name: Remote Access Software, tactics: [command-and-control]}
+  T1571: {name: Non-Standard Port, tactics: [command-and-control]}
+  T1572: {name: Protocol Tunneling, tactics: [command-and-control]}
+  T1041: {name: Exfiltration Over C2 Channel, tactics: [exfiltration]}
+  T1048: {name: Exfiltration Over Alternative Protocol, tactics: [exfiltration]}
+  T1485: {name: Data Destruction, tactics: [impact]}
+  T1486: {name: Data Encrypted for Impact, tactics: [impact]}
+  T1489: {name: Service Stop, tactics: [impact]}
+  T1490: {name: Inhibit System Recovery, tactics: [impact]}
+  T1498: {name: Network Denial of Service, tactics: [impact]}
+  T1499: {name: Endpoint Denial of Service, tactics: [impact]}
+  T1531: {name: Account Access Removal, tactics: [impact]}
+  T1565.001: {name: Stored Data Manipulation, tactics: [impact]}

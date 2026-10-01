@@ -1,0 +1,2334 @@
+{
+ "took": 12,
+ "timed_out": false,
+ "hits": {
+  "total": {
+   "value": 50,
+   "relation": "eq"
+  },
+  "hits": [
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726749.467297",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T13:28:00.000+0000",
+     "rule": {
+      "id": "23506",
+      "level": 13,
+      "description": "CVE-2021-44228 affects liblog4j2-java",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "003",
+      "name": "app-02",
+      "ip": "10.20.1.12"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726749.467297",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2021-44228",
+       "title": "CVE-2021-44228 affects liblog4j2-java",
+       "severity": "Critical",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "10.0"
+        }
+       },
+       "package": {
+        "name": "liblog4j2-java",
+        "version": "2.11.2-1",
+        "architecture": "amd64"
+       },
+       "rationale": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726750.381303",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T15:54:00.000+0000",
+     "rule": {
+      "id": "23506",
+      "level": 13,
+      "description": "CVE-2021-44228 affects liblog4j2-java",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "007",
+      "name": "lnx-app-03",
+      "ip": "10.20.1.33"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726750.381303",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2021-44228",
+       "title": "CVE-2021-44228 affects liblog4j2-java",
+       "severity": "Critical",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "10.0"
+        }
+       },
+       "package": {
+        "name": "liblog4j2-java",
+        "version": "2.11.2-1",
+        "architecture": "amd64"
+       },
+       "rationale": "Apache Log4j2 JNDI features do not protect against attacker controlled LDAP and other JNDI related endpoints.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726751.386178",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T06:43:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2021-4034 affects policykit-1",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726751.386178",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2021-4034",
+       "title": "CVE-2021-4034 affects policykit-1",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "7.8"
+        }
+       },
+       "package": {
+        "name": "policykit-1",
+        "version": "0.105-26ubuntu1",
+        "architecture": "amd64"
+       },
+       "rationale": "A local privilege escalation vulnerability was found on polkit's pkexec utility.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2021-4034"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726752.677149",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-10-01T10:57:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2021-4034 affects policykit-1",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "002",
+      "name": "db-01",
+      "ip": "10.20.2.20"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726752.677149",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2021-4034",
+       "title": "CVE-2021-4034 affects policykit-1",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "7.8"
+        }
+       },
+       "package": {
+        "name": "policykit-1",
+        "version": "0.105-26ubuntu1",
+        "architecture": "amd64"
+       },
+       "rationale": "A local privilege escalation vulnerability was found on polkit's pkexec utility.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2021-4034"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726753.418479",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T22:03:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2021-4034 affects policykit-1",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "003",
+      "name": "app-02",
+      "ip": "10.20.1.12"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726753.418479",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2021-4034",
+       "title": "CVE-2021-4034 affects policykit-1",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "7.8"
+        }
+       },
+       "package": {
+        "name": "policykit-1",
+        "version": "0.105-26ubuntu1",
+        "architecture": "amd64"
+       },
+       "rationale": "A local privilege escalation vulnerability was found on polkit's pkexec utility.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2021-4034"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726754.129093",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T17:12:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2022-0847 affects linux-image-5.15.0-25-generic",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "002",
+      "name": "db-01",
+      "ip": "10.20.2.20"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726754.129093",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2022-0847",
+       "title": "CVE-2022-0847 affects linux-image-5.15.0-25-generic",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "7.8"
+        }
+       },
+       "package": {
+        "name": "linux-image-5.15.0-25-generic",
+        "version": "5.15.0-25.25",
+        "architecture": "amd64"
+       },
+       "rationale": "A flaw was found in the way the flags member of the new pipe buffer structure was lacking proper initialization.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2022-0847"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726755.695963",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-10-01T05:05:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2023-4863 affects libwebp7",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726755.695963",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-4863",
+       "title": "CVE-2023-4863 affects libwebp7",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "8.8"
+        }
+       },
+       "package": {
+        "name": "libwebp7",
+        "version": "1.2.2-2",
+        "architecture": "amd64"
+       },
+       "rationale": "Heap buffer overflow in libwebp allows a remote attacker to perform an out of bounds memory write via a crafted HTML page.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-4863"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726756.671556",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T13:41:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2023-4863 affects libwebp7",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "006",
+      "name": "ws-hr-02",
+      "ip": "10.30.2.12"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726756.671556",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-4863",
+       "title": "CVE-2023-4863 affects libwebp7",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "8.8"
+        }
+       },
+       "package": {
+        "name": "libwebp7",
+        "version": "1.2.2-2",
+        "architecture": "amd64"
+       },
+       "rationale": "Heap buffer overflow in libwebp allows a remote attacker to perform an out of bounds memory write via a crafted HTML page.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-4863"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726757.54035",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-10-01T14:01:00.000+0000",
+     "rule": {
+      "id": "23505",
+      "level": 10,
+      "description": "CVE-2023-44487 affects nginx",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726757.54035",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-44487",
+       "title": "CVE-2023-44487 affects nginx",
+       "severity": "High",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "7.5"
+        }
+       },
+       "package": {
+        "name": "nginx",
+        "version": "1.18.0-6ubuntu14",
+        "architecture": "amd64"
+       },
+       "rationale": "The HTTP/2 protocol allows a denial of service (server resource consumption) because request cancellation can reset many streams quickly.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-44487"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726758.133040",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T21:15:00.000+0000",
+     "rule": {
+      "id": "23506",
+      "level": 13,
+      "description": "CVE-2024-3094 affects xz-utils",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "007",
+      "name": "lnx-app-03",
+      "ip": "10.20.1.33"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726758.133040",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2024-3094",
+       "title": "CVE-2024-3094 affects xz-utils",
+       "severity": "Critical",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "10.0"
+        }
+       },
+       "package": {
+        "name": "xz-utils",
+        "version": "5.6.0-0.2",
+        "architecture": "amd64"
+       },
+       "rationale": "Malicious code was discovered in the upstream tarballs of xz, starting with version 5.6.0.",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2024-3094"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726759.72942",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-10-01T12:13:00.000+0000",
+     "rule": {
+      "id": "23504",
+      "level": 7,
+      "description": "CVE-2023-48795 affects openssh-client",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726759.72942",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-48795",
+       "title": "CVE-2023-48795 affects openssh-client",
+       "severity": "Medium",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "5.9"
+        }
+       },
+       "package": {
+        "name": "openssh-client",
+        "version": "1:8.9p1-3ubuntu0.1",
+        "architecture": "amd64"
+       },
+       "rationale": "The SSH transport protocol with certain OpenSSH extensions allows remote attackers to bypass integrity checks (Terrapin).",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-48795"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726760.615867",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-10-01T11:13:00.000+0000",
+     "rule": {
+      "id": "23504",
+      "level": 7,
+      "description": "CVE-2023-48795 affects openssh-client",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "002",
+      "name": "db-01",
+      "ip": "10.20.2.20"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726760.615867",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-48795",
+       "title": "CVE-2023-48795 affects openssh-client",
+       "severity": "Medium",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "5.9"
+        }
+       },
+       "package": {
+        "name": "openssh-client",
+        "version": "1:8.9p1-3ubuntu0.1",
+        "architecture": "amd64"
+       },
+       "rationale": "The SSH transport protocol with certain OpenSSH extensions allows remote attackers to bypass integrity checks (Terrapin).",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-48795"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726761.912941",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T13:52:00.000+0000",
+     "rule": {
+      "id": "23504",
+      "level": 7,
+      "description": "CVE-2023-48795 affects openssh-client",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "003",
+      "name": "app-02",
+      "ip": "10.20.1.12"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726761.912941",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-48795",
+       "title": "CVE-2023-48795 affects openssh-client",
+       "severity": "Medium",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "5.9"
+        }
+       },
+       "package": {
+        "name": "openssh-client",
+        "version": "1:8.9p1-3ubuntu0.1",
+        "architecture": "amd64"
+       },
+       "rationale": "The SSH transport protocol with certain OpenSSH extensions allows remote attackers to bypass integrity checks (Terrapin).",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-48795"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726762.812984",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T14:21:00.000+0000",
+     "rule": {
+      "id": "23504",
+      "level": 7,
+      "description": "CVE-2023-48795 affects openssh-client",
+      "groups": [
+       "vulnerability-detector"
+      ],
+      "firedtimes": 1
+     },
+     "agent": {
+      "id": "007",
+      "name": "lnx-app-03",
+      "ip": "10.20.1.33"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726762.812984",
+     "decoder": {
+      "name": "json"
+     },
+     "location": "vulnerability-detector",
+     "data": {
+      "vulnerability": {
+       "cve": "CVE-2023-48795",
+       "title": "CVE-2023-48795 affects openssh-client",
+       "severity": "Medium",
+       "published": "2023-01-01",
+       "status": "Active",
+       "cvss": {
+        "cvss3": {
+         "base_score": "5.9"
+        }
+       },
+       "package": {
+        "name": "openssh-client",
+        "version": "1:8.9p1-3ubuntu0.1",
+        "architecture": "amd64"
+       },
+       "rationale": "The SSH transport protocol with certain OpenSSH extensions allows remote attackers to bypass integrity checks (Terrapin).",
+       "reference": "https://nvd.nist.gov/vuln/detail/CVE-2023-48795"
+      }
+     }
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726763.3973",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:00:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726763.3973",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/login.php?user=admin'--",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:00:00 +0000] \"GET /login.php?user=admin'-- HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726764.137306",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:00:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726764.137306",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:00:15 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726765.838302",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:00:30.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726765.838302",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/cgi-bin/test.cgi?cmd=;cat /etc/shadow",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:00:30 +0000] \"GET /cgi-bin/test.cgi?cmd=;cat /etc/shadow HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726766.694169",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:01:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726766.694169",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/login.php?user=admin'--",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:01:00 +0000] \"GET /login.php?user=admin'-- HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726767.16582",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:01:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726767.16582",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:01:15 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726768.618457",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:01:30.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726768.618457",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:01:30 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726769.183710",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:02:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726769.183710",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:02:00 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726770.133915",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:02:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726770.133915",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:02:15 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726771.120169",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:02:30.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726771.120169",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/../../etc/passwd",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:02:30 +0000] \"GET /../../etc/passwd HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726772.471050",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:03:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726772.471050",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:03:00 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726773.623503",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:03:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726773.623503",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:03:15 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726774.529313",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:03:30.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726774.529313",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:03:30 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726775.46471",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:04:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726775.46471",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/login.php?user=admin'--",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:04:00 +0000] \"GET /login.php?user=admin'-- HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726776.481292",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:04:15.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726776.481292",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/cgi-bin/test.cgi?cmd=;cat /etc/shadow",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:04:15 +0000] \"GET /cgi-bin/test.cgi?cmd=;cat /etc/shadow HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726777.503248",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:04:30.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726777.503248",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:04:30 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726778.720425",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:05:00.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726778.720425",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/../../etc/passwd",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:05:00 +0000] \"GET /../../etc/passwd HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726779.748006",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:05:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726779.748006",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:05:15 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726780.943949",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:05:30.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726780.943949",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/../../etc/passwd",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:05:30 +0000] \"GET /../../etc/passwd HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726781.638846",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:06:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726781.638846",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:06:00 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726782.133321",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:06:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726782.133321",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/login.php?user=admin'--",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:06:15 +0000] \"GET /login.php?user=admin'-- HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726783.655644",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:06:30.000+0000",
+     "rule": {
+      "id": "31106",
+      "level": 12,
+      "description": "A web attack returned code 200 (success).",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726783.655644",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "200"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:06:30 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 200 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726784.747746",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:07:00.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726784.747746",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/cgi-bin/test.cgi?cmd=;cat /etc/shadow",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:07:00 +0000] \"GET /cgi-bin/test.cgi?cmd=;cat /etc/shadow HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726785.627410",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:07:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726785.627410",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:07:15 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726786.476755",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:07:30.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726786.476755",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/cgi-bin/test.cgi?cmd=;cat /etc/shadow",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:07:30 +0000] \"GET /cgi-bin/test.cgi?cmd=;cat /etc/shadow HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726787.452096",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:08:00.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726787.452096",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/cgi-bin/test.cgi?cmd=;cat /etc/shadow",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:08:00 +0000] \"GET /cgi-bin/test.cgi?cmd=;cat /etc/shadow HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726788.120971",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:08:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726788.120971",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:08:15 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726789.908534",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:08:30.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726789.908534",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/cgi-bin/test.cgi?cmd=;cat /etc/shadow",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:08:30 +0000] \"GET /cgi-bin/test.cgi?cmd=;cat /etc/shadow HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726790.474489",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:09:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726790.474489",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/login.php?user=admin'--",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:09:00 +0000] \"GET /login.php?user=admin'-- HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726791.356395",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:09:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726791.356395",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/login.php?user=admin'--",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:09:15 +0000] \"GET /login.php?user=admin'-- HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726792.437196",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:09:30.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726792.437196",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/../../etc/passwd",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:09:30 +0000] \"GET /../../etc/passwd HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726793.448494",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:10:00.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726793.448494",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "403"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:10:00 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 403 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726794.268271",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:10:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726794.268271",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:10:15 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726795.721184",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:10:30.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726795.721184",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/search?q=1 UNION SELECT password FROM users",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:10:30 +0000] \"GET /search?q=1 UNION SELECT password FROM users HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726796.96656",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:11:00.000+0000",
+     "rule": {
+      "id": "31104",
+      "level": 6,
+      "description": "Common web attack.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726796.96656",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/../../etc/passwd",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:11:00 +0000] \"GET /../../etc/passwd HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726797.453855",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:11:15.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726797.453855",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "400"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:11:15 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 400 512 \"-\" \"sqlmap/1.7\""
+    }
+   },
+   {
+    "_index": "wazuh-alerts-4.x-2026.09.30",
+    "_id": "1790726798.775683",
+    "_score": 1.0,
+    "_source": {
+     "timestamp": "2026-09-30T16:11:30.000+0000",
+     "rule": {
+      "id": "31103",
+      "level": 7,
+      "description": "SQL injection attempt.",
+      "groups": [
+       "web",
+       "accesslog",
+       "attack",
+       "sql_injection"
+      ],
+      "firedtimes": 1,
+      "mitre": {
+       "id": [
+        "T1190"
+       ]
+      }
+     },
+     "agent": {
+      "id": "001",
+      "name": "web-01",
+      "ip": "10.20.1.10"
+     },
+     "manager": {
+      "name": "wazuh-manager"
+     },
+     "id": "1790726798.775683",
+     "decoder": {
+      "name": "web-accesslog"
+     },
+     "location": "/var/log/nginx/access.log",
+     "data": {
+      "srcip": "192.0.2.150",
+      "protocol": "GET",
+      "url": "/index.php?id=1' OR '1'='1",
+      "id": "404"
+     },
+     "full_log": "192.0.2.150 - - [30/Sep/2026:16:11:30 +0000] \"GET /index.php?id=1' OR '1'='1 HTTP/1.1\" 404 512 \"-\" \"sqlmap/1.7\""
+    }
+   }
+  ]
+ }
+}

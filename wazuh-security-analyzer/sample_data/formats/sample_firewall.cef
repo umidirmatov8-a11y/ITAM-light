@@ -1,0 +1,4 @@
+Sep 30 23:00:00 fw-edge-01 CEF:0|DemoVendor|EdgeFirewall|9.1|4100|Port scan detected|7|src=192.0.2.210 dst=10.20.1.10 dpt=22 act=blocked rt=1790809200000 msg=Multiple ports probed from single source
+Sep 30 23:02:00 fw-edge-01 CEF:0|DemoVendor|EdgeFirewall|9.1|4100|Port scan detected|7|src=192.0.2.210 dst=10.20.1.10 dpt=23 act=blocked rt=1790809320000 msg=Multiple ports probed from single source
+Sep 30 23:04:00 fw-edge-01 CEF:0|DemoVendor|EdgeFirewall|9.1|4100|Port scan detected|7|src=192.0.2.210 dst=10.20.1.10 dpt=24 act=blocked rt=1790809440000 msg=Multiple ports probed from single source
+Sep 30 23:06:00 fw-edge-01 CEF:0|DemoVendor|EdgeFirewall|9.1|4100|Port scan detected|7|src=192.0.2.210 dst=10.20.1.10 dpt=25 act=blocked rt=1790809560000 msg=Multiple ports probed from single source

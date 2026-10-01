@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wazuh-security-analyzer"
+version = "1.0.0"
+description = "Desktop Security Analysis Assistant for Wazuh alerts: normalization, risk scoring, correlation, threat intelligence, MITRE ATT&CK, CVE, IOC and AI-assisted explanations."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = [
+    "PySide6>=6.6",
+    "pydantic>=2.6",
+    "SQLAlchemy>=2.0",
+    "httpx>=0.27",
+    "PyYAML>=6.0",
+    "Jinja2>=3.1",
+    "reportlab>=4.0",
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+    "keyring>=25.0",
+    "defusedxml>=0.7",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+postgres = ["psycopg[binary]>=3.1"]
+dev = ["pytest>=8.0", "pyinstaller>=6.5"]
+
+[project.scripts]
+wazuh-security-analyzer = "app.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: long-running performance tests (deselect with -m 'not slow')",
+    "gui: tests that need a Qt platform (run with QT_QPA_PLATFORM=offscreen)",
+]
+filterwarnings = ["ignore::DeprecationWarning"]

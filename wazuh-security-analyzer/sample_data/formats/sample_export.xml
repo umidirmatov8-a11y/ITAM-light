@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alerts>
+  <alert>
+    <timestamp>2026-09-30T23:30:00.000+0000</timestamp>
+    <rule id="5402" level="3"><description>Successful sudo to ROOT executed.</description>
+      <groups><group>syslog</group><group>sudo</group></groups></rule>
+    <agent id="002" name="db-01" ip="10.20.2.20"/>
+    <data><srcuser>admin.ops</srcuser><dstuser>root</dstuser><command>/usr/bin/systemctl status postgresql</command></data>
+    <full_log>admin.ops : TTY=pts/0 ; PWD=/home/admin.ops ; USER=root ; COMMAND=/usr/bin/systemctl status postgresql</full_log>
+  </alert>
+  <alert>
+    <timestamp>2026-09-30T23:31:00.000+0000</timestamp>
+    <rule id="5402" level="3"><description>Successful sudo to ROOT executed.</description>
+      <groups><group>syslog</group><group>sudo</group></groups></rule>
+    <agent id="002" name="db-01" ip="10.20.2.20"/>
+    <data><srcuser>admin.ops</srcuser><dstuser>root</dstuser><command>/usr/bin/systemctl status postgresql</command></data>
+    <full_log>admin.ops : TTY=pts/0 ; PWD=/home/admin.ops ; USER=root ; COMMAND=/usr/bin/systemctl status postgresql</full_log>
+  </alert>
+  <alert>
+    <timestamp>2026-09-30T23:32:00.000+0000</timestamp>
+    <rule id="5402" level="3"><description>Successful sudo to ROOT executed.</description>
+      <groups><group>syslog</group><group>sudo</group></groups></rule>
+    <agent id="002" name="db-01" ip="10.20.2.20"/>
+    <data><srcuser>admin.ops</srcuser><dstuser>root</dstuser><command>/usr/bin/systemctl status postgresql</command></data>
+    <full_log>admin.ops : TTY=pts/0 ; PWD=/home/admin.ops ; USER=root ; COMMAND=/usr/bin/systemctl status postgresql</full_log>
+  </alert>
+</alerts>

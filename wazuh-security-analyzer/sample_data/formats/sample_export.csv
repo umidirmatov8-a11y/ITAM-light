@@ -1,0 +1,9 @@
+timestamp,agent.name,agent.ip,rule.id,rule.level,rule.description,rule.groups,data.srcip,data.dstuser,rule.mitre.id,full_log
+2026-09-30T22:00:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:01:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:02:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:03:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:04:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:05:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:06:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
+2026-09-30T22:07:00.000+0000,dc-01,10.20.0.5,60122,5,Logon Failure - Unknown user or bad password,"windows, windows_security, authentication_failed",10.30.2.12,svc_sql,"[""T1110.001""]",An account failed to log on.
