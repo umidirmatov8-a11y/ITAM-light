@@ -19,6 +19,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Iterable
 
+from app.i18n import tr
 from app.models.analysis import AlertGroup, AttackChain, ChainStage
 from app.models.categories import Category
 
@@ -176,6 +177,7 @@ class ChainDetector:
                 elif not self.is_external(src_ip):
                     continue  # ordinary internal login - not part of an attack narrative
             stage, order, label = stage_info
+            label = tr(label)
             last = segments[-1] if segments else None
             if last and last.stage == stage and ts - last.last_ts <= self.window:
                 seg = last
@@ -246,7 +248,7 @@ class ChainDetector:
         group_ids = sorted({g for s in window if s.stage in lis_stages for g in s.group_ids})
         scenario_parts: list[str] = []
         for st in stages:
-            tactic = SCENARIO_TACTICS.get(st.stage, st.label)
+            tactic = tr(SCENARIO_TACTICS.get(st.stage, st.label))
             if tactic not in scenario_parts:
                 scenario_parts.append(tactic)
         chain = AttackChain(

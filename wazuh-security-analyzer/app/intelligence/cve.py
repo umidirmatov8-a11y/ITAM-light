@@ -225,7 +225,8 @@ def parse_nvd_cve(cve: _NvdCve) -> dict[str, Any]:
 def remediation_text(record: CVERecord) -> str:
     if record.kev.get("requiredAction"):
         return record.kev["requiredAction"]
-    pkg = ", ".join(record.packages[:3]) if record.packages else "the affected software"
-    return (f"Update {pkg} to a version that fixes {record.cve} as listed in the vendor advisory "
-            "(see sources). If no fix is available, apply the vendor's mitigations and limit exposure "
-            "of the vulnerable service.")
+    from app.i18n import tr
+    pkg = ", ".join(record.packages[:3]) if record.packages else tr("the affected software")
+    return tr("Update {package} to a version that fixes {cve} as listed in the vendor advisory (see sources). If no fix "
+              "is available, apply the vendor's mitigations and limit exposure of the vulnerable service.",
+              package=pkg, cve=record.cve)

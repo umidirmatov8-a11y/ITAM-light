@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from app.core import paths
+from app.i18n import get_language, tr
 from app.models.analysis import AlertGroup, Incident
 from app.models.categories import Category
 from app.utils.text import truncate_list
@@ -31,13 +32,18 @@ SECTION_TITLES = {
     "remediation": "Remediation",
     "prevention": "Prevention",
 }
+
+
+def section_title(key: str) -> str:
+    return tr(SECTION_TITLES[key])
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 MAX_PER_SECTION = 8
 
 
-@lru_cache(maxsize=1)
-def _load_playbooks() -> dict[str, Any]:
-    path = paths.knowledge_dir() / "playbooks.yaml"
+@lru_cache(maxsize=4)
+def _load_playbooks(lang: str = "en") -> dict[str, Any]:
+    localized = paths.knowledge_dir() / f"playbooks.{lang}.yaml"
+    path = localized if lang != "en" and localized.exists() else paths.knowledge_dir() / "playbooks.yaml"
     try:
         return (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("playbooks", {})
     except (OSError, yaml.YAMLError) as exc:
@@ -48,7 +54,7 @@ def _load_playbooks() -> dict[str, Any]:
 class RecommendationEngine:
     def __init__(self, rule_kb=None, high_risk_threshold: float = 60.0):
         self.rule_kb = rule_kb
-        self.playbooks = _load_playbooks()
+        self.playbooks = _load_playbooks(get_language())
         self.high_risk = high_risk_threshold
 
     def values_for(self, g: AlertGroup) -> dict[str, str]:
@@ -71,7 +77,7 @@ class RecommendationEngine:
             "count": f"{g.count:,}",
             "first_seen": fmt_ts(g.first_ts) if g.first_ts else "",
             "last_seen": fmt_ts(g.last_ts) if g.last_ts else "",
-            "window": "30 minutes",
+            "window": tr("30 minutes"),
         }
 
     def conditions_for(self, g: AlertGroup) -> set[str]:
@@ -130,11 +136,11 @@ class RecommendationEngine:
                         if step not in result[section]:
                             result[section].append(step)
         if g.chain_ids and not any("attack chain" in s for s in result["immediate"]):
-            result["immediate"].insert(0, f"Review the full correlated attack chain on {g.agent_name or 'the host'} "
-                                          "- treat the related alerts as one incident.")
+            result["immediate"].insert(0, tr("Review the full correlated attack chain on {host} - treat the related "
+                                             "alerts as one incident.", host=g.agent_name or tr("the host")))
         if g.fp_probability >= 0.6:
-            result["investigation"].insert(0, "Confirm the benign explanation (scanner, scheduled job, maintenance) "
-                                              "and tune the rule if it is confirmed.")
+            result["investigation"].insert(0, tr("Confirm the benign explanation (scanner, scheduled job, maintenance) "
+                                                 "and tune the rule if it is confirmed."))
         if g.severity in ("informational", "low") and not g.chain_ids:
             result["immediate"] = []
         return {k: v[:MAX_PER_SECTION] for k, v in result.items()}

@@ -10,6 +10,7 @@ from __future__ import annotations
 import fnmatch
 import math
 
+from app.i18n import num, tr
 from app.core.config import AppConfig, AssetRule
 from app.core.severity import Severity, severity_from_score
 from app.models.analysis import AlertGroup, RiskFactor
@@ -51,50 +52,54 @@ class RiskEngine:
         factors: list[RiskFactor] = []
 
         level_points = group.rule_level / 15.0 * w.wazuh_level_max
-        factors.append(RiskFactor("wazuh_level", level_points, f"Wazuh rule level {group.rule_level}/15"))
+        factors.append(RiskFactor("wazuh_level", level_points, tr("Wazuh rule level {level}/15", level=group.rule_level)))
 
         crit = self.assets.criticality(group.agent_name)
         group.asset_criticality = crit
         asset_points = w.asset_criticality.get(crit, 0.0)
         if asset_points:
             factors.append(RiskFactor("asset_criticality", asset_points,
-                                      f"Asset {group.agent_name or 'unknown'} criticality: {crit}"))
+                                      tr("Asset {host} criticality: {criticality}",
+                                         host=group.agent_name or tr("unknown"), criticality=tr(crit))))
 
         if group.count > 1 and w.frequency_max:
             sat = max(w.frequency_saturation, 2)
             freq = w.frequency_max * min(1.0, math.log10(group.count) / math.log10(sat))
-            factors.append(RiskFactor("frequency", freq, f"{group.count:,} occurrences"))
+            factors.append(RiskFactor("frequency", freq, tr("{count} occurrences", count=num(group.count))))
 
         if group.src_external and group.category not in (C.VULNERABILITY.value, C.POLICY.value, C.SYSTEM.value):
             factors.append(RiskFactor("external_source", w.external_source,
-                                      f"Source {group.src_ip} is an external IP address"))
+                                      tr("Source {ip} is an external IP address", ip=group.src_ip)))
 
         if group.category in _AUTH_FAIL and group.peak_count >= self.bruteforce_threshold:
             factors.append(RiskFactor("bruteforce_pattern", w.bruteforce_pattern,
-                                      f"Burst of {group.peak_count:,} failed authentications within "
-                                      f"{self.config.correlation.chain_window_minutes} minutes "
-                                      f"(threshold {self.bruteforce_threshold})"))
+                                      tr("Burst of {count} failed authentications within {minutes} minutes "
+                                         "(threshold {threshold})", count=num(group.peak_count),
+                                         minutes=self.config.correlation.chain_window_minutes,
+                                         threshold=self.bruteforce_threshold)))
 
         if group.success_after_failures:
             factors.append(RiskFactor("successful_auth", w.successful_auth_after_failures,
-                                      f"Successful authentication after {group.failures_before_success} failures"))
+                                      tr("Successful authentication after {count} failures",
+                                         count=group.failures_before_success)))
         elif group.category == C.AUTH_SUCCESS.value and group.src_external:
             factors.append(RiskFactor("successful_auth", w.successful_auth_external,
-                                      "Successful authentication from an external IP"))
+                                      tr("Successful authentication from an external IP")))
 
         if group.ioc_verdict == "malicious" or (group.vt_positives or 0) >= 3:
-            reason = ("Malicious indicator: " + ", ".join(group.ioc_verdict_sources[:3])) if \
-                group.ioc_verdict == "malicious" else f"VirusTotal: {group.vt_positives} engines detected the file"
+            reason = tr("Malicious indicator: {sources}", sources=", ".join(group.ioc_verdict_sources[:3])) if \
+                group.ioc_verdict == "malicious" else tr("VirusTotal: {count} engines detected the file",
+                                                         count=group.vt_positives)
             factors.append(RiskFactor("ioc_reputation", w.ioc_malicious, reason))
         elif group.ioc_verdict == "suspicious" or (group.vt_positives or 0) > 0:
-            factors.append(RiskFactor("ioc_reputation", w.ioc_suspicious, "Indicator with suspicious reputation"))
+            factors.append(RiskFactor("ioc_reputation", w.ioc_suspicious, tr("Indicator with suspicious reputation")))
 
         if group.cvss is not None:
             factors.append(RiskFactor("cve_severity", group.cvss / 10.0 * w.cve_max,
-                                      f"{group.cve or 'CVE'} CVSS {group.cvss:.1f}"))
+                                      tr("{cve} CVSS {cvss}", cve=group.cve or "CVE", cvss=f"{group.cvss:.1f}")))
         if group.kev:
             factors.append(RiskFactor("cve_known_exploited", w.cve_known_exploited,
-                                      f"{group.cve} is in CISA Known Exploited Vulnerabilities"))
+                                      tr("{cve} is in CISA Known Exploited Vulnerabilities", cve=group.cve)))
 
         if group.mitre:
             best = 0.0
@@ -105,28 +110,32 @@ class RiskEngine:
                 pts = w.mitre_max * tactic_w * conf
                 if pts > best:
                     best = pts
-                    best_reason = f"MITRE {m.technique_id} {m.name} ({m.confidence} confidence)"
+                    best_reason = tr("MITRE {technique} {name} ({confidence} confidence)", technique=m.technique_id,
+                                     name=m.name, confidence=tr(m.confidence))
             if best:
                 factors.append(RiskFactor("mitre_technique", best, best_reason))
 
         if group.chain_ids:
             stages = max((chain_stage_counts or {}).get(cid, 3) for cid in group.chain_ids)
             pts = w.correlation_chain + w.correlation_chain_per_extra_stage * max(0, stages - 3)
-            factors.append(RiskFactor("correlation", pts, f"Part of a correlated attack chain ({stages} stages)"))
+            factors.append(RiskFactor("correlation", pts, tr("Part of a correlated attack chain ({stages} stages)",
+                                                             stages=stages)))
         elif group.campaign:
             factors.append(RiskFactor("correlation", w.correlation_campaign,
-                                      "Same source targets several hosts (campaign)"))
+                                      tr("Same source targets several hosts (campaign)")))
 
         bonus = w.category_bonus.get(group.category, 0.0)
         if bonus:
-            factors.append(RiskFactor("category", bonus, f"Behaviour: {C.parse(group.category).label}"))
+            factors.append(RiskFactor("category", bonus, tr("Behaviour: {category}",
+                                                            category=C.parse(group.category).label)))
 
         raw = sum(f.points for f in factors)
         if group.fp_probability and w.false_positive_dampening:
             reduction = raw * group.fp_probability * w.false_positive_dampening
             if reduction >= 0.5:
                 factors.append(RiskFactor("false_positive_likelihood", -reduction,
-                                          f"False positive probability {group.fp_probability:.0%}"))
+                                          tr("False positive probability {probability}",
+                                             probability=f"{group.fp_probability:.0%}")))
                 raw -= reduction
         group.risk_factors = [RiskFactor(f.name, round(f.points, 1), f.reason) for f in factors]
         group.risk_score = round(max(0.0, min(100.0, raw)), 1)

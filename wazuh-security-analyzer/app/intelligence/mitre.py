@@ -18,6 +18,7 @@ from functools import lru_cache
 
 import yaml
 
+from app.i18n import tr
 from app.core import paths
 from app.models.analysis import MitreMapping
 from app.models.categories import Category
@@ -128,40 +129,43 @@ def map_alert_group(group, catalog: MitreCatalog, rule_kb, bruteforce_threshold:
             found[mapping.technique_id] = mapping
 
     for tid in group.rule_mitre_ids:
-        add(catalog.mapping(tid, "high", "wazuh_rule", f"Technique attached to Wazuh rule {group.rule_id}"))
+        add(catalog.mapping(tid, "high", "wazuh_rule", tr("Technique attached to Wazuh rule {rule}", rule=group.rule_id)))
 
     info = rule_kb.get(group.rule_id) if rule_kb else None
     if info:
         for tid in info.mitre:
-            add(catalog.mapping(tid, "medium", "rule_kb", f"Local rule knowledge base for rule {group.rule_id}"))
+            add(catalog.mapping(tid, "medium", "rule_kb", tr("Local rule knowledge base for rule {rule}",
+                                                             rule=group.rule_id)))
 
     category = group.category
     if category in (Category.AUTH_FAILURE.value, Category.BRUTE_FORCE.value) and \
             (group.peak_count >= bruteforce_threshold or category == Category.BRUTE_FORCE.value):
         if len(group.users) >= 5 and group.count >= bruteforce_threshold:
             add(catalog.mapping("T1110.003", "low", "heuristic",
-                                f"{len(group.users)} different accounts targeted from one source"))
+                                tr("{count} different accounts targeted from one source", count=len(group.users))))
         add(catalog.mapping("T1110", "medium", "heuristic",
-                            f"{group.peak_count} authentication failures from the same source in one window"))
+                            tr("{count} authentication failures from the same source in one window",
+                               count=group.peak_count)))
     if group.success_after_failures:
         add(catalog.mapping("T1078", "medium", "heuristic",
-                            f"Successful authentication after {group.failures_before_success} failures"))
+                            tr("Successful authentication after {count} failures",
+                               count=group.failures_before_success)))
 
     text = " ".join(group.processes[:5] + group.command_lines[:5])
     if text:
         for regex, tid, conf, label in _COMMAND_HEURISTICS:
             if regex.search(text):
-                add(catalog.mapping(tid, conf, "heuristic", label))
+                add(catalog.mapping(tid, conf, "heuristic", tr(label)))
 
     if category == Category.NETWORK_C2.value:
         ports = {str(p) for p in (group.representative.get("dst_port"),) if p}
         if ports & {"80", "443", "8080", "8443"}:
-            add(catalog.mapping("T1071.001", "low", "heuristic", "Outbound web connection from a scripting process"))
+            add(catalog.mapping("T1071.001", "low", "heuristic", tr("Outbound web connection from a scripting process")))
         else:
-            add(catalog.mapping("T1071", "low", "heuristic", "Outbound connection from a scripting process"))
+            add(catalog.mapping("T1071", "low", "heuristic", tr("Outbound connection from a scripting process")))
     if category == Category.WEB_ATTACK.value and re.search(r"sql|injection|traversal|command", group.rule_description,
                                                            re.I):
-        add(catalog.mapping("T1190", "medium", "heuristic", "Exploit attempt against a web application"))
+        add(catalog.mapping("T1190", "medium", "heuristic", tr("Exploit attempt against a web application")))
     if category == Category.SCAN.value and not found:
-        add(catalog.mapping("T1595", "low", "heuristic", "Scanning pattern from one source"))
+        add(catalog.mapping("T1595", "low", "heuristic", tr("Scanning pattern from one source")))
     return sorted(found.values(), key=lambda m: (-_CONF_RANK[m.confidence], m.technique_id))

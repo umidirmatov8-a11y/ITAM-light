@@ -33,8 +33,16 @@ STRICT RULES
 """
 
 
-def build_user_prompt(context: dict) -> str:
+LANGUAGE_INSTRUCTIONS = {
+    "ru": ("LANGUAGE: write every human-readable text value (summary, explanations, reasoning and all action items) "
+           "in Russian. Keep JSON keys, the severity and confidence enum values, technique IDs, IOCs, CVE IDs and "
+           "placeholders exactly as specified (in English / unchanged).\n\n"),
+}
+
+
+def build_user_prompt(context: dict, language: str = "en") -> str:
     return (
+        LANGUAGE_INSTRUCTIONS.get(language, "") +
         "Analyze the following security finding.\n\n"
         "CONTEXT (JSON):\n" + json.dumps(context, ensure_ascii=False, indent=1, default=str) +
         "\n\nReturn exactly this JSON structure (types shown as placeholders):\n" +

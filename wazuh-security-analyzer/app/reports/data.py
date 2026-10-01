@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app import __app_name__, __version__
+from app.i18n import tr
 from app.core.severity import SEVERITY_ORDER
 from app.database.store import GroupFilter
 from app.models.analysis import AlertGroup, AnalysisSummary, CVERecord, Incident, IOCRecord
@@ -62,7 +63,7 @@ def collect_report_data(session: AnalysisSession, title: str = "Wazuh Security A
         "rejected": summary.rejected_inputs,
         "warnings": summary.warnings,
         "top_rules": dashboard.get("top_rules", []),
-        "severity_scale": "0-19 Informational, 20-39 Low, 40-59 Medium, 60-79 High, 80-100 Critical",
+        "severity_scale": tr("0-19 Informational, 20-39 Low, 40-59 Medium, 60-79 High, 80-100 Critical"),
         "mode": summary.mode,
         "duration": summary.duration_seconds,
         "duplicates": summary.duplicates,

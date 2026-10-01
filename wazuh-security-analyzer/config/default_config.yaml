@@ -123,4 +123,5 @@ logging:
 
 ui:
   first_run: true
+  language: auto            # auto | en | ru
   page_size: 500

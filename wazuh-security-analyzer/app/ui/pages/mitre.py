@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QAbstractItemView, QHeaderView, QSplitter, QTableWidget, QTableWidgetItem,
                                QTextBrowser)
 
+from app.i18n import n, num, tr
 from app.ui import render, theme
 from app.ui.pages.base import BasePage
 
@@ -54,10 +55,11 @@ class MitrePage(BasePage):
         rows = max(len(v) for v in columns.values())
         self.matrix.setColumnCount(len(tactics))
         self.matrix.setRowCount(rows)
-        self.matrix.setHorizontalHeaderLabels([self.ctx.catalog.tactic_name(t) for t in tactics])
+        self.matrix.setHorizontalHeaderLabels([tr(self.ctx.catalog.tactic_name(t)) for t in tactics])
         for c, tactic in enumerate(tactics):
             for r, s in enumerate(sorted(columns[tactic], key=lambda x: -x["max_risk"])):
-                item = QTableWidgetItem(f"{s['technique_id']}\n{s['name']}\n{s['events']:,} events · {s['confidence']}")
+                item = QTableWidgetItem(f"{s['technique_id']}\n{s['name']}\n{n(s['events'], 'event')} · "
+                                        f"{tr(s['confidence'])}")
                 item.setData(Qt.UserRole, s["technique_id"])
                 sev = "critical" if s["max_risk"] >= 80 else "high" if s["max_risk"] >= 60 else \
                     "medium" if s["max_risk"] >= 40 else "low" if s["max_risk"] >= 20 else "informational"
@@ -77,15 +79,15 @@ class MitrePage(BasePage):
         if not s:
             return
         html = [f'<p style="font-size:14pt; font-weight:bold;">{render.e(tid)} — {render.e(s["name"])}</p>',
-                render.kv_table([("Tactics", ", ".join(self.ctx.catalog.tactic_name(t) for t in s["tactics"])),
-                                 ("Events", f"{s['events']:,}"), ("Findings", s["groups"]),
+                render.kv_table([("Tactics", ", ".join(tr(self.ctx.catalog.tactic_name(t)) for t in s["tactics"])),
+                                 ("Events", num(s['events'])), ("Findings", s["groups"]),
                                  ("Highest risk", f"{s['max_risk']:.0f}"),
-                                 ("Mapping confidence", s["confidence"]),
+                                 ("Mapping confidence", tr(s["confidence"])),
                                  ("Mapping sources", ", ".join(s["sources"])),
                                  ("Hosts", ", ".join(s["hosts"][:15]))]),
                 render.h("Evidence"), render.bullets(s.get("evidence", [])),
                 f'<p><a href="{render.e(s["url"])}" style="color:{theme.ACCENT};">{render.e(s["url"])}</a></p>',
-                '<p><a href="search:' + render.e(tid) + f'" style="color:{theme.ACCENT};">Show related alerts →</a></p>']
+                '<p><a href="search:' + render.e(tid) + f'" style="color:{theme.ACCENT};">{render.e(tr("Show related alerts"))} →</a></p>']
         self.detail.setHtml("".join(html))
 
     def _anchor(self, url) -> None:

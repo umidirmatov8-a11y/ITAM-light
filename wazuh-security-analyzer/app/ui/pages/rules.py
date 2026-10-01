@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QPushButton, QSplitter, QTextBrowser
 
+from app.i18n import tr
 from app.core.severity import Severity
 from app.database.store import GroupFilter
 from app.ui import render
@@ -19,10 +20,10 @@ class RulesPage(BasePage):
         super().__init__(ctx, parent)
         bar = QHBoxLayout()
         self.query = QLineEdit()
-        self.query.setPlaceholderText("Rule ID (e.g. 5710) or keyword…")
+        self.query.setPlaceholderText(tr("Rule ID (e.g. 5710) or keyword…"))
         self.query.returnPressed.connect(self.lookup)
         self.query.textChanged.connect(lambda _t: self.populate())
-        btn = QPushButton("Open rule")
+        btn = QPushButton(tr("Open rule"))
         btn.clicked.connect(self.lookup)
         bar.addWidget(self.query, 1)
         bar.addWidget(btn)

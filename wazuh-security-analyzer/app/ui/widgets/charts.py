@@ -8,6 +8,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QSizePolicy, QToolTip, QWidget
 
+from app.i18n import num, severity_label, tr
 from app.core.severity import SEVERITY_ORDER
 from app.ui import theme
 
@@ -18,7 +19,7 @@ def _fmt(n: float) -> str:
         return f"{n / 1_000_000:.1f}M"
     if n >= 10_000:
         return f"{n / 1000:.0f}k"
-    return f"{n:,}"
+    return num(n)
 
 
 class HBarChart(QWidget):
@@ -47,7 +48,7 @@ class HBarChart(QWidget):
         self._rows = []
         if not self.items:
             p.setPen(QColor(theme.MUTED))
-            p.drawText(self.rect(), Qt.AlignCenter, "No data")
+            p.drawText(self.rect(), Qt.AlignCenter, tr("No data"))
             return
         w, h = self.width(), self.height()
         label_w = min(220, int(w * 0.42))
@@ -82,7 +83,7 @@ class HBarChart(QWidget):
         idx = self._row_at(event.position())
         if idx is not None:
             label, value, _, _ = self.items[idx]
-            QToolTip.showText(event.globalPosition().toPoint(), f"{label}: {value:,.0f}", self)
+            QToolTip.showText(event.globalPosition().toPoint(), f"{label}: {num(int(value))}", self)
             self.setCursor(Qt.PointingHandCursor)
         else:
             self.setCursor(Qt.ArrowCursor)
@@ -113,7 +114,7 @@ class TimelineChart(QWidget):
         n = int(self.data.get("n") or 0)
         if not series or not n:
             p.setPen(QColor(theme.MUTED))
-            p.drawText(self.rect(), Qt.AlignCenter, "No timestamped events")
+            p.drawText(self.rect(), Qt.AlignCenter, tr("No timestamped events"))
             return
         w, h = self.width(), self.height()
         left, bottom, top = 46, 22, 8
@@ -163,9 +164,10 @@ class TimelineChart(QWidget):
         if 0 <= i < n:
             start, size = self.data.get("start") or 0, self.data.get("bucket") or 3600
             label = datetime.fromtimestamp(start + i * size, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-            parts = [f"{s.value}: {(series.get(s.value) or [0] * n)[i]:,}" for s in SEVERITY_ORDER
+            parts = [f"{severity_label(s.value, upper=False)}: {num((series.get(s.value) or [0] * n)[i])}"
+                     for s in SEVERITY_ORDER
                      if (series.get(s.value) or [0] * n)[i]]
-            QToolTip.showText(event.globalPosition().toPoint(), label + "\n" + "\n".join(parts or ["no events"]), self)
+            QToolTip.showText(event.globalPosition().toPoint(), label + "\n" + "\n".join(parts or [tr("no events")]), self)
 
 
 class DonutChart(QWidget):
@@ -213,4 +215,4 @@ class DonutChart(QWidget):
         font.setBold(False)
         p.setFont(font)
         p.setPen(QColor(theme.MUTED))
-        p.drawText(rect, Qt.AlignCenter, "\n\nevents")
+        p.drawText(rect, Qt.AlignCenter, "\n\n" + tr("events"))

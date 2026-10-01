@@ -22,6 +22,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.i18n import get_language, tr
 from app.ai.prompts import REPAIR_PROMPT, SYSTEM_PROMPT, build_user_prompt
 from app.ai.providers.base import AIProvider
 from app.ai.providers.factory import create_provider
@@ -196,10 +197,10 @@ class AIAnalysisEngine:
         even when they only appear inside free-text log lines of this finding."""
         started = time.time()
         if self.provider is None:
-            return AIRunResult(False, error="AI analysis is disabled (Settings > AI provider). "
-                                             "Local analysis results are shown.")
+            return AIRunResult(False, error=tr("AI analysis is disabled (Settings > AI provider). "
+                                                "Local analysis results are shown."))
         if not groups:
-            return AIRunResult(False, error="No alerts to analyze.")
+            return AIRunResult(False, error=tr("No alerts to analyze."))
         context = self.build_context(groups, incident, iocs, cves)
         sanitizer: Sanitizer | None = None
         if self.should_sanitize():
@@ -218,7 +219,7 @@ class AIAnalysisEngine:
               anonymized=sanitizer is not None, replacements=sanitizer.replacements if sanitizer else 0,
               context_chars=len(allowed_text), finding=(incident.id if incident else groups[0].display_id))
         log.info("AI analysis via %s (%s), anonymized=%s", provider.name, provider.model, sanitizer is not None)
-        user_prompt = build_user_prompt(context)
+        user_prompt = build_user_prompt(context, get_language())
         try:
             answer = provider.complete(SYSTEM_PROMPT, user_prompt)
             try:
@@ -230,17 +231,18 @@ class AIAnalysisEngine:
                                              + "\nPrevious answer:\n" + answer[:4000])
                 result = AIAnalysisResult.model_validate(extract_json(repaired))
         except (ProviderUnavailableError, ProviderResponseError) as exc:
-            return AIRunResult(False, error=f"AI unavailable: {exc}. Local analysis results are shown.",
+            return AIRunResult(False, error=tr("AI unavailable: {error}. Local analysis results are shown.", error=exc),
                                provider=provider.name, model=provider.model, anonymized=sanitizer is not None,
                                duration_seconds=round(time.time() - started, 1))
         except (ValueError, ValidationError) as exc:
-            return AIRunResult(False, error="The AI response did not match the required schema and was discarded. "
-                                            f"Details: {str(exc).splitlines()[0][:200]}",
+            return AIRunResult(False, error=tr("The AI response did not match the required schema and was discarded. "
+                                               "Details: {details}", details=str(exc).splitlines()[0][:200]),
                                provider=provider.name, model=provider.model, anonymized=sanitizer is not None,
                                duration_seconds=round(time.time() - started, 1))
         except Exception as exc:  # pragma: no cover - unexpected provider bugs must not crash the app
             log.exception("Unexpected AI failure")
-            return AIRunResult(False, error=f"AI analysis failed: {type(exc).__name__}", provider=provider.name)
+            return AIRunResult(False, error=tr("AI analysis failed: {error}", error=type(exc).__name__),
+                               provider=provider.name)
 
         cleaned, removed = self._guardrails(result, allowed_text, context)
         data = cleaned.model_dump()

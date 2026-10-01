@@ -6,6 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QInputDialog, QLabel, QMessageBox, QPushButton, QSplitter,
                                QTextBrowser, QVBoxLayout, QWidget)
 
+from app.i18n import tr
+from app.i18n import severity_label, tr
 from app.models.analysis import IncidentStatus
 from app.ui import render
 from app.ui.ai_actions import run_ai
@@ -15,11 +17,11 @@ from app.utils.timeutil import fmt_ts
 
 COLUMNS = [
     ("id", "Incident", None),
-    ("severity", "Severity", lambda r: r["severity"].upper()),
+    ("severity", "Severity", lambda r: severity_label(r["severity"])),
     ("risk_score", "Risk", None),
     ("title", "Title", None),
-    ("assessment", "Assessment", None),
-    ("status", "Status", None),
+    ("assessment", "Assessment", lambda r: tr(r["assessment"] or "")),
+    ("status", "Status", lambda r: tr(r["status"])),
     ("event_count", "Events", None),
     ("hosts", "Hosts", None),
     ("first_ts", "Start", lambda r: fmt_ts(r["first_ts"])),
@@ -34,32 +36,32 @@ class IncidentsPage(BasePage):
         super().__init__(ctx, parent)
         filters = QHBoxLayout()
         self.status_filter = QComboBox()
-        self.status_filter.addItem("All statuses", "")
+        self.status_filter.addItem(tr("All statuses"), "")
         for st in IncidentStatus:
-            self.status_filter.addItem(st.value, st.value)
+            self.status_filter.addItem(tr(st.value), st.value)
         self.status_filter.currentIndexChanged.connect(lambda _i: self.refresh())
-        filters.addWidget(QLabel("Status:"))
+        filters.addWidget(QLabel(tr("Status:")))
         filters.addWidget(self.status_filter)
         filters.addStretch(1)
         self.root.addLayout(filters)
 
         splitter = QSplitter(Qt.Horizontal)
         self.table = SimpleTable(COLUMNS, 500)
-        self.table.set_widths([120, 80, 50, 330, 200, 110, 70, 60, 150])
+        self.table.set_widths([120, 120, 50, 330, 200, 130, 70, 60, 150])
         splitter.addWidget(self.table)
         right = QWidget()
         rl = QVBoxLayout(right)
         rl.setContentsMargins(0, 0, 0, 0)
         actions = QHBoxLayout()
-        actions.addWidget(QLabel("Status:"))
+        actions.addWidget(QLabel(tr("Status:")))
         self.status = QComboBox()
         for st in IncidentStatus:
-            self.status.addItem(st.value, st.value)
+            self.status.addItem(tr(st.value), st.value)
         self.status.activated.connect(self._change_status)
         actions.addWidget(self.status)
-        self.note_btn = QPushButton("Add note")
-        self.alerts_btn = QPushButton("Show alerts")
-        self.ai_btn = QPushButton("✨ Analyze with AI")
+        self.note_btn = QPushButton(tr("Add note"))
+        self.alerts_btn = QPushButton(tr("Show alerts"))
+        self.ai_btn = QPushButton(tr("✨ Analyze with AI"))
         self.ai_btn.setObjectName("primary")
         for b in (self.note_btn, self.alerts_btn, self.ai_btn):
             actions.addWidget(b)
@@ -128,7 +130,8 @@ class IncidentsPage(BasePage):
             return
         new_status = self.status.currentData()
         self.session.set_incident_status(self.current.id, new_status, self.ctx.state)
-        self.ctx.statusMessage.emit(f"{self.current.id} status set to {new_status}")
+        self.ctx.statusMessage.emit(tr("{incident} status set to {status}", incident=self.current.id,
+                                       status=tr(new_status)))
         current_id = self.current.id
         self.refresh()
         self.on_show(incident_id=current_id)
@@ -136,7 +139,8 @@ class IncidentsPage(BasePage):
     def _add_note(self) -> None:
         if self.current is None or self.session is None:
             return
-        text, ok = QInputDialog.getMultiLineText(self, "Analyst note", f"Note for {self.current.id}:", self.current.note)
+        text, ok = QInputDialog.getMultiLineText(self, tr("Analyst note"), tr("Note for {incident}:", incident=self.current.id),
+                                                 self.current.note)
         if ok:
             self.session.set_incident_status(self.current.id, self.current.status, self.ctx.state, text.strip())
             self.detail.setHtml(render.render_incident(self.current))
@@ -152,11 +156,11 @@ class IncidentsPage(BasePage):
             return
         groups = session.store.get_groups(inc.group_ids[:60])
         self.ai_btn.setEnabled(False)
-        self.ai_btn.setText("Analyzing…")
+        self.ai_btn.setText(tr("Analyzing…"))
 
         def reset() -> None:
             self.ai_btn.setEnabled(True)
-            self.ai_btn.setText("✨ Analyze with AI")
+            self.ai_btn.setText(tr("✨ Analyze with AI"))
 
         def done(result: dict) -> None:
             reset()
@@ -165,11 +169,11 @@ class IncidentsPage(BasePage):
             if self.current is inc:
                 self.detail.setHtml(render.render_incident(inc))
             if not result.get("ok"):
-                self.ctx.statusMessage.emit(result.get("error", "AI analysis failed"))
+                self.ctx.statusMessage.emit(result.get("error", tr("AI analysis failed")))
 
         def failed(message: str) -> None:
             reset()
-            QMessageBox.warning(self, "AI analysis", message)
+            QMessageBox.warning(self, tr("AI analysis"), message)
 
         if not run_ai(self, self.ctx, groups, inc, done, failed):
             reset()

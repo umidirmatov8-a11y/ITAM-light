@@ -6,6 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QButtonGroup, QComboBox, QHBoxLayout, QLineEdit, QMessageBox, QPushButton,
                                QRadioButton, QSplitter, QTextBrowser, QVBoxLayout, QWidget)
 
+from app.i18n import tr
+from app.i18n import severity_label, tr
 from app.core.severity import SEVERITY_ORDER
 from app.database.store import GroupFilter
 from app.models.categories import CATEGORY_LABELS
@@ -17,14 +19,14 @@ from app.utils.timeutil import fmt_ts
 
 GROUP_COLUMNS = [
     ("id", "ID", lambda r: f"#{r['id']:05d}"),
-    ("severity", "Severity", lambda r: r["severity"].upper()),
+    ("severity", "Severity", lambda r: severity_label(r["severity"])),
     ("risk_score", "Risk", None),
     ("title", "Finding", None),
     ("agent", "Host", None),
     ("src_ip", "Source", None),
     ("user", "User", None),
     ("count", "Count", None),
-    ("assessment", "Assessment", None),
+    ("assessment", "Assessment", lambda r: tr(r["assessment"] or "")),
     ("fp_probability", "FP", lambda r: f"{r['fp_probability']:.0%}"),
     ("first_ts", "First seen", lambda r: fmt_ts(r["first_ts"])),
     ("rule_id", "Rule", None),
@@ -33,7 +35,7 @@ GROUP_COLUMNS = [
 EVENT_COLUMNS = [
     ("id", "#", None),
     ("ts", "Time", lambda r: fmt_ts(r["ts"])),
-    ("severity", "Severity", lambda r: (r.get("severity") or "").upper()),
+    ("severity", "Severity", lambda r: severity_label(r.get("severity") or "")),
     ("rule_id", "Rule", None),
     ("level", "Lvl", None),
     ("description", "Description", None),
@@ -54,26 +56,26 @@ class AlertsPage(BasePage):
         self.event_group: int | None = None
 
         bar = QHBoxLayout()
-        self.mode_findings = QRadioButton("Findings")
-        self.mode_events = QRadioButton("Raw events")
+        self.mode_findings = QRadioButton(tr("Findings"))
+        self.mode_events = QRadioButton(tr("Raw events"))
         self.mode_findings.setChecked(True)
         grp = QButtonGroup(self)
         grp.addButton(self.mode_findings)
         grp.addButton(self.mode_events)
         self.severity = QComboBox()
-        self.severity.addItem("All severities", "")
+        self.severity.addItem(tr("All severities"), "")
         for s in SEVERITY_ORDER:
-            self.severity.addItem(s.value.capitalize(), s.value)
+            self.severity.addItem(severity_label(s.value, upper=False), s.value)
         self.category = QComboBox()
-        self.category.addItem("All categories", "")
+        self.category.addItem(tr("All categories"), "")
         for cat, lbl in CATEGORY_LABELS.items():
-            self.category.addItem(lbl, cat.value)
+            self.category.addItem(tr(lbl), cat.value)
         self.text = QLineEdit()
-        self.text.setPlaceholderText("Filter: host, IP, user, rule ID, CVE, MITRE ID, text…")
+        self.text.setPlaceholderText(tr("Filter: host, IP, user, rule ID, CVE, MITRE ID, text…"))
         self.text.returnPressed.connect(self.apply)
-        apply_btn = QPushButton("Apply")
+        apply_btn = QPushButton(tr("Apply"))
         apply_btn.clicked.connect(self.apply)
-        self.clear_btn = QPushButton("Clear filters")
+        self.clear_btn = QPushButton(tr("Clear filters"))
         self.clear_btn.clicked.connect(self.clear_filters)
         for w in (self.mode_findings, self.mode_events, self.severity, self.category):
             bar.addWidget(w)
@@ -88,9 +90,9 @@ class AlertsPage(BasePage):
         splitter = QSplitter(Qt.Horizontal)
         page_size = ctx.config.ui.page_size
         self.findings = PagedTable(GROUP_COLUMNS, page_size)
-        self.findings.set_widths([70, 80, 50, 320, 110, 120, 100, 70, 190, 50, 150, 60, 110])
+        self.findings.set_widths([70, 120, 50, 320, 110, 120, 100, 70, 190, 50, 150, 60, 110])
         self.events = PagedTable(EVENT_COLUMNS, page_size)
-        self.events.set_widths([70, 150, 80, 60, 40, 360, 110, 120, 100, 200])
+        self.events.set_widths([70, 150, 120, 60, 40, 360, 110, 120, 100, 200])
         left = QWidget()
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
@@ -103,10 +105,10 @@ class AlertsPage(BasePage):
         rl = QVBoxLayout(right)
         rl.setContentsMargins(0, 0, 0, 0)
         actions = QHBoxLayout()
-        self.ai_btn = QPushButton("✨ Analyze with AI")
+        self.ai_btn = QPushButton(tr("✨ Analyze with AI"))
         self.ai_btn.setObjectName("primary")
-        self.events_btn = QPushButton("Show events")
-        self.incident_btn = QPushButton("Open incident")
+        self.events_btn = QPushButton(tr("Show events"))
+        self.incident_btn = QPushButton(tr("Open incident"))
         for b in (self.ai_btn, self.events_btn, self.incident_btn):
             actions.addWidget(b)
         actions.addStretch(1)
@@ -180,7 +182,8 @@ class AlertsPage(BasePage):
         findings_mode = self.mode_findings.isChecked()
         self.findings.setVisible(findings_mode)
         self.events.setVisible(not findings_mode)
-        self.clear_btn.setText("Clear filters" + (" (selection active)" if self.group_ids or self.event_group else ""))
+        self.clear_btn.setText(tr("Clear filters") + (tr(" (selection active)") if self.group_ids or self.event_group
+                                                      else ""))
         if findings_mode:
             f = self._filter()
             self.findings.set_source(lambda off, lim: store.group_rows(f, off, lim), lambda: store.count_groups(f))
@@ -234,23 +237,23 @@ class AlertsPage(BasePage):
             if incident:
                 related = [g for g in session.store.get_groups(incident.group_ids[:50]) if g.id != group.id]
         self.ai_btn.setEnabled(False)
-        self.ai_btn.setText("Analyzing…")
+        self.ai_btn.setText(tr("Analyzing…"))
 
         def done(result: dict) -> None:
             self.ai_btn.setEnabled(True)
-            self.ai_btn.setText("✨ Analyze with AI")
+            self.ai_btn.setText(tr("✨ Analyze with AI"))
             group.ai_analysis = result
             session.store.update_group(group)
             if self.current_group is group:
                 self.detail.setHtml(render.render_group(group, self.ctx.rule_kb.get(group.rule_id)))
             if not result.get("ok"):
-                self.ctx.statusMessage.emit(result.get("error", "AI analysis failed"))
+                self.ctx.statusMessage.emit(result.get("error", tr("AI analysis failed")))
 
         def failed(message: str) -> None:
             self.ai_btn.setEnabled(True)
-            self.ai_btn.setText("✨ Analyze with AI")
-            QMessageBox.warning(self, "AI analysis", message)
+            self.ai_btn.setText(tr("✨ Analyze with AI"))
+            QMessageBox.warning(self, tr("AI analysis"), message)
 
         if not run_ai(self, self.ctx, [group] + related, None, done, failed):
             self.ai_btn.setEnabled(True)
-            self.ai_btn.setText("✨ Analyze with AI")
+            self.ai_btn.setText(tr("✨ Analyze with AI"))

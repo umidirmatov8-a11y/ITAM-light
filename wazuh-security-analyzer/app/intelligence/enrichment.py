@@ -20,6 +20,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable
 
+from app.i18n import tr
 from app.core.config import AppConfig
 from app.core.errors import ProviderResponseError, ProviderUnavailableError
 from app.core.secrets import SecretStore
@@ -78,18 +79,20 @@ class EnrichmentService:
                 asyncio.run(self._enrich_online(iocs, cves, report))
             except Exception as exc:  # never let enrichment break the analysis
                 log.exception("Online enrichment failed")
-                report.errors.append(f"Enrichment error: {type(exc).__name__}: {exc}")
+                report.errors.append(tr("Enrichment error: {error}", error=f"{type(exc).__name__}: {exc}"))
         for record in cves:
             if not record.remediation:
                 record.remediation = remediation_text(record)
         if online and report.online_ok:
-            report.status = (f"Online enrichment completed: {report.ioc_lookups} IOC and {report.cve_lookups} CVE "
-                             f"lookups" + (f" ({len(report.errors)} provider errors)" if report.errors else "") + ".")
+            errors = tr(" ({count} provider errors)", count=len(report.errors)) if report.errors else ""
+            report.status = tr("Online enrichment completed: {iocs} IOC and {cves} CVE lookups{errors}.",
+                               iocs=report.ioc_lookups, cves=report.cve_lookups, errors=errors)
         elif online:
-            report.status = OFFLINE_MESSAGE
+            report.status = tr(OFFLINE_MESSAGE)
+        elif self.kev.available:
+            report.status = tr("Offline mode: local IOC list and cached CISA KEV catalog used.")
         else:
-            report.status = "Offline mode: local IOC list" + (" and cached CISA KEV catalog" if self.kev.available
-                                                              else "") + " used."
+            report.status = tr("Offline mode: local IOC list used.")
         return report
 
     # ------------------------------------------------------------------ offline
@@ -97,7 +100,7 @@ class EnrichmentService:
         for record in iocs:
             hit = self.local.lookup(record.type, record.value)
             if hit:
-                self._add_source(record, ProviderResult(f"Local IOC list ({hit['source']})", hit["verdict"],
+                self._add_source(record, ProviderResult(tr("Local IOC list ({source})", source=hit["source"]), hit["verdict"],
                                                         details={"description": hit["description"]}))
         for record in cves:
             self._apply_kev(record)
@@ -153,7 +156,7 @@ class EnrichmentService:
             # --- CISA KEV
             if ti.cisa_kev_enabled and self.kev.is_stale(ti.cache_ttl_hours):
                 try:
-                    self.progress("Downloading CISA KEV catalog", 0, 1)
+                    self.progress(tr("Downloading CISA KEV catalog"), 0, 1)
                     await self.kev.refresh(http)
                     report.online_ok = True
                     report.providers_used.append("CISA KEV")
@@ -200,7 +203,7 @@ class EnrichmentService:
                         report.errors.append(str(exc))
                 finally:
                     done += 1
-                    self.progress("Threat intelligence lookups", done, tasks_total)
+                    self.progress(tr("Threat intelligence lookups"), done, tasks_total)
 
             await asyncio.gather(*(run(p, r) for p, r in jobs))
 
@@ -211,7 +214,7 @@ class EnrichmentService:
                 for idx, record in enumerate(targets, start=1):
                     if self.cancel.is_set():
                         break
-                    self.progress(f"NVD lookup {record.cve}", idx, len(targets))
+                    self.progress(tr("NVD lookup {cve}", cve=record.cve), idx, len(targets))
                     cache_key = f"nvd|{record.cve}"
                     info = self.state.cache_get(cache_key) if self.state else None
                     try:

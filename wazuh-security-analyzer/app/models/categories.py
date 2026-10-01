@@ -31,7 +31,8 @@ class Category(str, Enum):
 
     @property
     def label(self) -> str:
-        return CATEGORY_LABELS[self]
+        from app.i18n import tr
+        return tr(CATEGORY_LABELS[self])
 
     @classmethod
     def parse(cls, value: str | None) -> "Category":

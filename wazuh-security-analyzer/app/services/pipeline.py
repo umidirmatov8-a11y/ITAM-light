@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, Callable
 
+from app.i18n import get_language, n, set_language, tr
 from app.analyzers.classifier import AlertClassifier
 from app.analyzers.explainer import Explainer
 from app.analyzers.false_positive import FalsePositiveAnalyzer
@@ -135,6 +136,7 @@ class AnalysisPipeline:
     def run(self, inputs: list[str | Path]) -> AnalysisSession:
         started = time.time()
         cfg = self.config
+        set_language(cfg.language)
         ws_dir = self.workspace or paths.workspace_dir()
         ws_dir.mkdir(parents=True, exist_ok=True)
         db_path = ws_dir / f"analysis_{time.strftime('%Y%m%d_%H%M%S')}_{int(started * 1000) % 1000:03d}.db"
@@ -167,7 +169,7 @@ class AnalysisPipeline:
         catalog = default_catalog()
 
         # ---------------------------------------------------------------- 1. discovery & parsing
-        self._emit("parse", "Discovering input files", 0.0, force=True)
+        self._emit("parse", tr("Discovering input files"), 0.0, force=True)
         discovery = SourceDiscovery(cfg.limits).discover(inputs)
         summary.rejected_inputs = discovery.rejected
         summary.warnings.extend(discovery.warnings)
@@ -244,20 +246,23 @@ class AnalysisPipeline:
                             self._check_cancel()
                             fraction = (done_bytes + counter.count) / total_bytes
                             est = int(events / fraction) if fraction > 0.01 else None
-                            self._emit("parse", f"Analyzing {source.display_name}", fraction, events, est)
+                            self._emit("parse", tr("Analyzing {file}", file=source.display_name), fraction, events,
+                                       est)
             except InputRejectedError as exc:
                 summary.rejected_inputs.append(str(exc))
                 log.warning("Input rejected while reading: %s", exc)
             except AnalysisCancelled:
                 raise
             except Exception as exc:
-                summary.rejected_inputs.append(f"{source.display_name}: read error ({type(exc).__name__}: {exc})")
+                summary.rejected_inputs.append(tr("{file}: read error ({error})", file=source.display_name,
+                                                  error=f"{type(exc).__name__}: {exc}"))
                 log.exception("Failed to read %s", source.display_name)
             finally:
                 done_bytes += source.size if counter is None else max(counter.count, 0)
             summary.parse_errors += ctx.errors
             if ctx.errors:
-                summary.warnings.append(f"{source.display_name}: {ctx.errors} malformed record(s) skipped")
+                summary.warnings.append(tr("{file}: {records} skipped", file=source.display_name,
+                                           records=n(ctx.errors, "malformed record")))
             parsers_used[parser.name] += file_events
             summary.files += 1
             summary.file_names.append(source.display_name)
@@ -270,8 +275,8 @@ class AnalysisPipeline:
         summary.parsers_used = dict(parsers_used)
         del seen
         if events == 0:
-            summary.warnings.append("No events could be extracted from the provided input.")
-        self._emit("parse", "Indexing events", 1.0, events, events, force=True)
+            summary.warnings.append(tr("No events could be extracted from the provided input."))
+        self._emit("parse", tr("Indexing events"), 1.0, events, events, force=True)
         store.create_indexes()
         self._check_cancel()
 
@@ -283,13 +288,13 @@ class AnalysisPipeline:
         del builder
 
         # ---------------------------------------------------------------- 2. correlation
-        self._emit("correlate", "Correlating events into attack chains", 0.1, force=True)
+        self._emit("correlate", tr("Correlating events into attack chains"), 0.1, force=True)
         detector = ChainDetector(cfg.correlation.chain_window_minutes, cfg.correlation.min_chain_stages,
                                  cfg.correlation.bruteforce_threshold,
                                  cfg.correlation.success_after_failure_window_minutes, network.is_external)
         chains = detector.run(store.iter_chain_rows(STAGES.keys()), by_id)
         mark_campaigns(groups, cfg.correlation.campaign_min_events)
-        self._emit("correlate", "Mapping MITRE ATT&CK techniques", 0.7, force=True)
+        self._emit("correlate", tr("Mapping MITRE ATT&CK techniques"), 0.7, force=True)
         for g in groups:
             g.mitre = map_alert_group(g, catalog, rule_kb, cfg.correlation.bruteforce_threshold)
         self._check_cancel()
@@ -297,7 +302,7 @@ class AnalysisPipeline:
         # ---------------------------------------------------------------- 3. enrichment
         iocs = self._build_iocs(groups, network, cfg.privacy.internal_domains)
         cves = self._build_cves(groups)
-        self._emit("enrich", "Threat intelligence enrichment", 0.0, force=True)
+        self._emit("enrich", tr("Threat intelligence enrichment"), 0.0, force=True)
 
         def ti_progress(message: str, done: int, total: int) -> None:
             self._emit("enrich", message, done / total if total else 0.0, done, total)
@@ -311,7 +316,7 @@ class AnalysisPipeline:
         self._check_cancel()
 
         # ---------------------------------------------------------------- 4. analysis
-        self._emit("score", "Scoring risk and building explanations", 0.0, force=True)
+        self._emit("score", tr("Scoring risk and building explanations"), 0.0, force=True)
         fp = FalsePositiveAnalyzer(network, rule_kb)
         risk = RiskEngine(cfg)
         explainer = Explainer(rule_kb, cfg.correlation.bruteforce_threshold)
@@ -323,12 +328,12 @@ class AnalysisPipeline:
             explainer.explain(g)
             g.recommendations = recs.for_group(g)
             if idx % 2000 == 0:
-                self._emit("score", "Scoring risk and building explanations", idx / max(len(groups), 1), idx,
+                self._emit("score", tr("Scoring risk and building explanations"), idx / max(len(groups), 1), idx,
                            len(groups))
                 self._check_cancel()
 
         # ---------------------------------------------------------------- 5. incidents & persistence
-        self._emit("finalize", "Building incidents", 0.1, force=True)
+        self._emit("finalize", tr("Building incidents"), 0.1, force=True)
         status_lookup = self.state.get_status if self.state is not None else None
         incidents = IncidentBuilder(cfg, risk, recs, status_lookup).build(groups, chains)
         store.save_groups(groups)
@@ -337,7 +342,7 @@ class AnalysisPipeline:
         self._link_iocs(iocs, groups)
         store.save_iocs(iocs)
         store.save_cves(cves)
-        self._emit("finalize", "Computing statistics", 0.6, force=True)
+        self._emit("finalize", tr("Computing statistics"), 0.6, force=True)
         self._save_entities(store, groups, incidents)
 
         sev_counts = store.severity_counts()
@@ -358,9 +363,9 @@ class AnalysisPipeline:
         store.set_meta("mitre", mitre_stats)
         store.set_meta("dashboard", self._dashboard(store, groups, iocs))
         store.set_meta("config_snapshot", {"risk_thresholds": cfg.risk_thresholds.model_dump(),
-                                           "mode": summary.mode})
+                                           "mode": summary.mode, "language": get_language()})
         summary.executive_summary = build_executive_summary(summary, incidents)
-        self._emit("finalize", "Done", 1.0, events, events, force=True)
+        self._emit("finalize", tr("Done"), 1.0, events, events, force=True)
         return AnalysisSession(store, summary)
 
     # ------------------------------------------------------------------ helpers

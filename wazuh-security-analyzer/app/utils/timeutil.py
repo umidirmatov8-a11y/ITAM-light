@@ -72,13 +72,17 @@ def fmt_ts(ts: float | None, with_seconds: bool = True) -> str:
 def fmt_duration(seconds: float | None) -> str:
     if seconds is None:
         return "-"
+    from app.i18n import get_language
+    ru = get_language() == "ru"
+    d_, h_, m_, s_ = ("д", "ч", "мин", "с") if ru else ("d", "h", "m", "s")
+    sep = " " if ru else ""
     if seconds < 10:
-        return f"{seconds:.1f}s"
+        return f"{seconds:.1f}{sep}{s_}".replace(".", ",") if ru else f"{seconds:.1f}s"
     seconds = int(seconds)
     if seconds < 60:
-        return f"{seconds}s"
+        return f"{seconds}{sep}{s_}"
     if seconds < 3600:
-        return f"{seconds // 60}m {seconds % 60}s"
+        return f"{seconds // 60}{sep}{m_} {seconds % 60}{sep}{s_}"
     if seconds < 86400:
-        return f"{seconds // 3600}h {(seconds % 3600) // 60}m"
-    return f"{seconds // 86400}d {(seconds % 86400) // 3600}h"
+        return f"{seconds // 3600}{sep}{h_} {(seconds % 3600) // 60}{sep}{m_}"
+    return f"{seconds // 86400}{sep}{d_} {(seconds % 86400) // 3600}{sep}{h_}"

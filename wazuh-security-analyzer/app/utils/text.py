@@ -28,7 +28,8 @@ def truncate_list(values, limit: int = 5) -> str:
         return "-"
     shown = ", ".join(str(v) for v in values[:limit])
     if len(values) > limit:
-        shown += f" (+{len(values) - limit} more)"
+        from app.i18n import tr
+        shown += tr(" (+{count} more)", count=len(values) - limit)
     return shown
 
 

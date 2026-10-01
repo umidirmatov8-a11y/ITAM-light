@@ -6,6 +6,7 @@ from typing import Callable
 
 from PySide6.QtWidgets import QCheckBox, QMessageBox, QWidget
 
+from app.i18n import tr
 from app.ai.engine import EXTERNAL_WARNING, AIAnalysisEngine
 from app.ai.providers.factory import PROVIDER_LABELS
 from app.models.analysis import AlertGroup, Incident
@@ -20,14 +21,15 @@ def confirm_external(parent: QWidget, ctx: AppContext, engine: AIAnalysisEngine)
         return True
     box = QMessageBox(parent)
     box.setIcon(QMessageBox.Warning)
-    box.setWindowTitle("External AI provider")
-    box.setText(EXTERNAL_WARNING)
+    box.setWindowTitle(tr("External AI provider"))
+    box.setText(tr(EXTERNAL_WARNING))
     box.setInformativeText(
-        f"Provider: {PROVIDER_LABELS.get(ctx.config.ai.provider)} ({engine.provider.model}).\n\n"
-        "Usernames, hostnames, internal IPs, e-mails, domains and secrets will be replaced with placeholders "
-        "before sending. Only the normalized context of this finding is sent - never the full log files.\n\n"
-        "Continue?")
-    remember = QCheckBox("Do not ask again until the application is restarted")
+        tr("Provider: {provider} ({model}).", provider=tr(PROVIDER_LABELS.get(ctx.config.ai.provider, "")),
+           model=engine.provider.model) + "\n\n" +
+        tr("Usernames, hostnames, internal IPs, e-mails, domains and secrets will be replaced with placeholders before "
+           "sending. Only the normalized context of this finding is sent - never the full log files.") + "\n\n" +
+        tr("Continue?"))
+    remember = QCheckBox(tr("Do not ask again until the application is restarted"))
     box.setCheckBox(remember)
     box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
     box.setDefaultButton(QMessageBox.No)
@@ -45,10 +47,10 @@ def run_ai(parent: QWidget, ctx: AppContext, groups: list[AlertGroup], incident:
         return False
     engine = AIAnalysisEngine(ctx.config, ctx.secrets)
     if not engine.available:
-        QMessageBox.information(parent, "AI analysis",
-                                "AI analysis is disabled.\n\nChoose a provider in Settings › AI provider "
-                                "(Ollama is recommended for confidential data). The local analysis engine works "
-                                "without AI.")
+        QMessageBox.information(parent, tr("AI analysis"),
+                                tr("AI analysis is disabled.") + "\n\n" +
+                                tr("Choose a provider in Settings › AI provider (Ollama is recommended for "
+                                   "confidential data). The local analysis engine works without AI."))
         return False
     if not confirm_external(parent, ctx, engine):
         return False

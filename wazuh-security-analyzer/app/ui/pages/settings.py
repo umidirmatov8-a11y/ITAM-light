@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBo
                                QLineEdit, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea,
                                QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
+from app.i18n import tr
+from app.i18n import SUPPORTED, severity_label, tr
 from app.ai.engine import EXTERNAL_WARNING
 from app.ai.providers.factory import PROVIDER_LABELS, create_provider
 from app.core.config import AppConfig, AssetRule
@@ -48,9 +50,9 @@ class SettingsPage(BasePage):
         self._build_privacy()
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        reset = QPushButton("Revert")
+        reset = QPushButton(tr("Revert"))
         reset.clicked.connect(self.load)
-        save = QPushButton("Save settings")
+        save = QPushButton(tr("Save settings"))
         save.setObjectName("primary")
         save.clicked.connect(self.save)
         buttons.addWidget(reset)
@@ -62,89 +64,94 @@ class SettingsPage(BasePage):
     def _build_general(self) -> None:
         w = QWidget()
         form = QFormLayout(w)
-        self.mode_offline = QRadioButton("OFFLINE - local analysis only (no network access)")
-        self.mode_online = QRadioButton("ONLINE - CVE lookup, IOC reputation, CISA KEV")
+        self.mode_offline = QRadioButton(tr("OFFLINE - local analysis only (no network access)"))
+        self.mode_online = QRadioButton(tr("ONLINE - CVE lookup, IOC reputation, CISA KEV"))
         grp = QButtonGroup(w)
         grp.addButton(self.mode_offline)
         grp.addButton(self.mode_online)
-        form.addRow("Analysis mode", self.mode_offline)
+        form.addRow(tr("Analysis mode"), self.mode_offline)
         form.addRow("", self.mode_online)
+        self.language = QComboBox()
+        self.language.addItem(tr("Automatic (Windows language)"), "auto")
+        for code, name in SUPPORTED.items():
+            self.language.addItem(name, code)
+        form.addRow(tr("Language / Язык"), self.language)
         self.log_level = QComboBox()
         self.log_level.addItems(["DEBUG", "INFO", "WARNING", "ERROR"])
-        form.addRow("Log level", self.log_level)
+        form.addRow(tr("Log level"), self.log_level)
         self.page_size = QSpinBox()
         self.page_size.setRange(50, 5000)
-        form.addRow("Table page size", self.page_size)
-        self.store_raw = QCheckBox("Store raw events for the technical view (compressed)")
-        form.addRow("Storage", self.store_raw)
-        self.dedup = QCheckBox("Remove duplicate alerts (same alert ID loaded twice)")
+        form.addRow(tr("Table page size"), self.page_size)
+        self.store_raw = QCheckBox(tr("Store raw events for the technical view (compressed)"))
+        form.addRow(tr("Storage"), self.store_raw)
+        self.dedup = QCheckBox(tr("Remove duplicate alerts (same alert ID loaded twice)"))
         form.addRow("", self.dedup)
         self.keep_ws = QSpinBox()
         self.keep_ws.setRange(1, 100)
-        form.addRow("Keep last N analyses", self.keep_ws)
+        form.addRow(tr("Keep last N analyses"), self.keep_ws)
         self.max_file = QSpinBox()
         self.max_file.setRange(1, 1_000_000)
         self.max_file.setSuffix(" MB")
-        form.addRow("Max file size", self.max_file)
+        form.addRow(tr("Max file size"), self.max_file)
         self.max_archive = QSpinBox()
         self.max_archive.setRange(1, 1_000_000)
         self.max_archive.setSuffix(" MB")
-        form.addRow("Max decompressed archive size", self.max_archive)
+        form.addRow(tr("Max decompressed archive size"), self.max_archive)
         self.max_ratio = QSpinBox()
         self.max_ratio.setRange(2, 10_000)
-        form.addRow("Max compression ratio", self.max_ratio)
-        self.tabs.addTab(_scroll(w), "General")
+        form.addRow(tr("Max compression ratio"), self.max_ratio)
+        self.tabs.addTab(_scroll(w), tr("General"))
 
     def _build_ai(self) -> None:
         w = QWidget()
         lay = QVBoxLayout(w)
-        warn = QLabel(EXTERNAL_WARNING)
+        warn = QLabel(tr(EXTERNAL_WARNING))
         warn.setObjectName("warning")
         warn.setWordWrap(True)
         lay.addWidget(warn)
         form = QFormLayout()
         self.ai_provider = QComboBox()
         for key, lbl in PROVIDER_LABELS.items():
-            self.ai_provider.addItem(lbl, key)
-        form.addRow("AI provider", self.ai_provider)
+            self.ai_provider.addItem(tr(lbl), key)
+        form.addRow(tr("AI provider"), self.ai_provider)
         self.openai_model = QLineEdit()
-        form.addRow("OpenAI model", self.openai_model)
+        form.addRow(tr("OpenAI model"), self.openai_model)
         self.anthropic_model = QLineEdit()
-        form.addRow("Anthropic model", self.anthropic_model)
+        form.addRow(tr("Anthropic model"), self.anthropic_model)
         self.ollama_url = QLineEdit()
-        form.addRow("Ollama URL", self.ollama_url)
+        form.addRow(tr("Ollama URL"), self.ollama_url)
         model_row = QHBoxLayout()
         self.ollama_model = QComboBox()
         self.ollama_model.setEditable(True)
-        refresh = QPushButton("List installed models")
+        refresh = QPushButton(tr("List installed models"))
         refresh.clicked.connect(self._list_ollama)
         model_row.addWidget(self.ollama_model, 1)
         model_row.addWidget(refresh)
-        form.addRow("Ollama model (qwen, llama, mistral…)", model_row)
+        form.addRow(tr("Ollama model (qwen, llama, mistral…)"), model_row)
         self.compat_url = QLineEdit()
-        form.addRow("OpenAI-compatible base URL", self.compat_url)
+        form.addRow(tr("OpenAI-compatible base URL"), self.compat_url)
         self.compat_model = QLineEdit()
-        form.addRow("OpenAI-compatible model", self.compat_model)
+        form.addRow(tr("OpenAI-compatible model"), self.compat_model)
         self.ai_timeout = QSpinBox()
         self.ai_timeout.setRange(5, 900)
         self.ai_timeout.setSuffix(" s")
-        form.addRow("Timeout", self.ai_timeout)
+        form.addRow(tr("Timeout"), self.ai_timeout)
         self.ai_temperature = QDoubleSpinBox()
         self.ai_temperature.setRange(0, 1)
         self.ai_temperature.setSingleStep(0.05)
-        form.addRow("Temperature", self.ai_temperature)
+        form.addRow(tr("Temperature"), self.ai_temperature)
         self.ai_tokens = QSpinBox()
         self.ai_tokens.setRange(256, 16000)
-        form.addRow("Max output tokens", self.ai_tokens)
+        form.addRow(tr("Max output tokens"), self.ai_tokens)
         self.ai_related = QSpinBox()
         self.ai_related.setRange(1, 200)
-        form.addRow("Related alerts in context", self.ai_related)
-        self.anon_local = QCheckBox("Anonymize data also for local AI (Ollama / localhost endpoints)")
-        form.addRow("Privacy", self.anon_local)
-        form.addRow("", QLabel("Data sent to cloud providers (OpenAI, Anthropic) is always anonymized."))
+        form.addRow(tr("Related alerts in context"), self.ai_related)
+        self.anon_local = QCheckBox(tr("Anonymize data also for local AI (Ollama / localhost endpoints)"))
+        form.addRow(tr("Privacy"), self.anon_local)
+        form.addRow("", QLabel(tr("Data sent to cloud providers (OpenAI, Anthropic) is always anonymized.")))
         lay.addLayout(form)
         test_row = QHBoxLayout()
-        self.ai_test_btn = QPushButton("Test connection")
+        self.ai_test_btn = QPushButton(tr("Test connection"))
         self.ai_test_btn.clicked.connect(self._test_ai)
         self.ai_test_result = QLabel("")
         self.ai_test_result.setWordWrap(True)
@@ -152,14 +159,15 @@ class SettingsPage(BasePage):
         test_row.addWidget(self.ai_test_result, 1)
         lay.addLayout(test_row)
         lay.addStretch(1)
-        self.tabs.addTab(_scroll(w), "AI provider")
+        self.tabs.addTab(_scroll(w), tr("AI provider"))
 
     def _build_keys(self) -> None:
         w = QWidget()
         lay = QVBoxLayout(w)
-        backend = ("Windows Credential Manager / OS keychain" if self.ctx.secrets.persistent
-                   else "memory only (no secure OS credential store available - keys are lost on exit)")
-        info = QLabel(f"Secrets are stored in: <b>{backend}</b>. They are never written to config files or logs.")
+        backend = (tr("Windows Credential Manager / OS keychain") if self.ctx.secrets.persistent
+                   else tr("memory only (no secure OS credential store available - keys are lost on exit)"))
+        info = QLabel(tr("Secrets are stored in: <b>{backend}</b>. They are never written to config files or logs.",
+                         backend=backend))
         info.setWordWrap(True)
         lay.addWidget(info)
         form = QFormLayout()
@@ -169,11 +177,11 @@ class SettingsPage(BasePage):
             row = QHBoxLayout()
             edit = QLineEdit()
             edit.setEchoMode(QLineEdit.Password)
-            edit.setPlaceholderText("not set")
+            edit.setPlaceholderText(tr("not set"))
             status = QLabel("")
             status.setObjectName("muted")
-            save = QPushButton("Save")
-            clear = QPushButton("Clear")
+            save = QPushButton(tr("Save"))
+            clear = QPushButton(tr("Clear"))
             save.clicked.connect(lambda _c=False, n=name: self._save_key(n))
             clear.clicked.connect(lambda _c=False, n=name: self._clear_key(n))
             row.addWidget(edit, 1)
@@ -182,62 +190,62 @@ class SettingsPage(BasePage):
             row.addWidget(status)
             self.key_edits[name] = edit
             self.key_status[name] = status
-            form.addRow(lbl, row)
+            form.addRow(tr(lbl), row)
         lay.addLayout(form)
         lay.addStretch(1)
-        self.tabs.addTab(_scroll(w), "API keys")
+        self.tabs.addTab(_scroll(w), tr("API keys"))
 
     def _build_ti(self) -> None:
         w = QWidget()
         form = QFormLayout(w)
-        self.vt = QCheckBox("VirusTotal (IP, domain, URL, file hash)")
-        self.abuse = QCheckBox("AbuseIPDB (IP reputation, country, ISP)")
-        self.otx = QCheckBox("AlienVault OTX (pulses)")
-        self.nvd = QCheckBox("NVD - CVE details, CVSS, CWE, affected software")
-        self.kev = QCheckBox("CISA Known Exploited Vulnerabilities catalog")
-        self.active_dns = QCheckBox("Active domain checks (DNS resolution + TLS certificate) - contacts the domain")
+        self.vt = QCheckBox(tr("VirusTotal (IP, domain, URL, file hash)"))
+        self.abuse = QCheckBox(tr("AbuseIPDB (IP reputation, country, ISP)"))
+        self.otx = QCheckBox(tr("AlienVault OTX (pulses)"))
+        self.nvd = QCheckBox(tr("NVD - CVE details, CVSS, CWE, affected software"))
+        self.kev = QCheckBox(tr("CISA Known Exploited Vulnerabilities catalog"))
+        self.active_dns = QCheckBox(tr("Active domain checks (DNS resolution + TLS certificate) - contacts the domain"))
         for cb in (self.vt, self.abuse, self.otx, self.nvd, self.kev, self.active_dns):
             form.addRow("", cb)
         self.max_ioc = QSpinBox()
         self.max_ioc.setRange(0, 5000)
-        form.addRow("Max IOC lookups per analysis", self.max_ioc)
+        form.addRow(tr("Max IOC lookups per analysis"), self.max_ioc)
         self.max_cve = QSpinBox()
         self.max_cve.setRange(0, 2000)
-        form.addRow("Max NVD lookups per analysis", self.max_cve)
+        form.addRow(tr("Max NVD lookups per analysis"), self.max_cve)
         self.ti_ttl = QSpinBox()
         self.ti_ttl.setRange(0, 24 * 90)
         self.ti_ttl.setSuffix(" h")
-        form.addRow("Cache lifetime", self.ti_ttl)
+        form.addRow(tr("Cache lifetime"), self.ti_ttl)
         self.ti_conc = QSpinBox()
         self.ti_conc.setRange(1, 32)
-        form.addRow("Parallel requests", self.ti_conc)
-        hint = QLabel("Only public indicators are sent: internal IPs, usernames and agent names never leave this "
+        form.addRow(tr("Parallel requests"), self.ti_conc)
+        hint = QLabel(tr("Only public indicators are sent: internal IPs, usernames and agent names never leave this "
                       "computer. Add your organisation's domains in Privacy \u203A Internal domains so that internal "
-                      "FQDNs found in log text are never looked up online.")
+                      "FQDNs found in log text are never looked up online."))
         hint.setWordWrap(True)
         form.addRow("", hint)
-        self.tabs.addTab(_scroll(w), "Threat intelligence")
+        self.tabs.addTab(_scroll(w), tr("Threat intelligence"))
 
     def _build_network(self) -> None:
         w = QWidget()
         form = QFormLayout(w)
         self.proxy = QLineEdit()
-        self.proxy.setPlaceholderText("http://proxy.example:8080 (empty = direct)")
-        form.addRow("Proxy", self.proxy)
+        self.proxy.setPlaceholderText(tr("http://proxy.example:8080 (empty = direct)"))
+        form.addRow(tr("Proxy"), self.proxy)
         self.timeout = QDoubleSpinBox()
         self.timeout.setRange(1, 300)
         self.timeout.setSuffix(" s")
-        form.addRow("Request timeout", self.timeout)
-        self.verify_tls = QCheckBox("Verify TLS certificates (strongly recommended)")
+        form.addRow(tr("Request timeout"), self.timeout)
+        self.verify_tls = QCheckBox(tr("Verify TLS certificates (strongly recommended)"))
         form.addRow("TLS", self.verify_tls)
         self.ca_bundle = QLineEdit()
-        self.ca_bundle.setPlaceholderText("Path to corporate CA bundle (PEM) for TLS inspection proxies")
+        self.ca_bundle.setPlaceholderText(tr("Path to corporate CA bundle (PEM) for TLS inspection proxies"))
         form.addRow("CA bundle", self.ca_bundle)
         self.max_resp = QSpinBox()
         self.max_resp.setRange(1, 200)
         self.max_resp.setSuffix(" MB")
-        form.addRow("Max API response size", self.max_resp)
-        self.tabs.addTab(_scroll(w), "Network")
+        form.addRow(tr("Max API response size"), self.max_resp)
+        self.tabs.addTab(_scroll(w), tr("Network"))
 
     def _build_risk(self) -> None:
         w = QWidget()
@@ -248,70 +256,71 @@ class SettingsPage(BasePage):
             sb = QSpinBox()
             sb.setRange(0, 100)
             self.thresholds[key] = sb
-            form.addRow(f"{key.capitalize()} ≥", sb)
+            form.addRow(f"{severity_label(key, upper=False)} ≥", sb)
         self.bf_threshold = QSpinBox()
         self.bf_threshold.setRange(2, 10000)
-        form.addRow("Brute-force threshold (failures per window)", self.bf_threshold)
+        form.addRow(tr("Brute-force threshold (failures per window)"), self.bf_threshold)
         self.window = QSpinBox()
         self.window.setRange(1, 10080)
         self.window.setSuffix(" min")
-        form.addRow("Correlation window", self.window)
+        form.addRow(tr("Correlation window"), self.window)
         self.min_stages = QSpinBox()
         self.min_stages.setRange(2, 8)
-        form.addRow("Minimum attack-chain stages", self.min_stages)
+        form.addRow(tr("Minimum attack-chain stages"), self.min_stages)
         lay.addLayout(form)
-        lay.addWidget(QLabel("Risk weights (YAML) - points contributed by each factor:"))
+        lay.addWidget(QLabel(tr("Risk weights (YAML) - points contributed by each factor:")))
         self.weights_edit = QPlainTextEdit()
         self.weights_edit.setMinimumHeight(260)
         lay.addWidget(self.weights_edit, 1)
-        self.tabs.addTab(_scroll(w), "Risk model")
+        self.tabs.addTab(_scroll(w), tr("Risk model"))
 
     def _build_assets(self) -> None:
         w = QWidget()
         lay = QVBoxLayout(w)
-        lay.addWidget(QLabel("Asset criticality rules (YAML list, first match wins; glob patterns on agent name):"))
+        lay.addWidget(QLabel(tr("Asset criticality rules (YAML list, first match wins; glob patterns on agent name):")))
         self.assets_edit = QPlainTextEdit()
         self.assets_edit.setMinimumHeight(180)
         lay.addWidget(self.assets_edit)
         form = QFormLayout()
         self.default_crit = QComboBox()
         self.default_crit.addItems(["low", "medium", "high", "critical"])
-        form.addRow("Default criticality", self.default_crit)
+        form.addRow(tr("Default criticality"), self.default_crit)
         self.internal_nets = QPlainTextEdit()
-        self.internal_nets.setPlaceholderText("Additional internal networks, one CIDR per line")
+        self.internal_nets.setPlaceholderText(tr("Additional internal networks, one CIDR per line"))
         self.internal_nets.setMaximumHeight(90)
-        form.addRow("Internal networks", self.internal_nets)
+        form.addRow(tr("Internal networks"), self.internal_nets)
         self.scanners = QPlainTextEdit()
-        self.scanners.setPlaceholderText("Authorised scanners (IP or CIDR), one per line")
+        self.scanners.setPlaceholderText(tr("Authorised scanners (IP or CIDR), one per line"))
         self.scanners.setMaximumHeight(90)
-        form.addRow("Known scanners", self.scanners)
+        form.addRow(tr("Known scanners"), self.scanners)
         lay.addLayout(form)
-        self.tabs.addTab(_scroll(w), "Assets && Wazuh")
+        self.tabs.addTab(_scroll(w), tr("Assets && Wazuh"))
 
     def _build_privacy(self) -> None:
         w = QWidget()
         form = QFormLayout(w)
         self.mask: dict[str, QCheckBox] = {}
-        for key, lbl in (("mask_usernames", "Mask usernames"), ("mask_emails", "Mask e-mail addresses"),
-                         ("mask_internal_ips", "Mask internal IP addresses"),
-                         ("mask_external_ips", "Mask external IP addresses (hides the IOC from the AI)"),
-                         ("mask_hostnames", "Mask hostnames"), ("mask_domains", "Mask internal domains"),
-                         ("mask_personal_data", "Mask phone and card numbers")):
+        for key, lbl in (("mask_usernames", tr("Mask usernames")), ("mask_emails", tr("Mask e-mail addresses")),
+                         ("mask_internal_ips", tr("Mask internal IP addresses")),
+                         ("mask_external_ips", tr("Mask external IP addresses (hides the IOC from the AI)")),
+                         ("mask_hostnames", tr("Mask hostnames")), ("mask_domains", tr("Mask internal domains")),
+                         ("mask_personal_data", tr("Mask phone and card numbers"))):
             cb = QCheckBox(lbl)
             self.mask[key] = cb
             form.addRow("", cb)
-        form.addRow("", QLabel("Passwords, tokens, cookies, API keys and private keys are always removed."))
+        form.addRow("", QLabel(tr("Passwords, tokens, cookies, API keys and private keys are always removed.")))
         self.internal_domains = QPlainTextEdit()
         self.internal_domains.setPlaceholderText("corp.example\ncompany.uz")
         self.internal_domains.setMaximumHeight(100)
-        form.addRow("Internal domains", self.internal_domains)
-        self.tabs.addTab(_scroll(w), "Privacy")
+        form.addRow(tr("Internal domains"), self.internal_domains)
+        self.tabs.addTab(_scroll(w), tr("Privacy"))
 
     # ------------------------------------------------------------------ load / save
     def load(self) -> None:
         c = self.ctx.config
         (self.mode_online if c.network.online else self.mode_offline).setChecked(True)
         self.log_level.setCurrentText(c.logging.level)
+        self.language.setCurrentIndex(max(0, self.language.findData(c.ui.language)))
         self.page_size.setValue(c.ui.page_size)
         self.store_raw.setChecked(c.storage.store_raw_events)
         self.dedup.setChecked(c.storage.deduplicate)
@@ -333,7 +342,7 @@ class SettingsPage(BasePage):
         self.anon_local.setChecked(c.ai.anonymize_local)
         for name, edit in self.key_edits.items():
             edit.clear()
-            self.key_status[name].setText("✔ stored" if self.ctx.secrets.has(name) else "not set")
+            self.key_status[name].setText(tr("✔ stored") if self.ctx.secrets.has(name) else tr("not set"))
         ti = c.threat_intel
         self.vt.setChecked(ti.virustotal_enabled)
         self.abuse.setChecked(ti.abuseipdb_enabled)
@@ -374,6 +383,7 @@ class SettingsPage(BasePage):
                                max_response_mb=self.max_resp.value())
         data["logging"]["level"] = self.log_level.currentText()
         data["ui"]["page_size"] = self.page_size.value()
+        data["ui"]["language"] = self.language.currentData()
         data["storage"].update(store_raw_events=self.store_raw.isChecked(), deduplicate=self.dedup.isChecked(),
                                keep_workspaces=self.keep_ws.value())
         data["limits"].update(max_file_size_mb=self.max_file.value(), max_archive_total_mb=self.max_archive.value(),
@@ -396,11 +406,11 @@ class SettingsPage(BasePage):
                                    chain_window_minutes=self.window.value(), min_chain_stages=self.min_stages.value())
         weights = yaml.safe_load(self.weights_edit.toPlainText() or "{}")
         if not isinstance(weights, dict):
-            raise ValueError("Risk weights must be a YAML mapping")
+            raise ValueError(tr("Risk weights must be a YAML mapping"))
         data["risk_weights"] = weights
         assets = yaml.safe_load(self.assets_edit.toPlainText() or "[]") or []
         if not isinstance(assets, list):
-            raise ValueError("Asset rules must be a YAML list")
+            raise ValueError(tr("Asset rules must be a YAML list"))
         data["wazuh"].update(asset_criticality=[AssetRule.model_validate(a).model_dump() for a in assets],
                              default_asset_criticality=self.default_crit.currentText(),
                              internal_networks=_lines(self.internal_nets.toPlainText()),
@@ -413,20 +423,27 @@ class SettingsPage(BasePage):
         try:
             config = self.build_config()
         except Exception as exc:
-            QMessageBox.critical(self, "Invalid settings", f"The settings were not saved:\n\n{exc}")
+            QMessageBox.critical(self, tr("Invalid settings"), tr("The settings were not saved:") + f"\n\n{exc}")
             return
         if not config.network.verify_tls and self.ctx.config.network.verify_tls:
-            if QMessageBox.warning(self, "TLS verification", "Disabling TLS certificate verification allows "
-                                   "man-in-the-middle attacks on API traffic (including API keys). Use a CA bundle for "
-                                   "corporate TLS inspection instead.\n\nDisable verification anyway?",
+            if QMessageBox.warning(self, tr("TLS verification"), tr(
+                    "Disabling TLS certificate verification allows man-in-the-middle attacks on API traffic (including "
+                    "API keys). Use a CA bundle for corporate TLS inspection instead.") + "\n\n" +
+                    tr("Disable verification anyway?"),
                                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
                 return
         if config.ai.provider in ("openai", "anthropic") and self.ctx.config.ai.provider not in ("openai", "anthropic"):
-            if QMessageBox.warning(self, "External AI provider", EXTERNAL_WARNING + "\n\nEnable it anyway?",
+            if QMessageBox.warning(self, tr("External AI provider"), tr(EXTERNAL_WARNING) + "\n\n" +
+                                   tr("Enable it anyway?"),
                                    QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
                 return
+        language_changed = config.ui.language != self.ctx.config.ui.language
         self.ctx.update_config(config)
-        self.ctx.statusMessage.emit("Settings saved. Changes to the risk model apply to the next analysis.")
+        self.ctx.statusMessage.emit(tr("Settings saved. Changes to the risk model apply to the next analysis."))
+        if language_changed:
+            QMessageBox.information(self, tr("Language"), tr(
+                "The interface language changes after restarting the application. Texts generated by the analysis "
+                "(explanations, recommendations) use the new language starting with the next analysis."))
 
     # ------------------------------------------------------------------ actions
     def _save_key(self, name: str) -> None:
@@ -435,24 +452,24 @@ class SettingsPage(BasePage):
             return
         persistent = self.ctx.secrets.set(name, value)
         self.key_edits[name].clear()
-        self.key_status[name].setText("✔ stored" if persistent else "✔ memory only")
+        self.key_status[name].setText(tr("✔ stored") if persistent else tr("✔ memory only"))
 
     def _clear_key(self, name: str) -> None:
         self.ctx.secrets.delete(name)
-        self.key_status[name].setText("not set")
+        self.key_status[name].setText(tr("not set"))
 
     def _test_ai(self) -> None:
         try:
             config = self.build_config()
         except Exception as exc:
-            self.ai_test_result.setText(f"Invalid settings: {exc}")
+            self.ai_test_result.setText(tr("Invalid settings") + f": {exc}")
             return
         provider = create_provider(config, self.ctx.secrets)
         if provider is None:
-            self.ai_test_result.setText("AI is disabled.")
+            self.ai_test_result.setText(tr("AI is disabled."))
             return
         self.ai_test_btn.setEnabled(False)
-        self.ai_test_result.setText("Testing…")
+        self.ai_test_result.setText(tr("Testing…"))
 
         def job(progress, cancel):
             try:
@@ -489,7 +506,7 @@ class SettingsPage(BasePage):
                 self.ollama_model.clear()
                 self.ollama_model.addItems(result or [current])
                 self.ollama_model.setCurrentText(current if current in result or not result else result[0])
-                self.ai_test_result.setText(f"{len(result)} model(s) installed in Ollama")
+                self.ai_test_result.setText(tr("{count} model(s) installed in Ollama", count=len(result)))
             else:
                 self.ai_test_result.setText(f"✖ {result}")
 

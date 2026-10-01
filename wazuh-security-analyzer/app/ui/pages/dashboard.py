@@ -7,6 +7,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
                                QScrollArea, QStackedWidget, QTextBrowser, QVBoxLayout, QWidget)
 
+from app.i18n import n, num, severity_label, tr
 from app.core.severity import SEVERITY_ORDER
 from app.models.categories import Category
 from app.ui import theme
@@ -37,8 +38,8 @@ class DashboardPage(BasePage):
         self.drop.pathsSelected.connect(self.pathsSelected.emit)
         self.drop.demoRequested.connect(self.demoRequested.emit)
         el.addWidget(self.drop)
-        hint = label("Supported: Wazuh alerts.json, alerts.log, OpenSearch/Indexer exports, Wazuh API output, CSV, "
-                     "XML, CEF, syslog. Multiple files, folders, ZIP and .gz archives are accepted.", "muted", True)
+        hint = label(tr("Supported: Wazuh alerts.json, alerts.log, OpenSearch/Indexer exports, Wazuh API output, CSV, "
+                        "XML, CEF, syslog. Multiple files, folders, ZIP and .gz archives are accepted."), "muted", True)
         hint.setAlignment(Qt.AlignCenter)
         el.addWidget(hint)
         el.addStretch(2)
@@ -69,7 +70,7 @@ class DashboardPage(BasePage):
         cards.setSpacing(10)
         self.sev_cards: dict[str, StatCard] = {}
         for i, sev in enumerate(SEVERITY_ORDER):
-            card = StatCard(sev.value, "0", theme.SEV[sev.value])
+            card = StatCard(severity_label(sev.value, upper=False), "0", theme.SEV[sev.value])
             card.clicked.connect(lambda s=sev.value: self.ctx.navigate("alerts", severity=s))
             self.sev_cards[sev.value] = card
             cards.addWidget(card, 0, i)
@@ -138,19 +139,25 @@ class DashboardPage(BasePage):
         s = session.summary
         d = session.dashboard()
         self.stack.setCurrentIndex(1)
-        period = f"{fmt_ts(s.first_ts, False)}  –  {fmt_ts(s.last_ts, False)}" if s.first_ts else "no timestamps"
+        period = f"{fmt_ts(s.first_ts, False)}  \u2013  {fmt_ts(s.last_ts, False)}" if s.first_ts else \
+            tr("no timestamps")
         warn = ""
         if s.rejected_inputs:
-            warn += f"<br><span style='color:{theme.SEV['high']};'>Rejected: {len(s.rejected_inputs)} input(s) " \
-                    f"(see Reports › appendix)</span>"
+            warn += f"<br><span style='color:{theme.SEV['high']};'>" + e(tr(
+                "Rejected: {count} input(s) (see Reports \u203A appendix)", count=len(s.rejected_inputs))) + "</span>"
         if s.parse_errors:
-            warn += f"<br><span style='color:{theme.SEV['medium']};'>{s.parse_errors:,} malformed record(s) skipped</span>"
+            warn += f"<br><span style='color:{theme.SEV['medium']};'>" + e(tr(
+                "{records} skipped", records=n(s.parse_errors, "malformed record"))) + "</span>"
+
+        def b(label: str) -> str:
+            return f"<b>{e(tr(label))}:</b> "
+
         self.load_text.setTextFormat(Qt.RichText)
         self.load_text.setText(
-            f"<b>Files:</b> {s.files} &nbsp; <b>Events:</b> {s.events:,} &nbsp; <b>Findings:</b> {s.groups:,}<br>"
-            f"<b>Time range:</b> {e(period)}<br>"
-            f"<b>Agents:</b> {s.agents:,} &nbsp; <b>Rules:</b> {s.rules:,} &nbsp; <b>Duplicates removed:</b> "
-            f"{s.duplicates:,}<br><b>Mode:</b> {s.mode.upper()} &nbsp; <b>Analysis time:</b> "
+            f"{b('Files')}{s.files} &nbsp; {b('Events')}{num(s.events)} &nbsp; {b('Findings')}{num(s.groups)}<br>"
+            f"{b('Time range')}{e(period)}<br>"
+            f"{b('Agents')}{num(s.agents)} &nbsp; {b('Rules')}{num(s.rules)} &nbsp; {b('Duplicates removed')}"
+            f"{num(s.duplicates)}<br>{b('Mode')}{e(tr(s.mode.upper()))} &nbsp; {b('Analysis time')}"
             f"{fmt_duration(s.duration_seconds)}<br><span style='color:{theme.MUTED};'>{e(s.enrichment_status)}</span>"
             + warn)
         for sev, card in self.sev_cards.items():
@@ -167,7 +174,7 @@ class DashboardPage(BasePage):
         self.exec_text.setHtml(paras)
         self.incident_list.clear()
         for inc in session.incidents()[:30]:
-            item = QListWidgetItem(f"{inc.id}   {inc.severity.upper():<9}  {inc.risk_score:>3.0f}   {inc.title}")
+            item = QListWidgetItem(f"{inc.id}   {severity_label(inc.severity):<13}  {inc.risk_score:>3.0f}   {inc.title}")
             item.setData(Qt.UserRole, inc.id)
             item.setToolTip(inc.summary)
             item.setForeground(QColor(theme.severity_color(inc.severity)))

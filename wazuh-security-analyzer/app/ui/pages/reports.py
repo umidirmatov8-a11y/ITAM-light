@@ -10,6 +10,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QCheckBox, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout, QLineEdit, QListWidget,
                                QMessageBox, QPushButton, QTextBrowser, QVBoxLayout)
 
+from app.i18n import tr
 from app.core import paths
 from app.reports.data import ALL_SECTIONS
 from app.reports.exporters import export_report
@@ -32,31 +33,31 @@ class ReportsPage(BasePage):
     def __init__(self, ctx, parent=None):
         super().__init__(ctx, parent)
         top = QHBoxLayout()
-        fmt_box = QGroupBox("Formats")
+        fmt_box = QGroupBox(tr("Formats"))
         fl = QVBoxLayout(fmt_box)
         self.formats: dict[str, QCheckBox] = {}
         for key, lbl in FORMAT_LABELS:
-            cb = QCheckBox(lbl)
+            cb = QCheckBox(tr(lbl))
             cb.setChecked(key in ("pdf", "html"))
             self.formats[key] = cb
             fl.addWidget(cb)
         top.addWidget(fmt_box)
-        sec_box = QGroupBox("Sections")
+        sec_box = QGroupBox(tr("Sections"))
         sl = QGridLayout(sec_box)
         self.sections: dict[str, QCheckBox] = {}
         for i, key in enumerate(ALL_SECTIONS):
-            cb = QCheckBox(SECTION_LABELS[key])
+            cb = QCheckBox(tr(SECTION_LABELS[key]))
             cb.setChecked(True)
             self.sections[key] = cb
             sl.addWidget(cb, i // 3, i % 3)
         top.addWidget(sec_box, 1)
         self.root.addLayout(top)
         out = QHBoxLayout()
-        self.title_edit = QLineEdit("Wazuh Security Analysis Report")
+        self.title_edit = QLineEdit(tr("Wazuh Security Analysis Report"))
         self.dir_edit = QLineEdit(str(paths.reports_dir()))
-        browse = QPushButton("Browse…")
+        browse = QPushButton(tr("Browse…"))
         browse.clicked.connect(self._browse)
-        self.export_btn = QPushButton("Export report")
+        self.export_btn = QPushButton(tr("Export report"))
         self.export_btn.setObjectName("primary")
         self.export_btn.clicked.connect(self._export)
         out.addWidget(self.title_edit, 2)
@@ -76,45 +77,45 @@ class ReportsPage(BasePage):
             self.preview.clear()
             return
         s = session.summary
-        self.preview.setHtml("<h3>Executive Summary preview</h3>" + "".join(
+        self.preview.setHtml(f"<h3>{e(tr('Executive Summary preview'))}</h3>" + "".join(
             f"<p>{e(p)}</p>" for p in s.executive_summary.split("\n\n")))
 
     def _browse(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Output folder", self.dir_edit.text())
+        folder = QFileDialog.getExistingDirectory(self, tr("Output folder"), self.dir_edit.text())
         if folder:
             self.dir_edit.setText(folder)
 
     def _export(self) -> None:
         session = self.session
         if session is None:
-            QMessageBox.information(self, "Reports", "Load and analyze alerts first.")
+            QMessageBox.information(self, tr("Reports"), tr("Load and analyze alerts first."))
             return
         formats = [k for k, cb in self.formats.items() if cb.isChecked()]
         sections = tuple(k for k, cb in self.sections.items() if cb.isChecked())
         if not formats:
-            QMessageBox.information(self, "Reports", "Select at least one format.")
+            QMessageBox.information(self, tr("Reports"), tr("Select at least one format."))
             return
         out_dir = Path(self.dir_edit.text()).expanduser()
         base = "wazuh_report_" + time.strftime("%Y%m%d_%H%M%S")
-        title = self.title_edit.text().strip() or "Wazuh Security Analysis Report"
+        title = self.title_edit.text().strip() or tr("Wazuh Security Analysis Report")
         self.export_btn.setEnabled(False)
-        self.export_btn.setText("Exporting…")
+        self.export_btn.setText(tr("Exporting…"))
 
         def job(progress, cancel):
             return export_report(session, out_dir, formats, base, sections, title)
 
         def done(paths_written) -> None:
             self.export_btn.setEnabled(True)
-            self.export_btn.setText("Export report")
+            self.export_btn.setText(tr("Export report"))
             for p in paths_written:
                 self.results.insertItem(0, str(p))
-            self.ctx.statusMessage.emit(f"Report exported to {out_dir}")
+            self.ctx.statusMessage.emit(tr("Report exported to {path}", path=out_dir))
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(out_dir)))
 
         def failed(message: str) -> None:
             self.export_btn.setEnabled(True)
-            self.export_btn.setText("Export report")
-            QMessageBox.critical(self, "Export failed", message)
+            self.export_btn.setText(tr("Export report"))
+            QMessageBox.critical(self, tr("Export failed"), message)
 
         task = workers.Task(job)
         task.signals.finished.connect(done)

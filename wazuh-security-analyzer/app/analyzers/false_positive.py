@@ -11,6 +11,7 @@ from __future__ import annotations
 import statistics
 from datetime import datetime, timezone
 
+from app.i18n import tr
 from app.models.analysis import AlertGroup
 from app.models.categories import Category
 from app.utils.net import NetworkClassifier
@@ -63,69 +64,71 @@ class FalsePositiveAnalyzer:
         scanners = [ip for ip in group.src_ips if self.network.is_known_scanner(ip)]
         if scanners:
             prob += 0.5
-            benign.append(f"The source IP {scanners[0]} is configured as an authorised/internal scanner.")
+            benign.append(tr("The source IP {ip} is configured as an authorised/internal scanner.", ip=scanners[0]))
         if group.src_ip and self.network.is_internal(group.src_ip) and category in (
                 C.AUTH_FAILURE.value, C.BRUTE_FORCE.value, C.SCAN.value, C.WEB_ATTACK.value):
             prob += 0.1
-            benign.append(f"The source {group.src_ip} is an internal address.")
+            benign.append(tr("The source {ip} is an internal address.", ip=group.src_ip))
         periodic, mean = _periodicity(group.timestamps)
         if periodic:
             prob += 0.15
-            benign.append(f"The activity repeats at a regular interval (about every {fmt_duration(mean)}), "
-                          "which is typical for scheduled jobs, monitoring or scanners.")
+            benign.append(tr("The activity repeats at a regular interval (about every {interval}), which is typical "
+                             "for scheduled jobs, monitoring or scanners.", interval=fmt_duration(mean)))
         weekday = _weekly(group.timestamps)
         if weekday:
             prob += 0.15
-            benign.append(f"The same activity recurs every {weekday}.")
+            benign.append(tr("The same activity recurs every {weekday}.", weekday=tr(weekday)))
         if category == C.AUTH_FAILURE.value and group.count >= 3 and group.peak_count < 5:
             prob += 0.15
-            benign.append(f"Failures are spread out over time (at most {group.peak_count} per correlation window) "
-                          "rather than a rapid burst.")
+            benign.append(tr("Failures are spread out over time (at most {peak} per correlation window) rather than a "
+                             "rapid burst.", peak=group.peak_count))
         if category in (C.AUTH_FAILURE.value, C.BRUTE_FORCE.value) and not group.success_after_failures:
             prob += 0.05
-            benign.append("No successful authentication from the same source was detected.")
+            benign.append(tr("No successful authentication from the same source was detected."))
         if not group.chain_ids and category not in (C.MALWARE.value, C.IMPACT.value, C.CREDENTIAL_ACCESS.value):
             prob += 0.05
-            benign.append("No suspicious follow-up activity (execution, persistence, C2) was correlated.")
+            benign.append(tr("No suspicious follow-up activity (execution, persistence, C2) was correlated."))
         if category in _BENIGN_PRONE:
             prob += 0.1
         if group.rule_level <= 3:
             prob += 0.15
-            benign.append(f"Wazuh rule level {group.rule_level} is informational.")
+            benign.append(tr("Wazuh rule level {level} is informational.", level=group.rule_level))
         info = self.rule_kb.get(group.rule_id) if self.rule_kb else None
         if info and info.false_positives:
             prob += 0.05
-            benign.append("Known benign causes for this rule: " + "; ".join(info.false_positives[:3]) + ".")
+            benign.append(tr("Known benign causes for this rule: {causes}.", causes="; ".join(info.false_positives[:3])))
         if group.vendor == "generic":
             prob += 0.05
 
         if group.ioc_verdict == "malicious":
             prob -= 0.45
-            malicious.append("An indicator in this alert is known to be malicious ("
-                             + ", ".join(group.ioc_verdict_sources[:3]) + ").")
+            malicious.append(tr("An indicator in this alert is known to be malicious ({sources}).",
+                                sources=", ".join(group.ioc_verdict_sources[:3])))
         elif group.ioc_verdict == "suspicious":
             prob -= 0.15
-            malicious.append("An indicator in this alert has a suspicious reputation.")
+            malicious.append(tr("An indicator in this alert has a suspicious reputation."))
         if group.chain_ids:
             prob -= 0.3
-            malicious.append("The alert is part of a correlated multi-stage activity chain.")
+            malicious.append(tr("The alert is part of a correlated multi-stage activity chain."))
         if group.success_after_failures:
             prob -= 0.3
-            malicious.append(f"A successful authentication followed {group.failures_before_success} failures.")
+            malicious.append(tr("A successful authentication followed {count} failures.",
+                                count=group.failures_before_success))
         if group.vt_positives:
             prob -= 0.35
-            malicious.append(f"{group.vt_positives} antivirus engines flagged the file as malicious.")
+            malicious.append(tr("{count} antivirus engines flagged the file as malicious.", count=group.vt_positives))
         if group.kev:
             prob -= 0.1
-            malicious.append("The vulnerability is known to be exploited in the wild (CISA KEV).")
+            malicious.append(tr("The vulnerability is known to be exploited in the wild (CISA KEV)."))
         if category in (C.CREDENTIAL_ACCESS.value, C.IMPACT.value):
             prob -= 0.2
-            malicious.append("The command line contains attacker tooling patterns.")
+            malicious.append(tr("The command line contains attacker tooling patterns."))
         if group.src_external and category in (C.AUTH_SUCCESS.value,) and group.success_after_failures:
             prob -= 0.1
         if len(group.users) >= 5 and category in (C.AUTH_FAILURE.value, C.BRUTE_FORCE.value):
             prob -= 0.1
-            malicious.append(f"{len(group.users)} different accounts were targeted, typical of username guessing.")
+            malicious.append(tr("{count} different accounts were targeted, typical of username guessing.",
+                                count=len(group.users)))
         if scanners:
             prob = max(prob, 0.6)
         return round(min(max(prob, 0.02), 0.95), 2), benign, malicious

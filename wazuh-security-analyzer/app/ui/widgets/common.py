@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QFileDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout,
                                QWidget)
 
+from app.i18n import num, severity_label, tr
 from app.ui import theme
 
 
@@ -28,7 +29,7 @@ class Card(QFrame):
         self.layout_.setContentsMargins(14, 12, 14, 12)
         self.layout_.setSpacing(8)
         if title:
-            self.title = label(title, "sectionTitle")
+            self.title = label(tr(title), "sectionTitle")
             self.layout_.addWidget(self.title)
 
     def add(self, widget: QWidget, stretch: int = 0) -> QWidget:
@@ -49,7 +50,7 @@ class StatCard(QFrame):
         lay.setContentsMargins(14, 10, 14, 10)
         lay.setSpacing(2)
         self.color = color
-        self.title = QLabel(title.upper())
+        self.title = QLabel(tr(title).upper())
         self.title.setStyleSheet(f"color: {color or theme.MUTED}; font-size: 8.5pt; font-weight: 700; "
                                  "letter-spacing: 1px;")
         self.value = QLabel(value)
@@ -60,7 +61,7 @@ class StatCard(QFrame):
             self.setStyleSheet(f"QFrame#statCard {{ border-left: 4px solid {color}; }}")
 
     def set_value(self, value) -> None:
-        self.value.setText(f"{value:,}" if isinstance(value, int) else str(value))
+        self.value.setText(num(value) if isinstance(value, int) else str(value))
 
     def mousePressEvent(self, event) -> None:
         self.clicked.emit()
@@ -84,18 +85,18 @@ class DropZone(QFrame):
         icon = QLabel("⬇")
         icon.setAlignment(Qt.AlignCenter)
         icon.setStyleSheet(f"font-size: {'40' if not compact else '22'}pt; color: {theme.ACCENT};")
-        title = QLabel("DROP WAZUH LOGS HERE")
+        title = QLabel(tr("DROP WAZUH LOGS HERE"))
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet(f"font-size: {'18' if not compact else '12'}pt; font-weight: 800; letter-spacing: 2px;")
-        sub = QLabel("JSON / JSONL / NDJSON / CSV / XML / LOG / TXT / CEF / ZIP / GZ  —  files or folders")
+        sub = QLabel("JSON / JSONL / NDJSON / CSV / XML / LOG / TXT / CEF / ZIP / GZ  —  " + tr("files or folders"))
         sub.setAlignment(Qt.AlignCenter)
         sub.setObjectName("muted")
         buttons = QHBoxLayout()
         buttons.setAlignment(Qt.AlignCenter)
-        self.btn_files = QPushButton("Select Files")
+        self.btn_files = QPushButton(tr("Select Files"))
         self.btn_files.setObjectName("primary")
-        self.btn_folder = QPushButton("Select Folder")
-        self.btn_demo = QPushButton("Load Demo Dataset")
+        self.btn_folder = QPushButton(tr("Select Folder"))
+        self.btn_demo = QPushButton(tr("Load Demo Dataset"))
         for b in (self.btn_files, self.btn_folder, self.btn_demo):
             b.setCursor(Qt.PointingHandCursor)
             buttons.addWidget(b)
@@ -111,13 +112,14 @@ class DropZone(QFrame):
 
     def _select_files(self) -> None:
         files, _ = QFileDialog.getOpenFileNames(
-            self, "Select Wazuh alert files", str(Path.home()),
-            "Logs and archives (*.json *.jsonl *.ndjson *.log *.txt *.csv *.tsv *.xml *.cef *.zip *.gz);;All files (*)")
+            self, tr("Select Wazuh alert files"), str(Path.home()),
+            tr("Logs and archives") + " (*.json *.jsonl *.ndjson *.log *.txt *.csv *.tsv *.xml *.cef *.zip *.gz);;"
+            + tr("All files") + " (*)")
         if files:
             self.pathsSelected.emit(files)
 
     def _select_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Select folder with logs", str(Path.home()))
+        folder = QFileDialog.getExistingDirectory(self, tr("Select folder with logs"), str(Path.home()))
         if folder:
             self.pathsSelected.emit([folder])
 
@@ -146,4 +148,4 @@ def severity_badge_html(severity: str, text: str | None = None) -> str:
     color = theme.severity_color(severity)
     fg = "#ffffff" if severity in ("critical",) else "#0d1117"
     return (f'<span style="background-color:{color}; color:{fg}; font-weight:700; padding:1px 6px;">'
-            f'&nbsp;{(text or severity).upper()}&nbsp;</span>')
+            f'&nbsp;{(text or severity_label(severity)).upper()}&nbsp;</span>')

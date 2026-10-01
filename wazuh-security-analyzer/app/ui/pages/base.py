@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from app.i18n import tr
 from app.ui.context import AppContext
 from app.ui.widgets.common import label
 
@@ -24,16 +25,16 @@ class BasePage(QWidget):
         header = QHBoxLayout()
         titles = QVBoxLayout()
         titles.setSpacing(0)
-        self.title_label = label(self.title, "pageTitle")
+        self.title_label = label(tr(self.title), "pageTitle")
         titles.addWidget(self.title_label)
-        self.subtitle_label = label(self.subtitle, "muted", wrap=True)
+        self.subtitle_label = label(tr(self.subtitle), "muted", wrap=True)
         if self.subtitle:
             titles.addWidget(self.subtitle_label)
         header.addLayout(titles, 1)
         self.header_actions = QHBoxLayout()
         header.addLayout(self.header_actions)
         self.root.addLayout(header)
-        self.empty_label = QLabel("Load Wazuh alerts on the Dashboard to see results here.")
+        self.empty_label = QLabel(tr("Load Wazuh alerts on the Dashboard to see results here."))
         self.empty_label.setObjectName("muted")
         ctx.sessionChanged.connect(self.on_session)
 

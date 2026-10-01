@@ -11,13 +11,13 @@ from PySide6.QtWidgets import (QButtonGroup, QFrame, QHBoxLayout, QLabel, QLineE
                                QProgressBar, QPushButton, QStackedWidget, QStatusBar, QVBoxLayout, QWidget)
 
 from app import __app_name__, __version__
+from app.i18n import n, num, tr
 from app.ai.providers.factory import PROVIDER_LABELS
 from app.core import paths
 from app.core.errors import AnalysisCancelled
 from app.services.pipeline import AnalysisPipeline, Progress
 from app.ui import theme, workers
 from app.ui.context import AppContext
-from app.ui.onboarding import OnboardingDialog
 from app.ui.pages.alerts import AlertsPage
 from app.ui.pages.dashboard import DashboardPage
 from app.ui.pages.entities import EntitiesPage
@@ -32,17 +32,17 @@ from app.ui.pages.settings import SettingsPage
 log = logging.getLogger(__name__)
 
 NAV = [
-    ("dashboard", "▣  Dashboard"),
-    ("alerts", "⚠  Alerts"),
-    ("incidents", "⚑  Incidents"),
-    ("hosts", "🖥  Hosts"),
-    ("users", "👤  Users"),
-    ("ioc", "◉  IOC"),
-    ("cve", "☢  CVE"),
-    ("mitre", "▦  MITRE ATT&&CK"),
-    ("rules", "ℹ  Rule Intelligence"),
-    ("reports", "📄  Reports"),
-    ("settings", "⚙  Settings"),
+    ("dashboard", "\u25A3", "Dashboard"),
+    ("alerts", "\u26A0", "Alerts"),
+    ("incidents", "\u2691", "Incidents"),
+    ("hosts", "\U0001F5A5", "Hosts"),
+    ("users", "\U0001F464", "Users"),
+    ("ioc", "\u25C9", "IOC"),
+    ("cve", "\u2622", "CVE"),
+    ("mitre", "\u25A6", "MITRE ATT&CK"),
+    ("rules", "\u2139", "Rule Intelligence"),
+    ("reports", "\U0001F4C4", "Reports"),
+    ("settings", "\u2699", "Settings"),
 ]
 
 
@@ -113,14 +113,14 @@ class MainWindow(QMainWindow):
         brand = QLabel("\U0001F6E1 Wazuh Security\nAnalyzer")
         brand.setObjectName("brand")
         lay.addWidget(brand)
-        sub = QLabel(f"SOC analysis assistant · v{__version__}")
+        sub = QLabel(tr("SOC analysis assistant") + f"\nv{__version__}")
         sub.setObjectName("brandSub")
         lay.addWidget(sub)
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
         self.nav_buttons: dict[str, QPushButton] = {}
-        for key, text in NAV:
-            btn = QPushButton(text)
+        for key, icon, text in NAV:
+            btn = QPushButton(f"{icon}  {tr(text)}".replace("&", "&&"))
             btn.setObjectName("navButton")
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
@@ -129,7 +129,7 @@ class MainWindow(QMainWindow):
             self.nav_buttons[key] = btn
             lay.addWidget(btn)
         lay.addStretch(1)
-        logs_btn = QPushButton("Open logs folder")
+        logs_btn = QPushButton(tr("Open logs folder"))
         logs_btn.setObjectName("navButton")
         logs_btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(paths.logs_dir()))))
         lay.addWidget(logs_btn)
@@ -142,13 +142,14 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(16, 8, 16, 8)
         self.search = QLineEdit()
         self.search.setObjectName("globalSearch")
-        self.search.setPlaceholderText("\U0001F50D  Search IP, user, host, rule ID, CVE, hash, domain, MITRE ID  (Ctrl+F)")
+        self.search.setPlaceholderText("\U0001F50D  " + tr("Search IP, user, host, rule ID, CVE, hash, domain, "
+                                                             "MITRE ID") + "  (Ctrl+F)")
         self.search.returnPressed.connect(lambda: self.navigate("search", {"term": self.search.text().strip()}))
         lay.addWidget(self.search, 1)
         lay.addStretch(0)
         self.mode_badge = QPushButton("")
         self.mode_badge.setCursor(Qt.PointingHandCursor)
-        self.mode_badge.setToolTip("Click to switch between OFFLINE and ONLINE analysis")
+        self.mode_badge.setToolTip(tr("Click to switch between OFFLINE and ONLINE analysis"))
         self.mode_badge.clicked.connect(self._toggle_mode)
         self.ai_badge = QPushButton("")
         self.ai_badge.setCursor(Qt.PointingHandCursor)
@@ -159,12 +160,12 @@ class MainWindow(QMainWindow):
 
     def _build_statusbar(self) -> None:
         status = QStatusBar()
-        self.status_label = QLabel("Ready")
+        self.status_label = QLabel(tr("Ready"))
         self.progress = QProgressBar()
         self.progress.setMaximumWidth(380)
         self.progress.setRange(0, 1000)
         self.progress.hide()
-        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn = QPushButton(tr("Cancel"))
         self.cancel_btn.hide()
         self.cancel_btn.clicked.connect(self._cancel)
         status.addWidget(self.status_label, 1)
@@ -176,17 +177,18 @@ class MainWindow(QMainWindow):
         cfg = self.ctx.config
         online = cfg.network.online
         color = theme.SUCCESS if online else theme.MUTED
-        self.mode_badge.setText("● ONLINE" if online else "● OFFLINE")
+        self.mode_badge.setText("● " + (tr("ONLINE") if online else tr("OFFLINE")))
         self.mode_badge.setStyleSheet(f"color: {color}; font-weight: 700; border-radius: 12px; padding: 4px 12px;")
         provider = cfg.ai.provider
-        label = "AI: off" if provider == "none" else f"AI: {PROVIDER_LABELS.get(provider, provider).split(' (')[0]}"
+        label = tr("AI: off") if provider == "none" else \
+            "AI: " + tr(PROVIDER_LABELS.get(provider, provider)).split(" (")[0]
         external = provider in ("openai", "anthropic")
         self.ai_badge.setText(label)
         self.ai_badge.setStyleSheet(
             f"color: {theme.WARNING if external else (theme.ACCENT if provider != 'none' else theme.MUTED)};"
             "border-radius: 12px; padding: 4px 12px;")
-        self.ai_badge.setToolTip("External provider - data is anonymized before sending" if external else
-                                 "Local or disabled AI")
+        self.ai_badge.setToolTip(tr("External provider - data is anonymized before sending") if external else
+                                 tr("Local or disabled AI"))
 
     # ------------------------------------------------------------------ navigation
     def navigate(self, page: str, kwargs: dict) -> None:
@@ -211,19 +213,20 @@ class MainWindow(QMainWindow):
         cfg = self.ctx.config.model_copy(deep=True)
         cfg.network.mode = "offline" if cfg.network.online else "online"
         self.ctx.update_config(cfg)
-        self.status_label.setText(f"Analysis mode: {cfg.network.mode.upper()} (applies to the next analysis)")
+        self.status_label.setText(tr("Analysis mode: {mode} (applies to the next analysis)",
+                                     mode=tr(cfg.network.mode.upper())))
 
     # ------------------------------------------------------------------ analysis
     def load_demo(self) -> None:
         demo = paths.sample_data_dir()
         if not demo.exists():
-            QMessageBox.warning(self, "Demo dataset", f"Demo data not found in {demo}")
+            QMessageBox.warning(self, tr("Demo dataset"), tr("Demo data not found in {path}", path=demo))
             return
         self.start_analysis([str(demo)])
 
     def start_analysis(self, inputs: list[str]) -> None:
         if self.task is not None:
-            QMessageBox.information(self, "Analysis running", "Please wait for the current analysis to finish.")
+            QMessageBox.information(self, tr("Analysis running"), tr("Please wait for the current analysis to finish."))
             return
         config = self.ctx.config
         state = self.ctx.state
@@ -241,15 +244,16 @@ class MainWindow(QMainWindow):
         self.progress.setValue(0)
         self.progress.show()
         self.cancel_btn.show()
-        self.status_label.setText(f"Analyzing {len(inputs)} input(s)…")
+        self.status_label.setText(tr("Analyzing {count} input(s)…", count=len(inputs)))
         workers.start(self.task)
 
     def _on_progress(self, p: Progress) -> None:
         self.progress.setValue(int(p.percent * 10))
         self.progress.setFormat(f"{p.percent:.0f}%")
         if p.stage == "parse" and p.processed:
-            total = f" / ~{p.total:,}" if p.total else ""
-            self.status_label.setText(f"Analyzing…  {p.processed:,}{total} events  —  {p.message}")
+            total = f" / ~{num(p.total)}" if p.total else ""
+            self.status_label.setText(tr("Analyzing…  {processed}{total} events  —  {message}",
+                                         processed=num(p.processed), total=total, message=p.message))
         else:
             self.status_label.setText(f"{p.message}…")
 
@@ -262,29 +266,32 @@ class MainWindow(QMainWindow):
         self._finish_task()
         self.ctx.set_session(session)
         s = session.summary
-        self.status_label.setText(f"Analysis complete: {s.events:,} events, {s.incidents} incidents, "
-                                  f"{s.duration_seconds:.1f}s. {s.enrichment_status}")
+        self.status_label.setText(tr("Analysis complete: {events}, {incidents}, {seconds}s.",
+                                     events=n(s.events, "event"), incidents=n(s.incidents, "incident"),
+                                     seconds=f"{s.duration_seconds:.1f}") + f" {s.enrichment_status}")
         self.navigate("dashboard", {})
-        problems = s.rejected_inputs + ([f"{s.parse_errors} malformed records skipped"] if s.parse_errors else [])
+        problems = s.rejected_inputs + ([tr("{records} skipped", records=n(s.parse_errors, "malformed record"))]
+                                        if s.parse_errors else [])
         if s.events == 0:
-            QMessageBox.warning(self, "No events", "No events could be extracted from the selected input.\n\n"
-                                + "\n".join(problems[:10]))
+            QMessageBox.warning(self, tr("No events"), tr("No events could be extracted from the selected input.")
+                                + "\n\n" + "\n".join(problems[:10]))
         elif s.rejected_inputs:
-            QMessageBox.warning(self, "Some inputs were rejected", "\n".join(s.rejected_inputs[:15]))
+            QMessageBox.warning(self, tr("Some inputs were rejected"), "\n".join(s.rejected_inputs[:15]))
 
     def _on_failed(self, message: str) -> None:
         self._finish_task()
-        self.status_label.setText("Analysis failed")
-        QMessageBox.critical(self, "Analysis failed", f"{message}\n\nDetails were written to logs/errors.log.")
+        self.status_label.setText(tr("Analysis failed"))
+        QMessageBox.critical(self, tr("Analysis failed"), message + "\n\n" +
+                             tr("Details were written to logs/errors.log."))
 
     def _on_cancelled(self) -> None:
         self._finish_task()
-        self.status_label.setText("Analysis cancelled")
+        self.status_label.setText(tr("Analysis cancelled"))
 
     def _cancel(self) -> None:
         if self.task is not None:
             self.task.cancel()
-            self.status_label.setText("Cancelling…")
+            self.status_label.setText(tr("Cancelling…"))
 
     # ------------------------------------------------------------------ window events
     def dragEnterEvent(self, event) -> None:
@@ -296,19 +303,10 @@ class MainWindow(QMainWindow):
         if paths_:
             self.start_analysis(paths_)
 
-    def maybe_onboard(self) -> None:
-        if not self.ctx.config.ui.first_run:
-            return
-        dlg = OnboardingDialog(self)
-        dlg.exec()
-        cfg = self.ctx.config.model_copy(deep=True)
-        cfg.ui.first_run = False
-        cfg.network.mode = "online" if dlg.choice == OnboardingDialog.ONLINE else "offline"
-        self.ctx.update_config(cfg)
-        if dlg.choice == OnboardingDialog.CONFIGURE_AI:
-            self.navigate("settings", {})
-            settings: SettingsPage = self.pages["settings"]  # type: ignore[assignment]
-            settings.tabs.setCurrentIndex(1)
+    def open_ai_settings(self) -> None:
+        self.navigate("settings", {})
+        settings: SettingsPage = self.pages["settings"]  # type: ignore[assignment]
+        settings.tabs.setCurrentIndex(1)
 
     def closeEvent(self, event) -> None:
         if self.task is not None:

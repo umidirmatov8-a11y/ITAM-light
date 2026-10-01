@@ -9,6 +9,7 @@ from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QHBoxLayout, QHeaderView, QLabel, QPushButton, QTableView,
                                QVBoxLayout, QWidget)
 
+from app.i18n import num, tr
 from app.ui import theme
 
 Column = tuple[str, str, Callable[[dict[str, Any]], Any] | None]  # (key, header, formatter)
@@ -34,7 +35,7 @@ class RowsModel(QAbstractTableModel):
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
-            return self.columns[section][1]
+            return tr(self.columns[section][1])
         return None
 
     def data(self, index, role=Qt.DisplayRole):
@@ -47,7 +48,7 @@ class RowsModel(QAbstractTableModel):
             if isinstance(value, float):
                 return f"{value:.0f}" if key in ("risk_score", "max_risk") else f"{value:.2f}"
             if isinstance(value, int):
-                return f"{value:,}"
+                return num(value)
             return "" if value is None else str(value)
         if role == Qt.ToolTipRole:
             value = fmt(row) if fmt else row.get(key)
@@ -94,8 +95,8 @@ class PagedTable(QWidget):
         self.view.setShowGrid(False)
         self.view.selectionModel().currentRowChanged.connect(self._on_current)
         self.view.doubleClicked.connect(lambda idx: self.rowActivated.emit(self.model.row(idx.row()) or {}))
-        self.prev_btn = QPushButton("◀ Prev")
-        self.next_btn = QPushButton("Next ▶")
+        self.prev_btn = QPushButton(tr("◀ Prev"))
+        self.next_btn = QPushButton(tr("Next ▶"))
         self.info = QLabel("")
         self.info.setObjectName("muted")
         self.prev_btn.clicked.connect(lambda: self.go(self.page - 1))
@@ -135,8 +136,9 @@ class PagedTable(QWidget):
         rows = self._fetch(self.page * self.page_size, self.page_size)
         self.model.set_rows(rows)
         start = self.page * self.page_size + (1 if rows else 0)
-        self.info.setText(f"{start:,}–{self.page * self.page_size + len(rows):,} of {self.total:,}"
-                          f"   ·   page {self.page + 1} / {pages}")
+        self.info.setText(tr("{start}–{end} of {total}   ·   page {page} / {pages}", start=num(start),
+                             end=num(self.page * self.page_size + len(rows)), total=num(self.total),
+                             page=self.page + 1, pages=pages))
         self.prev_btn.setEnabled(self.page > 0)
         self.next_btn.setEnabled(self.page < pages - 1)
         if rows:

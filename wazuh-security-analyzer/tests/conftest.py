@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 _HOME = tempfile.mkdtemp(prefix="wsa_test_home_")
 os.environ["WSA_HOME"] = _HOME
+os.environ["WSA_LANGUAGE"] = "en"  # tests assert English texts unless they switch language explicitly
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from app.core.config import AppConfig  # noqa: E402

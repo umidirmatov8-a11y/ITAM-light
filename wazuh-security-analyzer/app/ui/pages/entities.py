@@ -5,6 +5,8 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QSplitter, QTextBrowser, QVBoxLayout, QWidget
 
+from app.i18n import tr
+from app.i18n import severity_label, tr
 from app.database.store import GroupFilter
 from app.ui import render
 from app.ui.pages.base import BasePage
@@ -21,15 +23,15 @@ class EntitiesPage(BasePage):
         super().__init__(ctx, parent)
         bar = QHBoxLayout()
         self.filter = QLineEdit()
-        self.filter.setPlaceholderText(f"Filter {self.title.lower()}…")
+        self.filter.setPlaceholderText(tr("Filter hosts…") if kind == "host" else tr("Filter users…"))
         self.filter.textChanged.connect(lambda _t: self.refresh())
         bar.addWidget(self.filter, 1)
-        self.alerts_btn = QPushButton("Show alerts")
+        self.alerts_btn = QPushButton(tr("Show alerts"))
         self.alerts_btn.clicked.connect(self._show_alerts)
         bar.addWidget(self.alerts_btn)
         self.root.addLayout(bar)
         columns = [("name", "Host" if kind == "host" else "Account", None),
-                   ("severity", "Severity", lambda r: r["severity"].upper()),
+                   ("severity", "Severity", lambda r: severity_label(r["severity"])),
                    ("max_risk", "Max risk", None), ("events", "Events", None), ("groups", "Findings", None),
                    ("incidents", "Incidents", None),
                    ("extra", "Criticality" if kind == "host" else "Hosts", None),
@@ -51,7 +53,8 @@ class EntitiesPage(BasePage):
         if session is not None:
             for ent in session.store.entities(self.kind):
                 data = ent["data"]
-                ent["extra"] = data.get("criticality", "") if self.kind == "host" else ", ".join(data.get("hosts", [])[:3])
+                ent["extra"] = tr(data.get("criticality", "")) if self.kind == "host" else \
+                    ", ".join(data.get("hosts", [])[:3])
                 self._rows.append(ent)
         self.detail.clear()
         self.refresh()

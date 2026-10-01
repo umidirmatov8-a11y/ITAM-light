@@ -237,6 +237,7 @@ class LoggingConfig(_Section):
 
 class UIConfig(_Section):
     first_run: bool = True
+    language: Literal["auto", "en", "ru"] = "auto"
     page_size: int = Field(default=500, ge=50, le=5000)
 
 
@@ -253,6 +254,14 @@ class AppConfig(_Section):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
+
+    @property
+    def language(self) -> str:
+        """Effective UI/report language ('auto' resolves to the operating-system language)."""
+        if self.ui.language == "auto":
+            from app.i18n import detect_system_language
+            return detect_system_language()
+        return self.ui.language
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:

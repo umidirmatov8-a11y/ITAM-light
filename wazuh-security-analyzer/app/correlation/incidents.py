@@ -22,7 +22,8 @@ from datetime import datetime, timezone
 from app.core.severity import Severity
 from app.models.analysis import AlertGroup, AttackChain, Incident, IncidentStatus, MitreMapping
 from app.models.categories import Category
-from app.utils.text import plural, truncate_list
+from app.i18n import n, tr
+from app.utils.text import truncate_list
 
 C = Category
 
@@ -157,17 +158,19 @@ class IncidentBuilder:
         success = any(g.success_after_failures and g.category == C.AUTH_SUCCESS.value for g in members)
 
         risk = top.risk_score
-        reasoning = [f"Highest-risk finding: {top.display_id} \"{top.title}\" scored {top.risk_score:.0f}/100."]
+        reasoning = [tr("Highest-risk finding: {id} \"{title}\" scored {score}/100.", id=top.display_id,
+                        title=top.title, score=f"{top.risk_score:.0f}")]
         if chain is not None:
             bonus = 3 * max(0, chain.distinct_stages - 2) + (10 if chain.success_after_failures else 0)
             risk += bonus
-            reasoning.append(f"Correlated chain with {chain.distinct_stages} kill-chain stages: {chain.scenario}.")
+            reasoning.append(tr("Correlated chain with {stages} kill-chain stages: {scenario}.",
+                                stages=chain.distinct_stages, scenario=chain.scenario))
         elif kind in _CAMPAIGN_KINDS and len(hosts) >= 2 and top.fp_probability < 0.6:
             risk += min(10, 2 * len(hosts))
-            reasoning.append(f"The same source targeted {len(hosts)} hosts.")
+            reasoning.append(tr("The same source targeted {count} hosts.", count=len(hosts)))
         if success:
             risk += 5
-            reasoning.append("A successful authentication followed repeated failures.")
+            reasoning.append(tr("A successful authentication followed repeated failures."))
         risk = round(min(100.0, risk), 1)
         severity = self.risk_engine.severity_for(risk).value
 
@@ -248,47 +251,54 @@ class IncidentBuilder:
     def _describe(self, kind, key, members, chain, hosts, users, srcs, count, success):
         host_txt = truncate_list(hosts, 3)
         if kind == "attack_chain":
-            title = f"Possible attack chain on {chain.entity}"
+            title = tr("Possible attack chain on {host}", host=chain.entity)
             assessment = "Potential compromise" if chain.success_after_failures else "Possible attack chain"
-            summary = (f"{plural(count, 'event')} on {chain.entity} form a sequence of {chain.distinct_stages} attack "
-                       f"stages: {chain.scenario}." + (" A successful login followed repeated failures."
-                                                        if chain.success_after_failures else "") +
-                       " The individual alerts should be investigated together as one incident.")
+            summary = tr("{events} on {host} form a sequence of {stages} attack stages: {scenario}.",
+                         events=n(count, "event"), host=chain.entity, stages=chain.distinct_stages,
+                         scenario=chain.scenario)
+            if chain.success_after_failures:
+                summary += " " + tr("A successful login followed repeated failures.")
+            summary += " " + tr("The individual alerts should be investigated together as one incident.")
         elif kind == "brute_force":
             burst = any(g.peak_count >= self.threshold or g.category == C.BRUTE_FORCE.value for g in members)
             if burst or success:
-                title = f"Possible brute-force attack from {key}"
+                title = tr("Possible brute-force attack from {ip}", ip=key)
                 assessment = "Potential compromise" if success else "Likely brute-force activity"
             else:
-                title = f"Repeated authentication failures from {key}"
+                title = tr("Repeated authentication failures from {ip}", ip=key)
                 top = max(members, key=lambda g: g.risk_score)
                 assessment = top.assessment or "Suspicious activity"
-            summary = (f"{plural(count, 'authentication event')} from {key} against {plural(len(hosts), 'host')} "
-                       f"({host_txt}) and {plural(len(users), 'account')}." +
-                       (" At least one login from this source succeeded afterwards." if success else
-                        " No successful login from this source was found in the analyzed logs."))
+            summary = tr("{events} from {ip} against {hosts} ({host_list}) and {accounts}.",
+                         events=n(count, "authentication event"), ip=key, hosts=n(len(hosts), "host"),
+                         host_list=host_txt, accounts=n(len(users), "account"))
+            summary += " " + (tr("At least one login from this source succeeded afterwards.") if success else
+                              tr("No successful login from this source was found in the analyzed logs."))
         elif kind == "web_attack":
-            title = f"Web attack campaign from {key}"
+            title = tr("Web attack campaign from {ip}", ip=key)
             assessment = "Possible attack"
-            summary = f"{plural(count, 'malicious web request')} from {key} against {host_txt}."
+            summary = tr("{requests} from {ip} against {hosts}.", requests=n(count, "malicious web request"), ip=key,
+                         hosts=host_txt)
         elif kind == "scan":
-            title = f"Scanning from {key}"
+            title = tr("Scanning from {ip}", ip=key)
             assessment = "Suspicious activity"
-            summary = f"{plural(count, 'scan event')} from {key} against {plural(len(hosts), 'host')} ({host_txt})."
+            summary = tr("{events} from {ip} against {hosts} ({host_list}).", events=n(count, "scan event"), ip=key,
+                         hosts=n(len(hosts), "host"), host_list=host_txt)
         elif kind == "malware":
-            title = f"Malware detected on {key or 'unknown host'}"
+            title = tr("Malware detected on {host}", host=key or tr("unknown host"))
             top = max(members, key=lambda g: g.risk_score)
             assessment = top.assessment or "Suspicious activity"
             files = truncate_list([p for g in members for p in g.file_paths], 3)
-            summary = f"{plural(len(members), 'malware finding')} on {key}: {files}."
+            summary = tr("{findings} on {host}: {files}.", findings=n(len(members), "malware finding"), host=key,
+                         files=files)
         elif kind == "vulnerability":
             g0 = members[0]
-            title = f"{key} on {plural(len(hosts), 'host')}"
+            title = tr("{cve} on {hosts}", cve=key, hosts=n(len(hosts), "host"))
             assessment = "Exposure (actively exploited vulnerability)" if any(g.kev for g in members) else \
                 "Exposure (vulnerable software)"
-            summary = (f"{key}" + (f" (CVSS {g0.cvss:.1f})" if g0.cvss is not None else "") +
-                       f" affects {truncate_list(sorted({p for g in members for p in g.packages}), 3)} on {host_txt}. "
-                       "No exploitation was observed in the analyzed logs.")
+            cvss = tr(" (CVSS {cvss})", cvss=f"{g0.cvss:.1f}") if g0.cvss is not None else ""
+            summary = tr("{cve}{cvss} affects {packages} on {hosts}. No exploitation was observed in the analyzed logs.",
+                         cve=key, cvss=cvss, packages=truncate_list(sorted({p for g in members for p in g.packages}), 3),
+                         hosts=host_txt)
         else:
             g = members[0]
             title = g.title or g.rule_description

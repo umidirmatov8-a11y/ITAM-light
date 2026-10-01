@@ -6,20 +6,22 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QHBoxLayout, QLineEdit, QMessageBox, QPushButton, QSplitter,
                                QTextBrowser)
 
+from app.i18n import tr
+from app.i18n import severity_label, tr
 from app.intelligence.enrichment import EnrichmentService
 from app.ui import render, workers
 from app.ui.pages.base import BasePage
 from app.ui.widgets.table import SimpleTable
 from app.utils.timeutil import fmt_ts
 
-IOC_COLUMNS = [("type", "Type", None), ("value", "Value", None), ("verdict", "Verdict", None),
+IOC_COLUMNS = [("type", "Type", None), ("value", "Value", None), ("verdict", "Verdict", lambda r: tr(r["verdict"])),
                ("count", "Occurrences", None), ("hosts", "Hosts", lambda r: ", ".join(r["hosts"][:3])),
-               ("country", "Country", None), ("scope", "Scope", lambda r: "internal" if r["internal"] else "external"),
+               ("country", "Country", None), ("scope", "Scope", lambda r: tr("internal") if r["internal"] else tr("external")),
                ("sources", "Sources", lambda r: ", ".join(s.get("provider", "") for s in r["sources"][:3])),
                ("last_seen", "Last seen", lambda r: fmt_ts(r["last_seen"]))]
 CVE_COLUMNS = [("cve", "CVE", None), ("cvss", "CVSS", lambda r: "" if r["cvss"] is None else f"{r['cvss']:.1f}"),
-               ("severity", "Severity", lambda r: (r["severity"] or "").upper()),
-               ("known_exploited", "Known exploited", lambda r: "YES" if r["known_exploited"] else ""),
+               ("severity", "Severity", lambda r: severity_label(r["severity"] or "")),
+               ("known_exploited", "Known exploited", lambda r: tr("YES") if r["known_exploited"] else ""),
                ("hosts", "Hosts", lambda r: len(r["hosts"])), ("packages", "Packages", lambda r: ", ".join(r["packages"][:2])),
                ("count", "Alerts", None)]
 
@@ -32,17 +34,17 @@ class IOCPage(BasePage):
         super().__init__(ctx, parent)
         bar = QHBoxLayout()
         self.type_filter = QComboBox()
-        self.type_filter.addItem("All types", "")
+        self.type_filter.addItem(tr("All types"), "")
         for t in ("ip", "domain", "url", "sha256", "sha1", "md5"):
             self.type_filter.addItem(t.upper(), t)
         self.verdict_filter = QComboBox()
-        self.verdict_filter.addItem("All verdicts", "")
+        self.verdict_filter.addItem(tr("All verdicts"), "")
         for v in ("malicious", "suspicious", "clean", "unknown"):
-            self.verdict_filter.addItem(v.capitalize(), v)
-        self.internal = QCheckBox("Include internal")
+            self.verdict_filter.addItem(tr(v).capitalize(), v)
+        self.internal = QCheckBox(tr("Include internal"))
         self.text = QLineEdit()
-        self.text.setPlaceholderText("Filter value…")
-        self.enrich_btn = QPushButton("\U0001F310 Enrich selected online")
+        self.text.setPlaceholderText(tr("Filter value…"))
+        self.enrich_btn = QPushButton("\U0001F310 " + tr("Enrich selected online"))
         self.enrich_btn.setObjectName("primary")
         for w in (self.type_filter, self.verdict_filter, self.internal):
             bar.addWidget(w)
@@ -98,11 +100,11 @@ class IOCPage(BasePage):
             return
         rec = self._by_key.get((row["type"], row["value"]))
         if rec is None or rec.internal:
-            QMessageBox.information(self, "Enrichment", "Internal indicators are never sent to external services.")
+            QMessageBox.information(self, tr("Enrichment"), tr("Internal indicators are never sent to external services."))
             return
-        if QMessageBox.question(self, "Online enrichment",
-                                f"Send the public indicator {rec.value} to the enabled threat-intelligence providers "
-                                "(VirusTotal / AbuseIPDB / OTX)?") != QMessageBox.Yes:
+        if QMessageBox.question(self, tr("Online enrichment"),
+                                tr("Send the public indicator {value} to the enabled threat-intelligence providers "
+                                   "(VirusTotal / AbuseIPDB / OTX)?", value=rec.value)) != QMessageBox.Yes:
             return
         service = EnrichmentService(self.ctx.config, self.ctx.secrets, self.ctx.state)
 
@@ -115,16 +117,17 @@ class IOCPage(BasePage):
             self._show(row)
             self.refresh()
             msg = report.status + (("\n\n" + "\n".join(report.errors[:5])) if report.errors else "")
-            msg += "\n\nRisk scores of related findings are recalculated on the next analysis run."
+            msg += "\n\n" + tr("Risk scores of related findings are recalculated on the next analysis run.")
             if not report.providers_used:
-                msg += "\n\nNo reputation provider is enabled. Configure API keys in Settings › Threat intelligence."
-            QMessageBox.information(self, "Enrichment", msg)
+                msg += "\n\n" + tr("No reputation provider is enabled. Configure API keys in Settings › Threat "
+                                     "intelligence.")
+            QMessageBox.information(self, tr("Enrichment"), msg)
 
         self.enrich_btn.setEnabled(False)
         task = workers.Task(job)
         task.signals.finished.connect(done)
         task.signals.failed.connect(lambda m: (self.enrich_btn.setEnabled(True),
-                                               QMessageBox.warning(self, "Enrichment", m)))
+                                               QMessageBox.warning(self, tr("Enrichment"), m)))
         workers.start(task)
 
 
@@ -136,11 +139,11 @@ class CVEPage(BasePage):
         super().__init__(ctx, parent)
         bar = QHBoxLayout()
         self.text = QLineEdit()
-        self.text.setPlaceholderText("Filter CVE / package…")
+        self.text.setPlaceholderText(tr("Filter CVE / package…"))
         self.text.textChanged.connect(lambda _t: self.refresh())
-        self.kev_only = QCheckBox("Known exploited only")
+        self.kev_only = QCheckBox(tr("Known exploited only"))
         self.kev_only.toggled.connect(lambda _c: self.refresh())
-        self.enrich_btn = QPushButton("\U0001F310 Fetch NVD / KEV for selected")
+        self.enrich_btn = QPushButton("\U0001F310 " + tr("Fetch NVD / KEV for selected"))
         self.enrich_btn.clicked.connect(self._enrich)
         bar.addWidget(self.text, 1)
         bar.addWidget(self.kev_only)
@@ -195,11 +198,11 @@ class CVEPage(BasePage):
             self.refresh()
             self.ctx.statusMessage.emit(report.status)
             if report.errors:
-                QMessageBox.warning(self, "CVE enrichment", report.status + "\n\n" + "\n".join(report.errors[:5]))
+                QMessageBox.warning(self, tr("CVE enrichment"), report.status + "\n\n" + "\n".join(report.errors[:5]))
 
         self.enrich_btn.setEnabled(False)
         task = workers.Task(job)
         task.signals.finished.connect(done)
         task.signals.failed.connect(lambda m: (self.enrich_btn.setEnabled(True),
-                                               QMessageBox.warning(self, "CVE enrichment", m)))
+                                               QMessageBox.warning(self, tr("CVE enrichment"), m)))
         workers.start(task)
