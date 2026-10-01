@@ -85,7 +85,9 @@ class AIAnalysisResult(BaseModel):
             value = value.strip().rstrip("%")
             value = float(value) / (100.0 if float(value) > 1.0 else 1.0)
         value = float(value)
-        if 1.0 < value <= 100.0:
+        if 1.0 < value < 2.0:
+            raise ValueError("ambiguous probability (expected 0..1 or a percentage)")
+        if 2.0 <= value <= 100.0:  # clearly a percentage such as 85
             value /= 100.0
         return value
 

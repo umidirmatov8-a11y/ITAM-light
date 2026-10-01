@@ -71,8 +71,10 @@ class WazuhJSONParser(BaseParser):
                 pos = self._resync(buf, pos)
                 continue
             except json.JSONDecodeError as exc:
-                remaining = len(buf) - exc.pos
-                if not eof and remaining < (1 << 20) and len(buf) - pos < max_object:
+                # Incomplete (needs more data) iff the decoder hit the end of the buffer.  A corrupt
+                # object fails *before* the end and is skipped immediately.
+                incomplete = exc.msg.startswith("Unterminated string") or not buf[exc.pos:].strip()
+                if incomplete and not eof and len(buf) - pos < max_object:
                     # Grow geometrically so large objects are not re-decoded O(n^2) times.
                     if fill(max(_CHUNK, len(buf) - pos)):
                         continue

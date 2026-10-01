@@ -211,6 +211,7 @@ class SourceDiscovery:
                 f"{path.name}: {len(infos)} entries exceed the limit of {self.limits.max_archive_entries}")
         declared_total = 0
         budget = ArchiveBudget(self.max_total)
+        members: list[InputSource] = []
         for info in infos:
             if info.is_dir():
                 continue
@@ -256,4 +257,5 @@ class SourceDiscovery:
 
             display = info.filename[:-3] if ext == ".gz" else info.filename
             est = info.file_size * (8 if ext == ".gz" else 1)
-            result.sources.append(InputSource(f"{path.name}/{display}", est, open_member, str(path), True))
+            members.append(InputSource(f"{path.name}/{display}", est, open_member, str(path), True))
+        result.sources.extend(members)  # only when the whole archive passed the checks

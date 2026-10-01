@@ -126,7 +126,11 @@ class AlertGroup:
     ai_analysis: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        # Shallow conversion (much faster than dataclasses.asdict, which deep-copies every value).
+        data = dict(self.__dict__)
+        data["mitre"] = [dict(m.__dict__) for m in self.mitre]
+        data["risk_factors"] = [dict(r.__dict__) for r in self.risk_factors]
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "AlertGroup":
@@ -229,7 +233,9 @@ class Incident:
     ai_analysis: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = dict(self.__dict__)
+        data["mitre"] = [dict(m.__dict__) for m in self.mitre]
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Incident":

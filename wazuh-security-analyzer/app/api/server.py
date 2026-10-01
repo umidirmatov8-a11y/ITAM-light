@@ -13,6 +13,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from app.core.config import ConfigManager
 from app.core.logging_setup import setup_logging
 from app.core.secrets import SecretStore
@@ -22,9 +24,13 @@ from app.services.pipeline import AnalysisPipeline
 from app.services.session import AnalysisSession
 
 
+class AnalyzeRequest(BaseModel):
+    paths: list[str] = Field(min_length=1, max_length=1000)
+    online: bool = False
+
+
 def create_app(token: str, config_manager: ConfigManager | None = None, workspace: Path | None = None):
     from fastapi import Depends, FastAPI, Header, HTTPException, Query
-    from pydantic import BaseModel, Field
 
     cm = config_manager or ConfigManager()
     state = StateStore(cm.config.storage.state_database_url or None)
@@ -37,10 +43,6 @@ def create_app(token: str, config_manager: ConfigManager | None = None, workspac
         expected = f"Bearer {token}"
         if not secrets.compare_digest(authorization.encode(), expected.encode()):
             raise HTTPException(status_code=401, detail="invalid or missing bearer token")
-
-    class AnalyzeRequest(BaseModel):
-        paths: list[str] = Field(min_length=1, max_length=1000)
-        online: bool = False
 
     def get_session(session_id: str) -> AnalysisSession:
         with lock:
