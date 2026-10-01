@@ -1,7 +1,7 @@
 """Hardened asynchronous HTTP client for external APIs.
 
-* TLS verification always on (optionally with a corporate CA bundle) - it cannot be
-  disabled from the GUI; ``verify_tls: false`` in config is honoured only with a warning.
+* TLS verification on by default (optionally with a corporate CA bundle); disabling it
+  requires an explicit confirmation in the GUI and is logged as a warning.
 * Explicit connect/read timeouts, optional proxy.
 * Response bodies are streamed and capped (``max_response_mb``) before JSON decoding.
 * No redirects to other hosts are followed.

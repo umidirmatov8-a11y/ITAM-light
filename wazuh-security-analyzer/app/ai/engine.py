@@ -190,7 +190,10 @@ class AIAnalysisEngine:
 
     # ------------------------------------------------------------------ analysis
     def analyze(self, groups: list[AlertGroup], incident: Incident | None = None,
-                iocs: list[IOCRecord] | None = None, cves: list[CVERecord] | None = None) -> AIRunResult:
+                iocs: list[IOCRecord] | None = None, cves: list[CVERecord] | None = None,
+                known_users: list[str] | None = None, known_hosts: list[str] | None = None) -> AIRunResult:
+        """``known_users`` / ``known_hosts``: all accounts and hosts of the analysis, so that they are masked
+        even when they only appear inside free-text log lines of this finding."""
         started = time.time()
         if self.provider is None:
             return AIRunResult(False, error="AI analysis is disabled (Settings > AI provider). "
@@ -205,6 +208,8 @@ class AIAnalysisEngine:
             if incident:
                 users |= set(incident.affected_users)
                 hosts |= set(incident.affected_hosts)
+            users |= set(known_users or [])
+            hosts |= set(known_hosts or [])
             sanitizer = Sanitizer(self.config.privacy, self.network, users, hosts)
             context = sanitizer.sanitize(context)
         allowed_text = json.dumps(context, ensure_ascii=False, default=str)

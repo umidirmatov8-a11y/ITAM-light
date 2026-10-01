@@ -7,6 +7,7 @@ Pydantic model; a provider error never aborts the analysis.
 from __future__ import annotations
 
 import base64
+from abc import ABC, abstractmethod
 import ipaddress
 import logging
 from dataclasses import asdict, dataclass, field
@@ -40,7 +41,7 @@ class _Lenient(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
-class IOCProvider:
+class IOCProvider(ABC):
     name = "provider"
     secret_name = ""
     supported: set[str] = set()
@@ -52,8 +53,9 @@ class IOCProvider:
     def supports(self, ioc_type: str) -> bool:
         return ioc_type in self.supported
 
+    @abstractmethod
     async def lookup(self, ioc_type: str, value: str) -> ProviderResult | None:
-        raise NotImplementedError
+        """Return the provider verdict for one indicator (None when the provider has no data)."""
 
 
 # ---------------------------------------------------------------- VirusTotal

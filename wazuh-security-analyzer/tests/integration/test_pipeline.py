@@ -220,3 +220,14 @@ def test_incident_status_persisted_across_runs(tmp_path, sample_dir):
     assert again.status == "CONFIRMED"
     s2.close()
     state.dispose()
+
+
+def test_pathological_record_does_not_abort_file(tmp_path, alert_factory):
+    deep = "[" * 900 + "]" * 900
+    lines = [json.dumps(alert_factory(full_log="a")), '{"rule": {"id": "1"}, "x": ' + deep + "}",
+             json.dumps(alert_factory(full_log="b"))]
+    path = tmp_path / "deep.jsonl"
+    path.write_text("\n".join(lines) + "\n")
+    s = run([path], tmp_path)
+    assert s.summary.events >= 2 and not s.summary.rejected_inputs
+    s.close()

@@ -115,6 +115,7 @@ class IOCPage(BasePage):
             self._show(row)
             self.refresh()
             msg = report.status + (("\n\n" + "\n".join(report.errors[:5])) if report.errors else "")
+            msg += "\n\nRisk scores of related findings are recalculated on the next analysis run."
             if not report.providers_used:
                 msg += "\n\nNo reputation provider is enabled. Configure API keys in Settings › Threat intelligence."
             QMessageBox.information(self, "Enrichment", msg)

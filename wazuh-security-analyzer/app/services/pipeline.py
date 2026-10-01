@@ -210,7 +210,9 @@ class AnalysisPipeline:
                     for raw in parser.parse(text_stream, ctx):
                         try:
                             alert = normalizer.normalize(raw, source.display_name, parser.name)
-                        except Exception as exc:  # defensive: malformed record shapes
+                            raw_blob = store.compress_raw(alert.raw, max_raw) if alert.raw is not None else None
+                        except (ValueError, TypeError, RecursionError, KeyError, AttributeError) as exc:
+                            # one pathological record must never abort the rest of the file
                             ctx.error(f"record could not be normalized: {type(exc).__name__}")
                             continue
                         if cfg.storage.deduplicate:
@@ -234,8 +236,7 @@ class AnalysisPipeline:
                             alert.uid, alert.timestamp, alert.rule_id, alert.rule_level, alert.rule_description,
                             alert.category, alert.agent_name, alert.agent_ip, alert.src_ip, alert.dst_ip, alert.user,
                             alert.process, alert.primary_cve, alert.file_path, alert.primary_hash, gid,
-                            source.display_name, alert.full_log[:1024],
-                            store.compress_raw(alert.raw, max_raw) if alert.raw is not None else None,
+                            source.display_name, alert.full_log[:1024], raw_blob,
                         ))
                         if len(batch) >= batch_size:
                             store.insert_alerts(batch)

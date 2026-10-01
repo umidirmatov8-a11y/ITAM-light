@@ -57,8 +57,11 @@ def run_ai(parent: QWidget, ctx: AppContext, groups: list[AlertGroup], incident:
     cve_ids = {c for g in groups for c in g.cves}
     cves = [c for c in session.store.cves() if c.cve in cve_ids]
 
+    known_hosts = [h["name"] for h in session.store.entities("host", 5000)]
+    known_users = [u["name"] for u in session.store.entities("user", 5000)]
+
     def job(progress, cancel):
-        return engine.analyze(groups, incident, iocs, cves)
+        return engine.analyze(groups, incident, iocs, cves, known_users, known_hosts)
 
     task = workers.Task(job)
     task.signals.finished.connect(lambda result: on_done(result.to_dict()))

@@ -211,8 +211,11 @@ class SettingsPage(BasePage):
         self.ti_conc = QSpinBox()
         self.ti_conc.setRange(1, 32)
         form.addRow("Parallel requests", self.ti_conc)
-        form.addRow("", QLabel("Only public indicators are sent. Internal IPs, usernames and hostnames never leave "
-                               "this computer."))
+        hint = QLabel("Only public indicators are sent: internal IPs, usernames and agent names never leave this "
+                      "computer. Add your organisation's domains in Privacy \u203A Internal domains so that internal "
+                      "FQDNs found in log text are never looked up online.")
+        hint.setWordWrap(True)
+        form.addRow("", hint)
         self.tabs.addTab(_scroll(w), "Threat intelligence")
 
     def _build_network(self) -> None:
@@ -282,8 +285,6 @@ class SettingsPage(BasePage):
         self.scanners.setPlaceholderText("Authorised scanners (IP or CIDR), one per line")
         self.scanners.setMaximumHeight(90)
         form.addRow("Known scanners", self.scanners)
-        self.dashboard_url = QLineEdit()
-        form.addRow("Wazuh dashboard URL", self.dashboard_url)
         lay.addLayout(form)
         self.tabs.addTab(_scroll(w), "Assets && Wazuh")
 
@@ -361,7 +362,6 @@ class SettingsPage(BasePage):
         self.default_crit.setCurrentText(c.wazuh.default_asset_criticality)
         self.internal_nets.setPlainText("\n".join(c.wazuh.internal_networks))
         self.scanners.setPlainText("\n".join(c.wazuh.known_scanners))
-        self.dashboard_url.setText(c.wazuh.dashboard_url)
         for key, cb in self.mask.items():
             cb.setChecked(getattr(c.privacy, key))
         self.internal_domains.setPlainText("\n".join(c.privacy.internal_domains))
@@ -404,8 +404,7 @@ class SettingsPage(BasePage):
         data["wazuh"].update(asset_criticality=[AssetRule.model_validate(a).model_dump() for a in assets],
                              default_asset_criticality=self.default_crit.currentText(),
                              internal_networks=_lines(self.internal_nets.toPlainText()),
-                             known_scanners=_lines(self.scanners.toPlainText()),
-                             dashboard_url=self.dashboard_url.text().strip())
+                             known_scanners=_lines(self.scanners.toPlainText()))
         data["privacy"].update({k: cb.isChecked() for k, cb in self.mask.items()})
         data["privacy"]["internal_domains"] = _lines(self.internal_domains.toPlainText())
         return AppConfig.model_validate(data)
@@ -416,6 +415,12 @@ class SettingsPage(BasePage):
         except Exception as exc:
             QMessageBox.critical(self, "Invalid settings", f"The settings were not saved:\n\n{exc}")
             return
+        if not config.network.verify_tls and self.ctx.config.network.verify_tls:
+            if QMessageBox.warning(self, "TLS verification", "Disabling TLS certificate verification allows "
+                                   "man-in-the-middle attacks on API traffic (including API keys). Use a CA bundle for "
+                                   "corporate TLS inspection instead.\n\nDisable verification anyway?",
+                                   QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+                return
         if config.ai.provider in ("openai", "anthropic") and self.ctx.config.ai.provider not in ("openai", "anthropic"):
             if QMessageBox.warning(self, "External AI provider", EXTERNAL_WARNING + "\n\nEnable it anyway?",
                                    QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:

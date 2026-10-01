@@ -229,3 +229,12 @@ def test_factory():
     cfg = AppConfig.model_validate({"ai": {"provider": "anthropic"}})
     p = create_provider(cfg, secrets)
     assert isinstance(p, AnthropicProvider) and p.api_key == "x"
+
+
+def test_session_wide_entities_are_masked():
+    g = finding()
+    g.sample_logs = ["lateral connection from web-01 to fileserver-12 by svc_backup"]
+    provider = FakeProvider([json.dumps(VALID)])
+    AIAnalysisEngine(AppConfig(), MemorySecretStore(), provider=provider).analyze(
+        [g], known_users=["svc_backup"], known_hosts=["fileserver-12"])
+    assert "fileserver-12" not in provider.prompts[0] and "svc_backup" not in provider.prompts[0]

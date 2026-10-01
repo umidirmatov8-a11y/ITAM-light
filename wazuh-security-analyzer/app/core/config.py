@@ -121,7 +121,6 @@ class WazuhConfig(_Section):
     known_scanners: list[str] = Field(default_factory=list)
     asset_criticality: list[AssetRule] = Field(default_factory=list)
     default_asset_criticality: Criticality = "medium"
-    dashboard_url: str = ""
 
     @field_validator("internal_networks", "known_scanners")
     @classmethod

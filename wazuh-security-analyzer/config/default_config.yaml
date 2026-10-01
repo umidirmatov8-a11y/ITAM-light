@@ -51,7 +51,6 @@ wazuh:
     - {pattern: "*fin*", criticality: high, description: Finance systems}
     - {pattern: "fs-*", criticality: high, description: File servers}
     - {pattern: "ws-*", criticality: medium, description: Workstations}
-  dashboard_url: ""
 
 correlation:
   chain_window_minutes: 60
