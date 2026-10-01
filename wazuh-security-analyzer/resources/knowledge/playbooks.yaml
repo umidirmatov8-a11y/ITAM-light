@@ -1,0 +1,237 @@
+# Response playbooks used by the Recommendations Engine.
+# Each step is included only when every {placeholder} it uses is known for the alert,
+# and when all of its "when" conditions are true.
+# "unless" lists conditions that suppress the step.
+# Conditions: external_source, internal_source, success_after_failures, auth_success,
+#             kev, malicious_ioc, multiple_hosts, multiple_users, in_chain, high_risk
+# Placeholders: src_ip, user, users, agent, hosts, rule_id, cve, package, file_path,
+#               hash, process, command_line, domain, count, window, first_seen, last_seen
+playbooks:
+  brute_force: &auth_attack
+    immediate:
+      - {text: "Check whether any authentication from {src_ip} succeeded (look for Wazuh rules 5715, 5501, 60106 from this IP).", }
+      - {text: "Terminate active sessions of {user} and reset the password - a successful login followed the failed attempts.", when: [success_after_failures]}
+      - {text: "Block {src_ip} on the perimeter firewall once malicious activity is confirmed (or use Wazuh active response firewall-drop).", when: [external_source], unless: [malicious_ioc]}
+      - {text: "Block {src_ip} at the firewall immediately - it is a confirmed malicious indicator.", when: [malicious_ioc]}
+    investigation:
+      - {text: "Count all attempts from {src_ip} across every agent in Wazuh (search data.srcip:{src_ip})."}
+      - {text: "List every account targeted from {src_ip}: {users}.", when: [multiple_users]}
+      - {text: "Check whether the account '{user}' exists and whether it is privileged."}
+      - {text: "Review authentication events on {agent} 30 minutes before and after {first_seen}."}
+      - {text: "Check {agent} for new processes, scheduled tasks and outbound connections after the successful login.", when: [success_after_failures]}
+      - {text: "Check firewall/VPN/EDR logs for other traffic from {src_ip}."}
+      - {text: "Check whether {src_ip} is an internal scanner or a misconfigured service before escalating.", when: [internal_source]}
+      - {text: "Look up the reputation of {src_ip} (AbuseIPDB, VirusTotal, OTX).", when: [external_source]}
+    remediation:
+      - {text: "Reset credentials of '{user}' and review its recent activity.", when: [success_after_failures]}
+      - {text: "Disable password authentication for SSH on {agent} and use key-based authentication.", when: [ssh]}
+      - {text: "Restrict remote access on {agent} to VPN or management networks."}
+    prevention:
+      - {text: "Enable MFA for remote access and privileged accounts."}
+      - {text: "Enforce account lockout / rate limiting (fail2ban, Wazuh active response)."}
+      - {text: "Remove default and unused accounts (admin, test, oracle, guest)."}
+  auth_failure: *auth_attack
+  auth_success:
+    immediate:
+      - {text: "Confirm with the owner of '{user}' that the login to {agent} from {src_ip} was legitimate.", when: [external_source], unless: [success_after_failures]}
+      - {text: "Treat the session of '{user}' as potentially compromised: disable the account or force logoff until verified.", when: [success_after_failures]}
+    investigation:
+      - {text: "Review commands, processes and network connections on {agent} after {first_seen}."}
+      - {text: "Check whether '{user}' normally logs in from {src_ip} and at this time of day."}
+      - {text: "Search for other logins of '{user}' on other hosts in the same period."}
+    remediation:
+      - {text: "Reset the password of '{user}' and revoke SSH keys/tokens if the login is not confirmed.", when: [success_after_failures]}
+    prevention:
+      - {text: "Require MFA and restrict logins from external networks."}
+  privilege_escalation:
+    immediate:
+      - {text: "Verify that '{user}' is authorised to run privileged commands on {agent}."}
+    investigation:
+      - {text: "Review the commands executed with elevated rights: {command_line}."}
+      - {text: "Check what '{user}' did before and after the elevation on {agent}."}
+    remediation:
+      - {text: "Remove unnecessary sudo/administrator rights from '{user}'."}
+    prevention:
+      - {text: "Apply least privilege and log all privileged commands centrally."}
+  account_change:
+    immediate:
+      - {text: "Confirm that the account change on {agent} was approved (change ticket)."}
+      - {text: "Disable the new/changed account '{user}' if the change is not authorised."}
+    investigation:
+      - {text: "Identify the session and user that performed the change and its source."}
+      - {text: "Check group memberships (administrators, sudo, wheel) of '{user}'."}
+    remediation:
+      - {text: "Remove unauthorised accounts and revert group changes."}
+    prevention:
+      - {text: "Restrict account management to dedicated admin accounts and alert on privileged group changes."}
+  execution:
+    immediate:
+      - {text: "Isolate {agent} from the network if the command is not recognised by IT.", when: [high_risk]}
+      - {text: "Capture the full command line and parent process before the evidence is lost."}
+    investigation:
+      - {text: "Decode and review the command: {command_line}."}
+      - {text: "Identify the parent process ({process}) and the user '{user}' that launched it."}
+      - {text: "Check {agent} for files downloaded or created around {first_seen}."}
+      - {text: "Search the same command line on other hosts."}
+      - {text: "Check outbound network connections from {agent} after the execution."}
+    remediation:
+      - {text: "Remove any persistence (scheduled tasks, services, Run keys) created by the command."}
+      - {text: "Reset credentials of '{user}' if the execution was not performed by the user."}
+    prevention:
+      - {text: "Enable PowerShell Constrained Language Mode, script block logging and AMSI."}
+      - {text: "Use application control (AppLocker/WDAC) to block unsigned scripts."}
+  credential_access:
+    immediate:
+      - {text: "Isolate {agent} - credential dumping indicates hands-on-keyboard activity.", }
+      - {text: "Assume credentials used on {agent} are compromised; prepare a password reset for privileged accounts."}
+    investigation:
+      - {text: "Identify the process accessing credentials: {process}."}
+      - {text: "List accounts that logged on to {agent} recently - their credentials may be exposed."}
+      - {text: "Search for lateral movement from {agent} using the exposed accounts."}
+    remediation:
+      - {text: "Reset passwords of all accounts exposed on {agent} (including service accounts and krbtgt if domain admin was exposed)."}
+    prevention:
+      - {text: "Enable LSA protection / Credential Guard and remove local admin rights."}
+  persistence:
+    immediate:
+      - {text: "Check whether the persistence mechanism on {agent} is approved software."}
+    investigation:
+      - {text: "Review the created task/service/registry value and the binary it points to."}
+      - {text: "Look up the referenced file hash {hash} in threat intelligence."}
+    remediation:
+      - {text: "Remove the unauthorised persistence entry and the referenced binary."}
+    prevention:
+      - {text: "Monitor autostart locations with Wazuh FIM and Sysmon."}
+  defense_evasion:
+    immediate:
+      - {text: "Verify why security logging/tools were altered on {agent}."}
+    investigation:
+      - {text: "Check activity on {agent} immediately before the evasion event - attackers clear logs after acting."}
+      - {text: "Compare local logs with centrally collected Wazuh events to find gaps."}
+    remediation:
+      - {text: "Restore the security configuration and restart affected agents/services."}
+    prevention:
+      - {text: "Forward logs centrally in real time and protect security tools from tampering."}
+  network_c2:
+    immediate:
+      - {text: "Block outbound traffic from {agent} to {src_ip} at the firewall/proxy if not business related.", when: [external_source]}
+    investigation:
+      - {text: "Identify the process ({process}) that opened the connection and its parent."}
+      - {text: "Check proxy/firewall logs for the volume and periodicity of traffic to the destination."}
+      - {text: "Look up the destination reputation."}
+    remediation:
+      - {text: "Remove the responsible binary/script and isolate {agent} if beaconing is confirmed."}
+    prevention:
+      - {text: "Enforce egress filtering and proxy authentication for servers."}
+  lateral_movement:
+    immediate:
+      - {text: "Check whether the remote access to {agent} was performed by an administrator."}
+    investigation:
+      - {text: "Trace the source host and account '{user}' and review their activity."}
+    remediation:
+      - {text: "Reset credentials of '{user}' if misuse is confirmed."}
+    prevention:
+      - {text: "Segment the network and restrict admin protocols (SMB, WinRM, RDP) to jump hosts."}
+  web_attack:
+    immediate:
+      - {text: "Block {src_ip} at the WAF/firewall if the attacks continue.", when: [external_source]}
+    investigation:
+      - {text: "Check the HTTP status codes returned to {src_ip} - 200 responses may mean a successful attack."}
+      - {text: "Review the targeted URLs and the application logs on {agent}."}
+      - {text: "Check the web root on {agent} for new or modified files (web shells)."}
+    remediation:
+      - {text: "Patch or fix the targeted application endpoint."}
+    prevention:
+      - {text: "Deploy/tune a WAF and validate input on the server side."}
+  scan:
+    immediate:
+      - {text: "Check whether {src_ip} is an authorised scanner (internal vulnerability management)."}
+    investigation:
+      - {text: "Identify which hosts and ports {src_ip} probed."}
+      - {text: "Look for successful connections or authentications from {src_ip} after the scan."}
+    remediation:
+      - {text: "Block {src_ip} at the perimeter if the scanning is not authorised.", when: [external_source]}
+    prevention:
+      - {text: "Reduce exposed services and keep an inventory of authorised scanners in the analyzer settings."}
+  malware:
+    immediate:
+      - {text: "Isolate {agent} from the network until the file is analysed.", when: [high_risk]}
+      - {text: "Quarantine or delete {file_path}."}
+    investigation:
+      - {text: "Check whether {file_path} was executed (process creation / Sysmon event 1)."}
+      - {text: "Search for hash {hash} on all other agents."}
+      - {text: "Identify how the file arrived (download, e-mail attachment, USB, lateral transfer)."}
+      - {text: "Review outbound connections from {agent} after the file appeared."}
+    remediation:
+      - {text: "Run a full EDR/antivirus scan on {agent} and remove all detected artefacts."}
+      - {text: "Reset credentials used on {agent} if the malware was executed."}
+    prevention:
+      - {text: "Keep endpoint protection updated and restrict execution from user-writable folders."}
+  impact:
+    immediate:
+      - {text: "Isolate {agent} immediately - destructive activity (e.g. shadow copy deletion) often precedes ransomware encryption."}
+      - {text: "Verify that recent offline backups are available and protected."}
+    investigation:
+      - {text: "Identify the process and user '{user}' that executed: {command_line}."}
+      - {text: "Check other hosts for the same command or for file encryption activity."}
+    remediation:
+      - {text: "Restore affected systems from known-good backups after eradication."}
+    prevention:
+      - {text: "Protect backups (immutable/offline) and restrict administrative tools."}
+  fim:
+    immediate:
+      - {text: "Confirm whether a planned change/patch explains the modification of {file_path}."}
+    investigation:
+      - {text: "Compare the old and new content/hash of {file_path}."}
+      - {text: "Identify the user/process that modified the file (enable who-data for this path if missing)."}
+    remediation:
+      - {text: "Restore {file_path} from a trusted source if the change was unauthorised."}
+    prevention:
+      - {text: "Enable Wazuh FIM who-data and realtime monitoring for critical paths."}
+  vulnerability:
+    immediate:
+      - {text: "Prioritise patching of {package} on {agent} - {cve} is listed in CISA KEV (actively exploited).", when: [kev]}
+    investigation:
+      - {text: "Verify the installed version of {package} on {agent} against the vendor advisory for {cve}."}
+      - {text: "Check whether the vulnerable service is exposed to the network."}
+      - {text: "Search for exploitation attempts against {agent}."}
+    remediation:
+      - {text: "Update {package} to the fixed version referenced by the vendor advisory for {cve}."}
+      - {text: "Apply vendor mitigations if a patch cannot be installed immediately."}
+    prevention:
+      - {text: "Keep regular patch cycles and monitor CISA KEV for newly exploited vulnerabilities."}
+  policy:
+    immediate: []
+    investigation:
+      - {text: "Review the failed configuration check on {agent} and its rationale."}
+    remediation:
+      - {text: "Apply the recommended hardening setting or document an accepted exception."}
+    prevention:
+      - {text: "Track SCA compliance over time and integrate hardening into build templates."}
+  system:
+    immediate: []
+    investigation:
+      - {text: "Confirm that the agent/service event on {agent} corresponds to planned maintenance."}
+    remediation: []
+    prevention: []
+  network:
+    immediate: []
+    investigation:
+      - {text: "Review the connection details and whether {src_ip} is expected to reach {agent}."}
+    remediation: []
+    prevention:
+      - {text: "Review firewall rules for unnecessary exposure."}
+  process_activity:
+    immediate: []
+    investigation:
+      - {text: "Review the process tree on {agent} if the process ({process}) is unexpected."}
+    remediation: []
+    prevention: []
+  other:
+    immediate: []
+    investigation:
+      - {text: "Read the full log of rule {rule_id} on {agent} and check related events within ±30 minutes."}
+      - {text: "Check whether the activity is expected for {agent}."}
+    remediation: []
+    prevention:
+      - {text: "Tune the rule or add a local Wazuh rule if the event is benign and noisy."}

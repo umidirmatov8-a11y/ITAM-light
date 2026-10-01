@@ -1,0 +1,9 @@
+# Local IOC list - DEMO INDICATORS ONLY.
+# All IPs below are from RFC 5737 documentation ranges and all hashes/domains are synthetic.
+# Add your own indicators to local_ioc.csv in the application data folder (same format).
+type,value,verdict,source,description
+ip,203.0.113.66,malicious,demo-threat-feed,Demo: known brute-force botnet node
+ip,198.51.100.23,malicious,demo-threat-feed,Demo: command-and-control server
+cidr,192.0.2.128/25,suspicious,demo-threat-feed,Demo: hosting range frequently abused for scanning
+domain,update-check.example-malware.test,malicious,demo-threat-feed,Demo: malware download domain
+sha256,9f2b5c0e1d4a7b3c6e8f0a1b2c3d4e5f60718293a4b5c6d7e8f9012345678abc,malicious,demo-threat-feed,Demo: synthetic trojan sample
