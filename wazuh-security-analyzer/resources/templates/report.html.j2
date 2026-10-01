@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ r.title }}</title>
+<style>
+  :root { --bg:#0f141a; --panel:#161d26; --text:#e6edf3; --muted:#8b949e; --line:#26303c; --accent:#3fa9f5;
+          --critical:#ff3b5c; --high:#ff8a3d; --medium:#f5c542; --low:#3fa9f5; --informational:#8b949e; }
+  @media print { :root { --bg:#fff; --panel:#fff; --text:#111; --muted:#555; --line:#ccc; } }
+  body { background:var(--bg); color:var(--text); font:14px/1.5 "Segoe UI", Roboto, Arial, sans-serif; margin:0; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:26px; margin:0 0 4px; } h2 { font-size:19px; margin:32px 0 10px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  h3 { font-size:15px; margin:18px 0 6px; }
+  .muted { color:var(--muted); } .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin:10px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; }
+  .stat b { display:block; font-size:24px; } .sev { display:inline-block; padding:1px 8px; border-radius:10px; font-weight:600; font-size:12px; color:#111; }
+  .sev-critical{background:var(--critical);color:#fff} .sev-high{background:var(--high)} .sev-medium{background:var(--medium)} .sev-low{background:var(--low)} .sev-informational{background:var(--informational)}
+  table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; } .wrap { overflow-x:auto; } code { font-family:Consolas, monospace; font-size:12px; word-break:break-all; }
+  .chain { font-weight:600; } ul { margin:4px 0 4px 20px; padding:0; } .exec p { margin:0 0 10px; }
+</style>
+</head>
+<body><main>
+<h1>{{ r.title }}</h1>
+<div class="muted">Generated {{ r.generated_at }} by {{ r.app }} &middot; Mode: {{ r.summary.mode|upper }}
+{% if r.summary.first_ts %}&middot; Period: {{ ts(r.summary.first_ts) }} &ndash; {{ ts(r.summary.last_ts) }}{% endif %}</div>
+
+{% if r.has('executive_summary') %}
+<h2>Executive Summary</h2>
+<div class="card exec">{% for p in r.summary.executive_summary.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div>
+{% endif %}
+
+{% if r.has('statistics') %}
+<h2>Statistics</h2>
+<div class="grid">
+{% for sev in ['critical','high','medium','low','informational'] %}
+  <div class="stat"><span class="sev sev-{{ sev }}">{{ sev|upper }}</span><b>{{ "{:,}".format(r.summary.severity_counts.get(sev, 0)) }}</b><span class="muted">events</span></div>
+{% endfor %}
+  <div class="stat"><b>{{ "{:,}".format(r.summary.events) }}</b><span class="muted">total events</span></div>
+  <div class="stat"><b>{{ r.summary.files }}</b><span class="muted">files</span></div>
+  <div class="stat"><b>{{ r.summary.agents }}</b><span class="muted">agents</span></div>
+  <div class="stat"><b>{{ r.summary.rules }}</b><span class="muted">rules</span></div>
+  <div class="stat"><b>{{ r.summary.incidents }}</b><span class="muted">incidents</span></div>
+  <div class="stat"><b>{{ r.summary.affected_hosts }}</b><span class="muted">affected hosts</span></div>
+  <div class="stat"><b>{{ r.summary.affected_users }}</b><span class="muted">affected users</span></div>
+  <div class="stat"><b>{{ r.summary.external_ips }}</b><span class="muted">external IPs</span></div>
+  <div class="stat"><b>{{ r.summary.cves }}</b><span class="muted">CVE</span></div>
+  <div class="stat"><b>{{ r.summary.mitre_techniques }}</b><span class="muted">MITRE techniques</span></div>
+</div>
+{% endif %}
+
+{% if r.has('incidents') %}
+<h2>Incidents</h2>
+{% for i in r.incidents[:50] %}
+<div class="card">
+  <h3>{{ i.id }} &middot; {{ i.title }} <span class="sev sev-{{ i.severity }}">{{ i.severity|upper }}</span></h3>
+  <div class="muted">Assessment: <b>{{ i.assessment }}</b> &middot; Risk {{ "%.0f"|format(i.risk_score) }}/100 &middot; Confidence {{ "%.0f"|format(i.confidence*100) }}% &middot; False positive probability {{ "%.0f"|format(i.fp_probability*100) }}% &middot; Status {{ i.status }}</div>
+  <p>{{ i.summary }}</p>
+  {% if i.chain %}<p class="chain">{{ i.chain|join(' → ') }}</p>{% endif %}
+  <table>
+    <tr><th>Events</th><td>{{ "{:,}".format(i.event_count) }}</td><th>Period</th><td>{{ ts(i.first_ts) }} &ndash; {{ ts(i.last_ts) }}</td></tr>
+    <tr><th>Hosts</th><td>{{ i.affected_hosts[:10]|join(', ') or '-' }}</td><th>Accounts</th><td>{{ i.affected_users[:10]|join(', ') or '-' }}</td></tr>
+    <tr><th>Sources</th><td>{{ i.source_ips[:10]|join(', ') or '-' }}</td><th>MITRE</th><td>{% for m in i.mitre[:8] %}{{ m.technique_id }} {{ m.name }} ({{ m.confidence }}){% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>
+  </table>
+  {% if i.evidence %}<h3>Evidence</h3><ul>{% for e in i.evidence %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  {% if i.reasoning %}<h3>Reasoning</h3><ul>{% for e in i.reasoning %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  {% for key, label in sections %}{% if i.recommendations.get(key) %}<h3>{{ label }}</h3><ul>{% for s in i.recommendations[key] %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}{% endfor %}
+</div>
+{% else %}<p class="muted">No incidents.</p>{% endfor %}
+{% endif %}
+
+{% if r.has('critical_alerts') %}
+<h2>Critical and High Alerts</h2>
+<div class="wrap"><table>
+<tr><th>ID</th><th>Severity</th><th>Risk</th><th>Finding</th><th>Host</th><th>Source</th><th>Count</th><th>Assessment</th></tr>
+{% for g in r.alerts[:200] %}
+<tr><td>{{ g.display_id }}</td><td><span class="sev sev-{{ g.severity }}">{{ g.severity|upper }}</span></td><td>{{ "%.0f"|format(g.risk_score) }}</td>
+<td><b>{{ g.title }}</b><br><span class="muted">{{ g.what_happened }}</span></td><td>{{ g.agent_name }}</td><td>{{ g.src_ip }}</td><td>{{ "{:,}".format(g.count) }}</td><td>{{ g.assessment }}</td></tr>
+{% endfor %}
+</table></div>
+{% endif %}
+
+{% if r.has('hosts') %}
+<h2>Affected Hosts</h2>
+<div class="wrap"><table><tr><th>Host</th><th>Severity</th><th>Max risk</th><th>Events</th><th>Incidents</th><th>Criticality</th></tr>
+{% for h in r.hosts[:100] %}<tr><td>{{ h.name }}</td><td><span class="sev sev-{{ h.severity }}">{{ h.severity|upper }}</span></td><td>{{ "%.0f"|format(h.max_risk) }}</td><td>{{ "{:,}".format(h.events) }}</td><td>{{ h.incidents }}</td><td>{{ h.data.get('criticality','') }}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% if r.has('users') %}
+<h2>Users</h2>
+<div class="wrap"><table><tr><th>Account</th><th>Severity</th><th>Max risk</th><th>Events</th><th>Hosts</th></tr>
+{% for u in r.users[:100] %}<tr><td>{{ u.name }}</td><td><span class="sev sev-{{ u.severity }}">{{ u.severity|upper }}</span></td><td>{{ "%.0f"|format(u.max_risk) }}</td><td>{{ "{:,}".format(u.events) }}</td><td>{{ u.data.get('hosts', [])[:5]|join(', ') }}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% if r.has('iocs') %}
+<h2>Indicators of Compromise (external)</h2>
+<div class="wrap"><table><tr><th>Type</th><th>Value</th><th>Verdict</th><th>Occurrences</th><th>Hosts</th><th>Sources</th></tr>
+{% for i in r.iocs[:200] %}<tr><td>{{ i.type }}</td><td><code>{{ i.value }}</code></td><td>{{ i.verdict }}</td><td>{{ "{:,}".format(i.count) }}</td><td>{{ i.hosts[:5]|join(', ') }}</td><td>{% for s in i.sources[:3] %}{{ s.provider }}: {{ s.verdict }}{% if s.score %} ({{ s.score }}){% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% if r.has('cves') %}
+<h2>Vulnerabilities (CVE)</h2>
+{% for c in r.cves[:100] %}
+<div class="card"><h3>{{ c.cve }} {% if c.known_exploited %}<span class="sev sev-critical">KNOWN EXPLOITED</span>{% endif %}</h3>
+<div class="muted">CVSS {{ c.cvss if c.cvss is not none else 'n/a' }} {{ c.severity|upper }} &middot; Hosts: {{ c.hosts[:10]|join(', ') }} &middot; Packages: {{ c.packages[:5]|join(', ') }}</div>
+{% if c.description %}<p>{{ c.description }}</p>{% endif %}
+<p><b>Remediation:</b> {{ c.remediation }}</p>
+<div class="muted">Sources: {% for ref in c.references[:6] %}<a href="{{ ref.url }}">{{ ref.tags or ref.url }}</a>{% if not loop.last %} &middot; {% endif %}{% endfor %}</div></div>
+{% else %}<p class="muted">No CVE detected.</p>{% endfor %}
+{% endif %}
+
+{% if r.has('mitre') %}
+<h2>MITRE ATT&amp;CK</h2>
+<div class="wrap"><table><tr><th>Technique</th><th>Tactics</th><th>Events</th><th>Confidence</th><th>Evidence</th></tr>
+{% for m in r.mitre[:100] %}<tr><td><a href="{{ m.url }}">{{ m.technique_id }}</a> {{ m.name }}</td><td>{{ m.tactics|join(', ') }}</td><td>{{ "{:,}".format(m.events) }}</td><td>{{ m.confidence }}</td><td>{{ m.evidence[:2]|join('; ') }}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% if r.has('recommendations') %}
+<h2>Recommendations</h2>
+{% for key, label in sections %}{% if r.recommendations.get(key) %}<h3>{{ label }}</h3><ul>{% for s in r.recommendations[key] %}<li>{{ s }}</li>{% endfor %}</ul>{% endif %}{% endfor %}
+{% endif %}
+
+{% if r.has('timeline') %}
+<h2>Timeline (critical / high incidents)</h2>
+<div class="wrap"><table><tr><th>Start</th><th>End</th><th>Severity</th><th>Event</th></tr>
+{% for t in r.timeline %}<tr><td>{{ ts(t.ts) }}</td><td>{{ ts(t.end) }}</td><td><span class="sev sev-{{ t.severity }}">{{ t.severity|upper }}</span></td><td>{{ t.text }}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+{% if r.has('appendix') %}
+<h2>Technical Appendix</h2>
+<div class="card">
+<p><b>Input files:</b> {{ r.appendix.files|join(', ') }}</p>
+<p><b>Parsers:</b> {% for k, v in r.appendix.parsers.items() %}{{ k }} ({{ "{:,}".format(v) }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+<p><b>Duplicates removed:</b> {{ r.appendix.duplicates }} &middot; <b>Malformed records skipped:</b> {{ r.appendix.parse_errors }} &middot; <b>Analysis time:</b> {{ r.appendix.duration }} s</p>
+<p><b>Risk scale:</b> {{ r.appendix.severity_scale }}. The risk score combines Wazuh rule level, asset criticality, frequency, source location, authentication outcome, IOC reputation, CVE severity, MITRE technique and correlation, reduced by the estimated false-positive probability.</p>
+{% if r.appendix.rejected %}<p><b>Rejected inputs:</b></p><ul>{% for x in r.appendix.rejected %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+<h3>Top rules</h3><table><tr><th>Rule</th><th>Description</th><th>Events</th></tr>
+{% for rid, desc, cnt in r.appendix.top_rules %}<tr><td>{{ rid }}</td><td>{{ desc }}</td><td>{{ "{:,}".format(cnt) }}</td></tr>{% endfor %}</table>
+<p class="muted">Statements in this report distinguish observed facts (evidence) from analytical conclusions (assessment). An assessment such as "possible attack" is not proof of compromise.</p>
+</div>
+{% endif %}
+</main></body></html>

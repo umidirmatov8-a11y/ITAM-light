@@ -123,6 +123,7 @@ class AlertGroup:
     evidence: list[str] = field(default_factory=list)
     recommendations: dict[str, list[str]] = field(default_factory=dict)
     incident_id: str = ""
+    ai_analysis: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -277,6 +278,7 @@ class CVERecord:
     cwe: list[str] = field(default_factory=list)
     affected_software: list[str] = field(default_factory=list)
     known_exploited: bool = False
+    kev_checked: bool = False  # True when the CISA KEV catalog was available for the lookup
     kev: dict[str, Any] = field(default_factory=dict)
     references: list[dict[str, str]] = field(default_factory=list)
     sources: list[str] = field(default_factory=list)

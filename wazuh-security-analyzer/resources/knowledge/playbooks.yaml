@@ -1,6 +1,7 @@
 # Response playbooks used by the Recommendations Engine.
 # Each step is included only when every {placeholder} it uses is known for the alert,
 # and when all of its "when" conditions are true.
+# "unless" lists conditions that suppress the step.
 # Conditions: external_source, internal_source, success_after_failures, auth_success,
 #             kev, malicious_ioc, multiple_hosts, multiple_users, in_chain, high_risk
 # Placeholders: src_ip, user, users, agent, hosts, rule_id, cve, package, file_path,
@@ -10,7 +11,7 @@ playbooks:
     immediate:
       - {text: "Check whether any authentication from {src_ip} succeeded (look for Wazuh rules 5715, 5501, 60106 from this IP).", }
       - {text: "Terminate active sessions of {user} and reset the password - a successful login followed the failed attempts.", when: [success_after_failures]}
-      - {text: "Block {src_ip} on the perimeter firewall once malicious activity is confirmed (or use Wazuh active response firewall-drop).", when: [external_source]}
+      - {text: "Block {src_ip} on the perimeter firewall once malicious activity is confirmed (or use Wazuh active response firewall-drop).", when: [external_source], unless: [malicious_ioc]}
       - {text: "Block {src_ip} at the firewall immediately - it is a confirmed malicious indicator.", when: [malicious_ioc]}
     investigation:
       - {text: "Count all attempts from {src_ip} across every agent in Wazuh (search data.srcip:{src_ip})."}
@@ -32,7 +33,7 @@ playbooks:
   auth_failure: *auth_attack
   auth_success:
     immediate:
-      - {text: "Confirm with the owner of '{user}' that the login to {agent} from {src_ip} was legitimate.", when: [external_source]}
+      - {text: "Confirm with the owner of '{user}' that the login to {agent} from {src_ip} was legitimate.", when: [external_source], unless: [success_after_failures]}
       - {text: "Treat the session of '{user}' as potentially compromised: disable the account or force logoff until verified.", when: [success_after_failures]}
     investigation:
       - {text: "Review commands, processes and network connections on {agent} after {first_seen}."}

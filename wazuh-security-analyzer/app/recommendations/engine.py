@@ -55,7 +55,8 @@ class RecommendationEngine:
         domain = next((v for t, v, _ in g.ioc_items() if t == "domain"), "")
         return {
             "src_ip": g.src_ip,
-            "user": g.user or (g.users[0] if len(g.users) == 1 else ""),
+            # Only name an account when the finding concerns exactly one account.
+            "user": g.users[0] if len(g.users) == 1 else ("" if g.users else g.user),
             "users": truncate_list(g.users, 10) if g.users else "",
             "agent": g.agent_name,
             "hosts": g.agent_name,
@@ -103,7 +104,8 @@ class RecommendationEngine:
             if not isinstance(step, dict) or "text" not in step:
                 continue
             when = step.get("when") or []
-            if any(c not in conditions for c in when):
+            unless = step.get("unless") or []
+            if any(c not in conditions for c in when) or any(c in conditions for c in unless):
                 continue
             text = str(step["text"])
             names = _PLACEHOLDER.findall(text)
@@ -121,12 +123,12 @@ class RecommendationEngine:
             result[section] = self._render(playbook.get(section, []), values, conditions)
         info = self.rule_kb.get(g.rule_id) if self.rule_kb else None
         if info:
-            for step in info.investigation:
-                if step not in result["investigation"]:
-                    result["investigation"].append(step)
-            for step in info.remediation:
-                if step not in result["remediation"]:
-                    result["remediation"].append(step)
+            # Rule-specific knowledge complements generic playbooks that produced few concrete steps.
+            for section, steps in (("investigation", info.investigation), ("remediation", info.remediation)):
+                if len(result[section]) < 3:
+                    for step in steps:
+                        if step not in result[section]:
+                            result[section].append(step)
         if g.chain_ids and not any("attack chain" in s for s in result["immediate"]):
             result["immediate"].insert(0, f"Review the full correlated attack chain on {g.agent_name or 'the host'} "
                                           "- treat the related alerts as one incident.")

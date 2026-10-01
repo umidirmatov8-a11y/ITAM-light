@@ -74,7 +74,7 @@ ai:
   timeout_seconds: 120
   temperature: 0.1
   max_tokens: 2000
-  anonymize_external: true  # always sanitize data sent to cloud AI providers
+  # Data sent to cloud providers (OpenAI, Anthropic) is always sanitized.
   anonymize_local: false    # set true to sanitize also for Ollama / local endpoints
   max_related_events: 20
   auto_analyze_top_n: 0

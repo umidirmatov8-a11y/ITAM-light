@@ -222,6 +222,8 @@ class Normalizer:
         for algo, hv in hashes.items():
             iocs[(algo, hv)] = None
         for u in urls[:1]:
+            if "://" not in u:
+                continue  # a request path (e.g. from an access log) is context, not an indicator
             iocs[("url", u)] = None
             host = domain_from_url(u)
             if host:

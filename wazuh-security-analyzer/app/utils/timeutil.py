@@ -72,6 +72,8 @@ def fmt_ts(ts: float | None, with_seconds: bool = True) -> str:
 def fmt_duration(seconds: float | None) -> str:
     if seconds is None:
         return "-"
+    if seconds < 10:
+        return f"{seconds:.1f}s"
     seconds = int(seconds)
     if seconds < 60:
         return f"{seconds}s"

@@ -161,7 +161,7 @@ class AIConfig(_Section):
     timeout_seconds: int = Field(default=120, ge=5, le=900)
     temperature: float = Field(default=0.1, ge=0.0, le=1.0)
     max_tokens: int = Field(default=2000, ge=256, le=16000)
-    anonymize_external: bool = True
+    # Data sent to cloud providers (OpenAI, Anthropic) is ALWAYS sanitized.
     anonymize_local: bool = False
     max_related_events: int = Field(default=20, ge=1, le=200)
     auto_analyze_top_n: int = Field(default=0, ge=0, le=50)

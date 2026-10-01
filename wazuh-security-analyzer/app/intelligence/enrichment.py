@@ -107,6 +107,8 @@ class EnrichmentService:
                     record.references.append({"url": link["url"], "tags": link["name"]})
 
     def _apply_kev(self, record: CVERecord) -> None:
+        if self.kev.available:
+            record.kev_checked = True
         entry = self.kev.lookup(record.cve)
         if entry:
             record.known_exploited = True
