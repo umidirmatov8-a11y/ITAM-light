@@ -1,0 +1,34 @@
+# docker compose -f deploy/docker/docker-compose.yml up -d   →  http://localhost:8080  (first start opens the setup wizard)
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: itam
+      POSTGRES_USER: itam
+      POSTGRES_PASSWORD: ${ITAM_DB_PASSWORD:-change-me-please}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U itam -d itam"]
+      interval: 5s
+      retries: 20
+
+  itam:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ITAM_ConnectionStrings__Default: Host=db;Port=5432;Database=itam;Username=itam;Password=${ITAM_DB_PASSWORD:-change-me-please}
+    ports:
+      - "8080:8080"
+    volumes:
+      - itamdata:/data
+
+volumes:
+  pgdata:
+  itamdata:

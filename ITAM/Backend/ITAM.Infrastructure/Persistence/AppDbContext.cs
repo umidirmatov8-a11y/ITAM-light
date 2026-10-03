@@ -132,7 +132,7 @@ public class AppDbContext : DbContext, IAppDbContext
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken ct = default) => SaveChangesAsync(true, ct);
+    public override Task<int> SaveChangesAsync(CancellationToken ct = default) => SaveChangesAsync(true, ct);
 
     private void OnBeforeSave()
     {

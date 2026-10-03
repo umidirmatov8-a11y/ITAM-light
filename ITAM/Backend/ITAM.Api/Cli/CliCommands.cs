@@ -44,6 +44,10 @@ public static partial class CliCommands
             var value = i + 1 < args.Length && !args[i + 1].StartsWith("--") ? args[++i] : "true";
             d[key] = value;
         }
+        // Secrets can be passed via environment (ITAM_SETUP_DB_PASSWORD, ...) so they never appear in the process list.
+        foreach (var secret in new[] { "db-password", "app-db-password", "admin-password", "password" })
+            if (!d.ContainsKey(secret) && Environment.GetEnvironmentVariable("ITAM_SETUP_" + secret.Replace('-', '_').ToUpperInvariant()) is { Length: > 0 } v)
+                d[secret] = v;
         return d;
     }
 
@@ -107,6 +111,8 @@ public static partial class CliCommands
                 [--app-db-user itam --app-db-password ***]  создать отдельного пользователя БД
                 --port 8080 --data-root <каталог данных> --pg-bin <каталог bin PostgreSQL>
                 --admin-user admin --admin-password *** --org "Организация" [--timezone Asia/Tashkent] [--demo]
+                Пароли можно передать через переменные окружения ITAM_SETUP_DB_PASSWORD, ITAM_SETUP_APP_DB_PASSWORD,
+                ITAM_SETUP_ADMIN_PASSWORD, ITAM_SETUP_PASSWORD (не видны в списке процессов).
             ITAM.Server.exe migrate                 применить миграции и справочные данные
             ITAM.Server.exe check                   проверить подключение к БД
             ITAM.Server.exe backup [--out <dir>]    создать резервную копию

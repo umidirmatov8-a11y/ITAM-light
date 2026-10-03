@@ -24,7 +24,7 @@ public sealed class SessionAuthenticationOptions : AuthenticationSchemeOptions
 /// </summary>
 public sealed class SessionAuthenticationHandler : AuthenticationHandler<SessionAuthenticationOptions>
 {
-    public const string Scheme = "ItamSession";
+    public new const string Scheme = "ItamSession";
     private const string Purpose = "ITAM.Session.v1";
     private readonly IDataProtector _protector;
     private readonly IMemoryCache _cache;

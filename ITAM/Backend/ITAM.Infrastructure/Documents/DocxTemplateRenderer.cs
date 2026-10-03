@@ -31,7 +31,7 @@ public sealed partial class DocxTemplateRenderer : IDocumentRenderer
                 foreach (var p in root.Descendants<Paragraph>().ToList())
                     ReplaceInParagraph(p, key => Lookup(values, key));
             }
-            main.Document.Save();
+            main.Document!.Save();
         }
         return ms.ToArray();
     }
@@ -54,7 +54,7 @@ public sealed partial class DocxTemplateRenderer : IDocumentRenderer
     {
         using var ms = new MemoryStream(docx);
         using var doc = WordprocessingDocument.Open(ms, false);
-        var body = doc.MainDocumentPart?.Document.Body;
+        var body = doc.MainDocumentPart?.Document?.Body;
         var blocks = new List<DocumentBlock>();
         if (body is null) return new DocumentContent(blocks);
         foreach (var el in body.Elements())
