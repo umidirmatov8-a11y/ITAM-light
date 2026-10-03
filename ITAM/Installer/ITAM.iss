@@ -59,10 +59,15 @@ Name: "{group}\ITAM (веб-интерфейс)"; Filename: "{app}\ITAM.url"
 Name: "{group}\Документация"; Filename: "{app}\docs"
 Name: "{group}\Удалить ITAM"; Filename: "{uninstallexe}"
 
+[UninstallDelete]
+Type: files; Name: "{app}\ITAM.url"
+
 [UninstallRun]
-Filename: "{sys}\sc.exe"; Parameters: "stop {#ServiceName}"; Flags: runhidden waituntilterminated; RunOnceId: "StopItam"
+; Stop-Service waits until the services have stopped, so their files are no longer locked.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -Command ""Stop-Service -Name {#ServiceName} -Force -ErrorAction SilentlyContinue"""; Flags: runhidden waituntilterminated; RunOnceId: "StopItam"
 Filename: "{sys}\sc.exe"; Parameters: "delete {#ServiceName}"; Flags: runhidden waituntilterminated; RunOnceId: "DelItam"
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""ITAM Web"""; Flags: runhidden waituntilterminated; RunOnceId: "DelFw"
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -Command ""Stop-Service -Name {#PgServiceName} -Force -ErrorAction SilentlyContinue"""; Flags: runhidden waituntilterminated; RunOnceId: "StopPg"
 Filename: "{app}\pgsql\bin\pg_ctl.exe"; Parameters: "unregister -N {#PgServiceName}"; Flags: runhidden waituntilterminated skipifdoesntexist; RunOnceId: "DelPg"
 
 [Code]
@@ -253,8 +258,9 @@ end;
 procedure StopService(const Name: String);
 var Code: Integer;
 begin
-  Run(ExpandConstant('{sys}\sc.exe'), 'stop ' + Name, Code);
-  Sleep(3000);
+  // Stop-Service waits for the service to stop (sc stop returns immediately and files may stay locked).
+  Run(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -Command "Stop-Service -Name ' + Name + ' -Force -ErrorAction SilentlyContinue"', Code);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
