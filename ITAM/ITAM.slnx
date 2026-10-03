@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Backend/">
+    <Project Path="Backend/ITAM.Api/ITAM.Api.csproj" />
+    <Project Path="Backend/ITAM.Application/ITAM.Application.csproj" />
+    <Project Path="Backend/ITAM.Domain/ITAM.Domain.csproj" />
+    <Project Path="Backend/ITAM.Infrastructure/ITAM.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Backend/Tests/">
+    <Project Path="Backend/Tests/ITAM.IntegrationTests/ITAM.IntegrationTests.csproj" />
+    <Project Path="Backend/Tests/ITAM.UnitTests/ITAM.UnitTests.csproj" />
+  </Folder>
+</Solution>
