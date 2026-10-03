@@ -379,7 +379,11 @@ public sealed partial class LookupService
     }
 
     private async Task<Dictionary<Guid, string>> LookupNames<T>(List<Guid> ids, CancellationToken ct) where T : LookupEntity
-        => await _db.Set<T>().IgnoreQueryFilters().Where(e => ids.Contains(e.Id))
-            .Select(e => new { e.Id, Name = EF.Property<string?>(e, "FullPath") ?? e.Name })
-            .ToDictionaryAsync(e => e.Id, e => e.Name, ct);
+    {
+        var query = _db.Set<T>().IgnoreQueryFilters().Where(e => ids.Contains(e.Id));
+        // Hierarchical dictionaries show the materialized path ("Ташкент / Офис / Склад"), flat ones just the name.
+        return typeof(T).GetProperty("FullPath") is not null
+            ? await query.Select(e => new { e.Id, Name = EF.Property<string?>(e, "FullPath") ?? e.Name }).ToDictionaryAsync(e => e.Id, e => e.Name, ct)
+            : await query.ToDictionaryAsync(e => e.Id, e => e.Name, ct);
+    }
 }

@@ -1,0 +1,25 @@
+html, body, #root { height: 100%; margin: 0; }
+body { -webkit-font-smoothing: antialiased; }
+html[data-theme='dark'] body { background: #0b1220; }
+.itam-logo { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 18px; color: #fff; font-weight: 700; font-size: 17px; letter-spacing: .3px; white-space: nowrap; overflow: hidden; }
+.itam-logo-mark { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg,#3b82f6,#1d4ed8); display: grid; place-items: center; font-size: 13px; flex: none; }
+.itam-header { display: flex; align-items: center; gap: 12px; padding: 0 16px !important; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.itam-content { padding: 16px 20px 32px; min-height: calc(100vh - 56px); }
+.itam-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.itam-page-header h2 { margin: 0 !important; }
+.itam-kpi .ant-card-body { padding: 16px 18px; }
+.itam-kpi-value { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.itam-kpi-label { opacity: .7; font-size: 13px; }
+.itam-muted { opacity: .65; }
+.itam-mono { font-family: Consolas, 'Courier New', monospace; }
+.itam-asset-hero { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+.itam-asset-hero .ant-descriptions { flex: 1 1 520px; }
+.itam-login-bg { min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 20% 20%, #1e3a8a 0, #0b1f4d 45%, #020617 100%); padding: 16px; }
+.itam-login-card { width: 100%; max-width: 400px; }
+.itam-table-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.itam-table-toolbar .grow { flex: 1 1 auto; }
+.itam-qr { width: 160px; height: 160px; border-radius: 8px; background: #fff; padding: 6px; }
+.itam-backdated { color: #d46b08; }
+.itam-cancelled { text-decoration: line-through; opacity: .6; }
+.itam-public { max-width: 520px; margin: 40px auto; padding: 0 16px; }
+@media print { .ant-layout-sider, .itam-header, .itam-no-print { display: none !important; } .itam-content { padding: 0; } }

@@ -24,6 +24,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
+  <!-- The SPA (built from ../../Frontend into wwwroot) is served from the output folder in dev runs too. -->
+  <ItemGroup>
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="ITAM.IntegrationTests" />
   </ItemGroup>
