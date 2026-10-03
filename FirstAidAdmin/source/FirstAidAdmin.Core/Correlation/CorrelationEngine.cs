@@ -78,12 +78,12 @@ public sealed class CorrelationEngine
                 Severity = check.Severity,
                 Confidence = Confidence.Medium,
                 WhatWasFound = check.Summary,
-                ProbableCause = check.Details ?? "Проверка завершилась с ошибкой.",
+                ProbableCause = check.Details ?? "Причина не определена автоматически — см. подробности проверки и базу знаний.",
                 Recommendation = check.Recommendation ?? "Изучите подробности проверки.",
                 RemediationIds = check.Remediation.ToList(),
                 RelatedCheckIds = { check.Id },
                 IsCorrelated = false
-            }.Support(check.Summary));
+            }.Against(check.Summary));
         }
 
         return findings

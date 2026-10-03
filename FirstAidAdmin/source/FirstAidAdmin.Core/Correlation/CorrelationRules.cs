@@ -21,6 +21,7 @@ public static class CorrelationRules
         "net.dns" => new[] { "net.http", "dns.internal-only" },
         "domain.public-dns" => new[] { "dns.internal-only", "domain.dc-unreachable" },
         "wu.disk-space" => new[] { "disk.system-low" },
+        "health.unexpected-shutdown" => new[] { "events.serious" },
         "wu.component-store" => new[] { "health.dism-repairable" },
         "rdp.disabled" => new[] { "rdp.not-listening" },
         "rdp.service-stopped" => new[] { "rdp.not-listening" },
@@ -453,6 +454,21 @@ public static class CorrelationRules
                 C.HealthCrashes);
             if (kp is not null) f.RelatedCheckIds.Add(kp.Id);
             return f.Line(s, C.StorageEvents, "Ошибок диска нет", "Есть ошибки диска").Fix(A.OpenEventViewer);
+        }),
+
+        new DelegateRule("events.serious", s =>
+        {
+            var logs = new[] { C.EventsSystem, C.EventsApplication }.Where(s.Failed).ToList();
+            if (logs.Count == 0) return null;
+            var groups = logs.SelectMany(l => s.Get(l)!.Checks).Where(g => g.IsProblem).ToList();
+            var f = F("events.serious", "Серьёзные события в журналах Windows", DiagnosticCategory.EventLog, Severity.High,
+                groups.Count >= 2 ? Confidence.Medium : Confidence.Low,
+                string.Join("; ", groups.Select(g => $"{g.Name}: {g.Summary}")),
+                "В журналах зарегистрированы сбои служб, питания, дисков или оборудования. Связь с жалобой пользователя нужно подтвердить по времени событий.",
+                "Сопоставьте время событий с моментом проблемы и изучите их в «Просмотре событий».",
+                logs.ToArray());
+            foreach (var g in groups) f.Against($"{g.Name} — {g.Summary}");
+            return f.Fix(A.OpenEventViewer);
         }),
 
         // ───────────── SECURITY ─────────────

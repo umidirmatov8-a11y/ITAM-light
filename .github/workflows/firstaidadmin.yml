@@ -64,6 +64,7 @@ jobs:
           Write-Output "exit=$LASTEXITCODE"
           if ($LASTEXITCODE -gt 2) { throw "CLI failed: $LASTEXITCODE" }
           if (-not (Test-Path "$env:RUNNER_TEMP\faa-fr\report.html")) { throw "report.html missing" }
+          exit 0   # exit codes 1/2 mean "warnings/problems found", which is a valid diagnostic result
 
       - name: CLI /diagnose /case /zip /json
         run: |
@@ -83,6 +84,8 @@ jobs:
           & .\publish\FirstAidAdmin.exe /app:notepad | Out-String | Write-Output
           & .\publish\FirstAidAdmin.exe /share:\\localhost\C$ | Out-String | Write-Output
           & .\publish\FirstAidAdmin.exe /health /sfc /dismscan | Out-String | Write-Output
+          if ($LASTEXITCODE -gt 2) { throw "CLI health failed: $LASTEXITCODE" }
+          exit 0
 
       - name: Elevated helper (direct, allow-list)
         run: |
@@ -108,7 +111,8 @@ jobs:
           Get-Content "$dir\out.txt"
           Write-Output "exit=$($p.ExitCode)"
           if (-not (Test-Path "$dir\report\report.html")) { throw "non-admin report missing" }
-          Select-String -Path "$dir\out.txt" -Pattern 'User \|' | Write-Output
+          if (-not (Select-String -Path "$dir\out.txt" -Pattern '\| User \|' -Quiet)) { throw "expected the app to run without admin rights" }
+          exit 0
 
       - name: GUI smoke test (renders every view)
         run: |
@@ -118,14 +122,20 @@ jobs:
           Get-ChildItem $env:FIRSTAIDADMIN_SMOKE_OUT | Format-Table Name, Length
           if (Test-Path "$env:FIRSTAIDADMIN_SMOKE_OUT\smoke-error.txt") { Get-Content "$env:FIRSTAIDADMIN_SMOKE_OUT\smoke-error.txt"; throw "GUI smoke test failed" }
           if ($p.ExitCode -ne 0) { throw "GUI exit code $($p.ExitCode)" }
+          exit 0
 
-      - name: Collect logs
+      - name: Collect evidence
         if: always()
         run: |
-          New-Item -ItemType Directory "$env:RUNNER_TEMP\faa-logs" -Force | Out-Null
-          Copy-Item "$env:LOCALAPPDATA\FirstAidAdmin\Logs\*" "$env:RUNNER_TEMP\faa-logs" -ErrorAction SilentlyContinue
+          $ev = Join-Path $env:GITHUB_WORKSPACE 'ci-evidence'
+          New-Item -ItemType Directory $ev -Force | Out-Null
+          foreach ($d in 'faa-fr','faa-case','faa-smoke') { if (Test-Path "$env:RUNNER_TEMP\$d") { Copy-Item "$env:RUNNER_TEMP\$d" "$ev\$d" -Recurse } }
+          Copy-Item "$env:LOCALAPPDATA\FirstAidAdmin\Logs" "$ev\logs" -Recurse -ErrorAction SilentlyContinue
+          if (Test-Path 'C:\faa-user\out.txt') { New-Item -ItemType Directory "$ev\standard-user" -Force | Out-Null; Copy-Item 'C:\faa-user\out.txt','C:\faa-user\report' "$ev\standard-user" -Recurse -ErrorAction SilentlyContinue }
+          if (Test-Path TestResults) { Copy-Item TestResults "$ev\TestResults" -Recurse }
 
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: FirstAidAdmin-win-x64
           path: FirstAidAdmin/publish/
@@ -134,11 +144,4 @@ jobs:
         if: always()
         with:
           name: test-evidence
-          path: |
-            FirstAidAdmin/TestResults/
-            ${{ runner.temp }}/faa-fr/
-            ${{ runner.temp }}/faa-case/
-            ${{ runner.temp }}/faa-smoke/
-            ${{ runner.temp }}/faa-logs/
-            C:/faa-user/out.txt
-            C:/faa-user/report/
+          path: ci-evidence/

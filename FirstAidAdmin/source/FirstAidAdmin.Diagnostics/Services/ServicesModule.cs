@@ -38,7 +38,10 @@ public static class ServiceAnalyzer
         var names = Critical.Keys.Concat(domainJoined ? DomainCritical.Keys : Array.Empty<string>());
         return names
             .Select(n => list.FirstOrDefault(s => s.Name.Equals(n, StringComparison.OrdinalIgnoreCase)))
-            .Where(s => s is not null && s.State != ServiceState.Running && s.State != ServiceState.StartPending)
+            // Demand/trigger-start services (e.g. NlaSvc on recent builds) may legitimately be stopped:
+            // only automatic or disabled ones are a problem.
+            .Where(s => s is not null && s.State != ServiceState.Running && s.State != ServiceState.StartPending
+                        && s.StartMode is ServiceStartMode.Automatic or ServiceStartMode.Disabled)
             .Cast<ServiceInfo>()
             .ToList();
     }

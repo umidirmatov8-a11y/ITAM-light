@@ -239,3 +239,26 @@ public class SeverityEngineTests
         Assert.Equal("🔴", SeverityEngine.Icon(S.Error));
     }
 }
+
+public class RealWorldRegressionTests
+{
+    [Fact]
+    public void TriggerStartService_StoppedManual_IsNotCritical()
+    {
+        var svc = FirstAidAdmin.Tests.Fakes.FakeServiceProbe.Healthy().Add("NlaSvc", FirstAidAdmin.Core.Abstractions.ServiceState.Stopped, FirstAidAdmin.Core.Abstractions.ServiceStartMode.Manual);
+        Assert.Empty(FirstAidAdmin.Diagnostics.Services.ServiceAnalyzer.StoppedCritical(svc.GetAll(), false));
+        svc.Add("Dhcp", FirstAidAdmin.Core.Abstractions.ServiceState.Stopped, FirstAidAdmin.Core.Abstractions.ServiceStartMode.Disabled);
+        Assert.Single(FirstAidAdmin.Diagnostics.Services.ServiceAnalyzer.StoppedCritical(svc.GetAll(), false));
+    }
+
+    [Fact]
+    public void SeriousEvents_GetDedicatedFinding_NotGenericOne()
+    {
+        var log = R.Check(C.EventsSystem, S.Error);
+        log.Checks.Add(R.Check("events.group.system.service-control-manager.7031", S.Error, "Количество: 2"));
+        var f = new CorrelationEngine().Analyze(new[] { R.Module("eventlog", log) });
+        var e = Assert.Single(f);
+        Assert.Equal("events.serious", e.Id);
+        Assert.True(e.IsCorrelated);
+    }
+}

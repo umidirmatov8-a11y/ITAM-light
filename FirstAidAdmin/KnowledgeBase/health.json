@@ -73,5 +73,34 @@
       "open-eventvwr"
     ],
     "risk": "Low"
+  },
+  {
+    "id": "events.serious",
+    "problem": "Серьёзные события в журналах Windows",
+    "category": "EventLog",
+    "symptoms": [
+      "Сбои программ/служб",
+      "Нестабильная работа"
+    ],
+    "evidence": [
+      "Service Control Manager 7031/7034",
+      "WHEA",
+      "disk/Ntfs",
+      "Kernel-Power"
+    ],
+    "possibleCauses": [
+      "Падение служб",
+      "Проблемы оборудования",
+      "Ошибки драйверов"
+    ],
+    "recommendations": [
+      "Сопоставить время событий с жалобой",
+      "Изучить событие в Просмотре событий",
+      "Проверить связанную службу/устройство"
+    ],
+    "remediation": [
+      "open-eventvwr"
+    ],
+    "risk": "Low"
   }
 ]
