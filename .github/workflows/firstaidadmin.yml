@@ -100,16 +100,19 @@ jobs:
           Write-Output "unknown op rejected: $($r.error)"
 
       - name: Run as a standard (non-admin) user
-        continue-on-error: true
         run: |
-          $pw = 'Faa!' + [guid]::NewGuid().ToString('N').Substring(0,12)
-          net user faauser $pw /add | Out-Null
-          $cred = New-Object PSCredential('faauser', (ConvertTo-SecureString $pw -AsPlainText -Force))
-          $dir = 'C:\faa-user'; New-Item -ItemType Directory $dir -Force | Out-Null; icacls $dir /grant 'faauser:(OI)(CI)F' | Out-Null
+          $pw = 'Faa!' + [guid]::NewGuid().ToString('N').Substring(0,20)
+          $sec = ConvertTo-SecureString $pw -AsPlainText -Force
+          New-LocalUser -Name faauser -Password $sec -PasswordNeverExpires -AccountNeverExpires | Out-Null
+          Add-LocalGroupMember -Group (Get-LocalGroup -SID 'S-1-5-32-545').Name -Member faauser   # Users (not Administrators)
+          $cred = New-Object PSCredential("$env:COMPUTERNAME\faauser", $sec)
+          $dir = 'C:\faa-user'; New-Item -ItemType Directory $dir -Force | Out-Null
           Copy-Item .\publish\* $dir -Recurse
-          $p = Start-Process "$dir\FirstAidAdmin.exe" -ArgumentList '/firstresponse','/report',"/out:$dir\report" -Credential $cred -WorkingDirectory $dir -Wait -PassThru -RedirectStandardOutput "$dir\out.txt"
+          icacls $dir /grant 'faauser:(OI)(CI)F' /T | Out-Null
+          $p = Start-Process "$dir\FirstAidAdmin.exe" -ArgumentList '/firstresponse','/report',"/out:$dir\report" -Credential $cred -WorkingDirectory $dir -Wait -PassThru -RedirectStandardOutput "$dir\out.txt" -LoadUserProfile
           Get-Content "$dir\out.txt"
           Write-Output "exit=$($p.ExitCode)"
+          if ($p.ExitCode -gt 2) { throw "non-admin run failed: $($p.ExitCode)" }
           if (-not (Test-Path "$dir\report\report.html")) { throw "non-admin report missing" }
           if (-not (Select-String -Path "$dir\out.txt" -Pattern '\| User \|' -Quiet)) { throw "expected the app to run without admin rights" }
           exit 0
