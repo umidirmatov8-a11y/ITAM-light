@@ -152,7 +152,8 @@ FirstAidAdmin.exe /help
 ```powershell
 cd FirstAidAdmin
 dotnet publish -c Release -r win-x64 --self-contained true
-# → publish\FirstAidAdmin.exe, publish\FirstAidAdmin.Helper.exe, publish\KnowledgeBase\
+# → publish\FirstAidAdmin.exe, publish\FirstAidAdmin.Helper.exe, 5 нативных DLL WPF (*_cor3.dll), publish\KnowledgeBase\
+# Копируйте папку publish целиком: нативные библиотеки WPF лежат рядом с exe и не распаковываются в %TEMP% (совместимо с AppLocker).
 ```
 Сборка также выполняется в GitHub Actions (`.github/workflows/firstaidadmin.yml`, windows-latest); артефакт **FirstAidAdmin-win-x64** содержит готовую папку `publish`.
 

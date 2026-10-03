@@ -13,7 +13,9 @@
   <!-- Single-file, self-contained publish (dotnet publish -c Release -r win-x64 with self-contained enabled) -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
     <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- WPF native libraries (wpfgfx, PresentationNative, ...) stay next to the exe instead of being extracted
+         to %TEMP%: works for users without a writable TEMP and under AppLocker rules that block %TEMP%. -->
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
@@ -29,6 +31,6 @@
        (a solution-level publish already publishes the helper project). -->
   <Target Name="PublishHelper" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' != '' and ('$(SolutionPath)' == '' or '$(SolutionPath)' == '*Undefined*')">
     <MSBuild Projects="..\FirstAidAdmin.Helper\FirstAidAdmin.Helper.csproj" Targets="Restore;Publish"
-             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained);PublishDir=$(PublishDir);PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;EnableCompressionInSingleFile=true;DebugType=embedded" />
+             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained);PublishDir=$(PublishDir);PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=false;EnableCompressionInSingleFile=true;DebugType=embedded" />
   </Target>
 </Project>

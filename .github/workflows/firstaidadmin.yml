@@ -109,6 +109,9 @@ jobs:
           $dir = 'C:\faa-user'; New-Item -ItemType Directory $dir -Force | Out-Null
           Copy-Item .\publish\* $dir -Recurse
           icacls $dir /grant 'faauser:(OI)(CI)F' /T | Out-Null
+          # Start-Process -Credential inherits the admin's environment; give the test user its own TEMP.
+          New-Item -ItemType Directory "$dir\tmp" -Force | Out-Null
+          $env:TEMP = "$dir\tmp"; $env:TMP = "$dir\tmp"
           $p = Start-Process "$dir\FirstAidAdmin.exe" -ArgumentList '/firstresponse','/report',"/out:$dir\report" -Credential $cred -WorkingDirectory $dir -Wait -PassThru -RedirectStandardOutput "$dir\out.txt" -LoadUserProfile
           Get-Content "$dir\out.txt"
           Write-Output "exit=$($p.ExitCode)"
