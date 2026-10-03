@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
     <IsTestProject>true</IsTestProject>
     <RootNamespace>FirstAidAdmin.IntegrationTests</RootNamespace>
   </PropertyGroup>
@@ -14,6 +15,7 @@
     <ProjectReference Include="..\..\source\FirstAidAdmin.Application\FirstAidAdmin.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\FirstAidAdmin.Tests\Fakes\*.cs" Link="Fakes\%(Filename)%(Extension)" />
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

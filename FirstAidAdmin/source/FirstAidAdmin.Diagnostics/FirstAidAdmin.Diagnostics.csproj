@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>FirstAidAdmin.Diagnostics</RootNamespace>
+    <IsPublishable>false</IsPublishable>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FirstAidAdmin.Core\FirstAidAdmin.Core.csproj" />

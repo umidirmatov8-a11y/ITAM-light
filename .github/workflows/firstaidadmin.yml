@@ -1,0 +1,144 @@
+name: FirstAidAdmin (Windows)
+
+on:
+  push:
+    paths:
+      - 'FirstAidAdmin/**'
+      - '.github/workflows/firstaidadmin.yml'
+  pull_request:
+    paths:
+      - 'FirstAidAdmin/**'
+  workflow_dispatch:
+
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: FirstAidAdmin
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Environment
+        run: |
+          [Environment]::OSVersion
+          whoami
+          whoami /groups | Select-String "S-1-16"   # integrity level (High = elevated)
+          dotnet --info | Select-Object -First 12
+
+      - name: Build (Release)
+        run: dotnet build FirstAidAdmin.sln -c Release
+
+      - name: Unit tests
+        run: dotnet test tests/FirstAidAdmin.Tests -c Release --no-build --logger "trx;LogFileName=unit.trx" --results-directory TestResults
+
+      - name: Integration tests (real Windows probes)
+        run: dotnet test tests/FirstAidAdmin.IntegrationTests -c Release --no-build --logger "trx;LogFileName=integration.trx" --results-directory TestResults
+
+      - name: Publish (self-contained, single file)
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true
+          Get-ChildItem publish | Format-Table Name, Length
+
+      - name: Run EXE without .NET runtime on PATH
+        run: |
+          $env:DOTNET_ROOT = 'C:\does-not-exist'
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'dotnet' }) -join ';'
+          $out = & .\publish\FirstAidAdmin.exe /help | Out-String
+          Write-Output $out
+          if ($LASTEXITCODE -ne 0 -or $out -notmatch '/diagnose') { throw "EXE did not start without runtime" }
+
+      - name: CLI /list and /firstresponse /report
+        run: |
+          & .\publish\FirstAidAdmin.exe /list | Out-String | Write-Output
+          & .\publish\FirstAidAdmin.exe /firstresponse /report /out:$env:RUNNER_TEMP\faa-fr | Out-String | Write-Output
+          Write-Output "exit=$LASTEXITCODE"
+          if ($LASTEXITCODE -gt 2) { throw "CLI failed: $LASTEXITCODE" }
+          if (-not (Test-Path "$env:RUNNER_TEMP\faa-fr\report.html")) { throw "report.html missing" }
+
+      - name: CLI /diagnose /case /zip /json
+        run: |
+          & .\publish\FirstAidAdmin.exe /case:"CI: полная диагностика" /diagnose /out:$env:RUNNER_TEMP\faa-case | Out-String | Write-Output
+          if ($LASTEXITCODE -gt 2) { throw "CLI case failed: $LASTEXITCODE" }
+          $zip = Get-ChildItem "$env:RUNNER_TEMP\faa-case" -Filter 'Case-*.zip' | Select-Object -First 1
+          if (-not $zip) { throw "Case ZIP missing" }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $names = [IO.Compression.ZipFile]::OpenRead($zip.FullName).Entries.FullName
+          Write-Output $names
+          foreach ($n in 'report.html','report.json','system.txt','network.txt','event-errors.txt','services.txt','commands.log','metadata.json') {
+            if ($names -notcontains $n) { throw "ZIP lacks $n" }
+          }
+          $json = & .\publish\FirstAidAdmin.exe /dns /json | Out-String
+          $null = $json | ConvertFrom-Json
+          & .\publish\FirstAidAdmin.exe /rdp:127.0.0.1 /port:3389 | Out-String | Write-Output
+          & .\publish\FirstAidAdmin.exe /app:notepad | Out-String | Write-Output
+          & .\publish\FirstAidAdmin.exe /share:\\localhost\C$ | Out-String | Write-Output
+          & .\publish\FirstAidAdmin.exe /health /sfc /dismscan | Out-String | Write-Output
+
+      - name: Elevated helper (direct, allow-list)
+        run: |
+          $f = Join-Path $env:TEMP ("faa-" + [guid]::NewGuid().ToString('N') + ".json")
+          $p = Start-Process .\publish\FirstAidAdmin.Helper.exe -ArgumentList "--op","flushdns","--out","`"$f`"" -Wait -PassThru
+          Get-Content $f
+          if (-not ((Get-Content $f | ConvertFrom-Json).success)) { throw "helper flushdns failed" }
+          $g = Join-Path $env:TEMP ("faa-" + [guid]::NewGuid().ToString('N') + ".json")
+          $p2 = Start-Process .\publish\FirstAidAdmin.Helper.exe -ArgumentList "--op","format-disk","--out","`"$g`"" -Wait -PassThru
+          $r = Get-Content $g | ConvertFrom-Json
+          if ($r.success) { throw "helper accepted an unknown operation" }
+          Write-Output "unknown op rejected: $($r.error)"
+
+      - name: Run as a standard (non-admin) user
+        continue-on-error: true
+        run: |
+          $pw = 'Faa!' + [guid]::NewGuid().ToString('N').Substring(0,12)
+          net user faauser $pw /add | Out-Null
+          $cred = New-Object PSCredential('faauser', (ConvertTo-SecureString $pw -AsPlainText -Force))
+          $dir = 'C:\faa-user'; New-Item -ItemType Directory $dir -Force | Out-Null; icacls $dir /grant 'faauser:(OI)(CI)F' | Out-Null
+          Copy-Item .\publish\* $dir -Recurse
+          $p = Start-Process "$dir\FirstAidAdmin.exe" -ArgumentList '/firstresponse','/report',"/out:$dir\report" -Credential $cred -WorkingDirectory $dir -Wait -PassThru -RedirectStandardOutput "$dir\out.txt"
+          Get-Content "$dir\out.txt"
+          Write-Output "exit=$($p.ExitCode)"
+          if (-not (Test-Path "$dir\report\report.html")) { throw "non-admin report missing" }
+          Select-String -Path "$dir\out.txt" -Pattern 'User \|' | Write-Output
+
+      - name: GUI smoke test (renders every view)
+        run: |
+          $env:FIRSTAIDADMIN_SMOKE_OUT = "$env:RUNNER_TEMP\faa-smoke"
+          $p = Start-Process .\publish\FirstAidAdmin.exe -ArgumentList '--smoke-test' -PassThru
+          if (-not $p.WaitForExit(300000)) { Stop-Process -Id $p.Id -Force; throw "GUI smoke test hung" }
+          Get-ChildItem $env:FIRSTAIDADMIN_SMOKE_OUT | Format-Table Name, Length
+          if (Test-Path "$env:FIRSTAIDADMIN_SMOKE_OUT\smoke-error.txt") { Get-Content "$env:FIRSTAIDADMIN_SMOKE_OUT\smoke-error.txt"; throw "GUI smoke test failed" }
+          if ($p.ExitCode -ne 0) { throw "GUI exit code $($p.ExitCode)" }
+
+      - name: Collect logs
+        if: always()
+        run: |
+          New-Item -ItemType Directory "$env:RUNNER_TEMP\faa-logs" -Force | Out-Null
+          Copy-Item "$env:LOCALAPPDATA\FirstAidAdmin\Logs\*" "$env:RUNNER_TEMP\faa-logs" -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FirstAidAdmin-win-x64
+          path: FirstAidAdmin/publish/
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-evidence
+          path: |
+            FirstAidAdmin/TestResults/
+            ${{ runner.temp }}/faa-fr/
+            ${{ runner.temp }}/faa-case/
+            ${{ runner.temp }}/faa-smoke/
+            ${{ runner.temp }}/faa-logs/
+            C:/faa-user/out.txt
+            C:/faa-user/report/

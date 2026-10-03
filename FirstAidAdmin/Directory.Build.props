@@ -13,4 +13,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
 </Project>
