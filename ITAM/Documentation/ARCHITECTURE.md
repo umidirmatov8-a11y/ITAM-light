@@ -225,13 +225,13 @@ correct/bulk), `repairs.*`, `licenses.*`, `software.*`, `access.*`, `checklists.
 REST, JSON, `/api` prefix, DTOs + validation, paging `?page=1&pageSize=25&sort=name&order=asc&search=...&filters`.
 Paged result: `{ items, total, page, pageSize }`. Main resources:
 
-`/api/auth`, `/api/setup`, `/api/dashboard`, `/api/search`, `/api/employees`, `/api/regions`, `/api/locations`,
-`/api/departments`, `/api/positions`, `/api/assets`, `/api/asset-types`, `/api/asset-categories`, `/api/asset-statuses`,
-`/api/manufacturers`, `/api/suppliers`, `/api/contracts`, `/api/operations` (issue/return/transfer/status, batches),
-`/api/assignments`, `/api/returns`, `/api/transfers`, `/api/repairs`, `/api/licenses`, `/api/software`, `/api/access`,
-`/api/checklists`, `/api/documents`, `/api/templates`, `/api/files`, `/api/custom-fields`, `/api/reports`, `/api/import`,
-`/api/export`, `/api/inventory`, `/api/stock`, `/api/notifications`, `/api/audit`, `/api/admin/users`, `/api/admin/roles`,
-`/api/admin/settings`, `/api/admin/backups`, `/api/admin/sessions`, `/api/public/assets/{id}`.
+`/api/auth`, `/api/setup`, `/api/public`, `/api/dashboard`, `/api/search`, `/api/employees`, `/api/lookups/{key}`
+(generic CRUD for all dictionaries: regions, locations, departments, positions, asset types/categories/statuses, manufacturers,
+suppliers, software, license types, access systems/levels, repair statuses, stock items), `/api/assets`, `/api/operations`
+(issue/return/transfer/status, acts, cancel, signatures), `/api/repairs`, `/api/licenses`, `/api/access`, `/api/checklists`,
+`/api/documents`, `/api/templates`, `/api/files`, `/api/custom-fields`, `/api/reports`, `/api/import`, `/api/inventory`,
+`/api/stock`, `/api/contracts`, `/api/notifications`, `/api/audit`, `/api/admin/users` (+ sessions), `/api/admin/roles`,
+`/api/admin/settings`, `/api/admin/backups`, `/api/admin/system`, `/health`.
 
 Details: [API.md](API.md) and live `/swagger`.
 
@@ -294,12 +294,15 @@ Other temporal data:
 * `app\` — self‑contained `ITAM.Server.exe` (+ SPA in `wwwroot`), no .NET runtime required;
 * `pgsql\` — PostgreSQL 16 Windows binaries (optional component).
 
-Wizard: Windows version check (Server 2016+/Win10+, x64, admin) → install directory → **Database** page (install bundled
-PostgreSQL on port 5433 *or* connect to an existing server: host/port/user/password/db) → **Web server** page (port, default
-8080; firewall rule) → **Administrator** page (login/password, validated against password policy) → **Organization** page
-(name, timezone). Then:
+Wizard: Windows version check (Server 2019+/Win10 1809+, x64, admin) → install directory → **Database** page (install bundled
+PostgreSQL on port 5433 *or* connect to an existing server) → **PostgreSQL connection** (host/port/user/password/db) →
+**Web server** (port, default 8080; organization name) → **Administrator** (login/password, validated against the password
+policy) → **Options** (firewall rule, demo data). The same values can be passed for an unattended install
+(`/VERYSILENT /DbPassword=… /AdminPassword=…`, see INSTALLATION.md). An upgrade (existing config found) skips the pages,
+stops the service, replaces files and runs `ITAM.Server.exe migrate`. Then:
 1. copy files; 2. (bundled) `initdb` + register/start service `ITAM-PostgreSQL`; 3. `ITAM.Server.exe setup ...` writes
-`config\appsettings.Production.json` (secrets protected with DPAPI‑machine scope where applicable), creates DB, runs migrations,
+`%ProgramData%\ITAM\config\itam.json` (folder ACL: SYSTEM + Administrators only; the application connects with its own
+non‑superuser role `itam`), creates DB, runs migrations,
 seeds reference data and creates the administrator; 4. registers Windows Service `ITAM` (auto start, recovery: restart);
 5. `netsh advfirewall` rule for the port; 6. starts the service and shows `http://<server-ip>:<port>`.
 Uninstall stops/removes services and the firewall rule; data directory is kept unless the user opts in to delete it.
@@ -316,10 +319,11 @@ Initial settings → Finish) is shown on first launch.
 * Security headers: CSP, X‑Content‑Type‑Options, X‑Frame‑Options DENY, Referrer‑Policy, Permissions‑Policy, HSTS (HTTPS).
 * EF Core parameterized queries only (no raw SQL concatenation); DTO validation; output encoding by React (no
   `dangerouslySetInnerHTML`); uploaded files served with `Content-Disposition: attachment` + `nosniff`, extension allow‑list.
-* License keys encrypted with ASP.NET Data Protection (keys stored under the data directory, protected with DPAPI on Windows),
+* License keys and channel secrets (SMTP password, Telegram token) encrypted with ASP.NET Data Protection (key ring stored in
+  `<data>\keys`, included in backups),
   masked in UI unless `licenses.keys.view`.
 * Audit log append‑only (DB trigger), records user, IP, user agent, old/new values; sensitive fields are masked.
-* Serilog destructuring policy never logs passwords, tokens, license keys.
+* Passwords, tokens and license keys are never written to logs or to the audit log (`[Sensitive]` properties are masked).
 * Extension points: `IExternalAuthProvider` (LDAP/AD), OIDC (`AddOpenIdConnect`) and `IDirectorySyncService` (AD import/sync).
 
 ## 13. Development roadmap
@@ -352,5 +356,5 @@ Initial settings → Finish) is shown on first launch.
 
 ## 15. Additional functions (beyond the specification)
 
-See [ADMIN_GUIDE.md → «Дополнительные функции»](ADMIN_GUIDE.md#дополнительные-функции) for the full list of 24 extra
+See [ADMIN_GUIDE.md → «Дополнительные функции»](ADMIN_GUIDE.md#дополнительные-функции) for the full list of 26 extra
 functions with purpose, usage, tables and integration.

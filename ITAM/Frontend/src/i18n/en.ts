@@ -251,7 +251,7 @@ const en = {
     minLength: 'Minimum password length', upper: 'Upper case', lower: 'Lower case', digit: 'Digits', special: 'Special characters',
     maxAge: 'Password lifetime, days (0 — unlimited)', lockoutThreshold: 'Lock out after failed attempts',
     lockoutMinutes: 'Lockout duration, min', idleMinutes: 'Idle timeout, min', absoluteHours: 'Maximum session length, h',
-    retentionDays: 'Keep audit log, days (0 — forever)',
+    retentionDays: 'Keep backups, days',
     autoBackup: 'Automatic backup', schedule: 'Schedule', sched: { Daily: 'Daily', Weekly: 'Weekly' },
     dayOfWeek: 'Day of week', time: 'Time', backupLocation: 'Backup folder', backupLocationHint: 'Local folder or network path (\\\\server\\share)',
     maxBackups: 'Backups to keep', includeFiles: 'Include files (documents, attachments)',
@@ -304,7 +304,7 @@ const en = {
     DUPLICATE: 'Such a record already exists', LICENSE_NO_SEATS: 'No free license seats', LICENSE_EXPIRED: 'The license has expired',
     OUT_OF_REGION_SCOPE: 'The object is outside your regions', INVALID_CREDENTIALS: 'Invalid login or password', ACCOUNT_LOCKED: 'The account is locked',
     PASSWORD_POLICY: 'The password does not meet the requirements', SETUP_ALREADY_COMPLETED: 'Setup has already been completed',
-    EMPLOYEE_HAS_OPEN_ITEMS: 'The employee has open items', RATE_LIMITED: 'Too many requests', ANTIFORGERY: 'Session expired — refresh the page',
+    EMPLOYEE_HAS_OPEN_ITEMS: 'The employee has open items', RATE_LIMITED: 'Too many requests', CSRF_INVALID: 'Session expired — refresh the page', ANTIFORGERY: 'Session expired — refresh the page',
     PASSWORD_CHANGE_REQUIRED: 'Password change required',
   },
   enums: {

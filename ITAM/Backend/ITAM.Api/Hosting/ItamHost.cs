@@ -21,13 +21,17 @@ public static class ItamHost
 {
     public const string ServiceName = "ITAM";
 
-    /// <summary>Runtime data root: config "Itam:DataRoot" → %ProgramData%\ITAM (Windows Service) → {app}/data.</summary>
+    /// <summary>Runtime data root: config "Itam:DataRoot" / ITAM_DATA_ROOT → %ProgramData%\ITAM (service or installed config) → {app}/data.</summary>
     public static string ResolveDataRoot(IConfiguration config)
     {
         var configured = config["Itam:DataRoot"] ?? Environment.GetEnvironmentVariable("ITAM_DATA_ROOT");
         if (!string.IsNullOrWhiteSpace(configured)) return Path.GetFullPath(configured);
-        if (OperatingSystem.IsWindows() && WindowsServiceHelpers.IsWindowsService())
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ITAM");
+        if (OperatingSystem.IsWindows())
+        {
+            // Installed layout: the service and the CLI (run from a console by an administrator) share %ProgramData%\ITAM.
+            var programData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ITAM");
+            if (WindowsServiceHelpers.IsWindowsService() || File.Exists(ConfigFilePath(programData))) return programData;
+        }
         return Path.Combine(AppContext.BaseDirectory, "data");
     }
 

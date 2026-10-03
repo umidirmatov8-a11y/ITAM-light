@@ -255,7 +255,7 @@ const ru = {
     minLength: 'Минимальная длина пароля', upper: 'Заглавные буквы', lower: 'Строчные буквы', digit: 'Цифры', special: 'Спецсимволы',
     maxAge: 'Срок действия пароля, дней (0 — без ограничения)', lockoutThreshold: 'Блокировка после неудачных попыток',
     lockoutMinutes: 'Длительность блокировки, мин.', idleMinutes: 'Тайм-аут бездействия, мин.', absoluteHours: 'Максимальная длительность сессии, ч',
-    retentionDays: 'Хранить журнал аудита, дней (0 — бессрочно)',
+    retentionDays: 'Хранить копии, дней',
     autoBackup: 'Автоматическое резервное копирование', schedule: 'Расписание', sched: { Daily: 'Ежедневно', Weekly: 'Еженедельно' },
     dayOfWeek: 'День недели', time: 'Время', backupLocation: 'Папка для копий', backupLocationHint: 'Локальная папка или сетевой путь (\\\\server\\share)',
     maxBackups: 'Хранить копий', includeFiles: 'Включать файлы (документы, вложения)',
@@ -311,7 +311,7 @@ const ru = {
     DUPLICATE: 'Такая запись уже существует', LICENSE_NO_SEATS: 'Нет свободных мест лицензии', LICENSE_EXPIRED: 'Лицензия истекла',
     OUT_OF_REGION_SCOPE: 'Объект вне ваших регионов', INVALID_CREDENTIALS: 'Неверный логин или пароль', ACCOUNT_LOCKED: 'Учётная запись заблокирована',
     PASSWORD_POLICY: 'Пароль не соответствует требованиям', SETUP_ALREADY_COMPLETED: 'Настройка уже выполнена', EMPLOYEE_HAS_OPEN_ITEMS: 'У сотрудника есть незакрытые позиции',
-    RATE_LIMITED: 'Слишком много запросов', ANTIFORGERY: 'Сессия устарела — обновите страницу', PASSWORD_CHANGE_REQUIRED: 'Необходимо сменить пароль',
+    RATE_LIMITED: 'Слишком много запросов', CSRF_INVALID: 'Сессия устарела — обновите страницу', ANTIFORGERY: 'Сессия устарела — обновите страницу', PASSWORD_CHANGE_REQUIRED: 'Необходимо сменить пароль',
   },
   enums: {
     common: { Archived: 'Архив', Active: 'Активно' },

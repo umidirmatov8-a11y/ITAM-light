@@ -292,7 +292,7 @@ begin
   // The service runs as NETWORK SERVICE: grant it access to the cluster directory.
   Run(ExpandConstant('{sys}\icacls.exe'), '"' + PgData + '" /grant "*S-1-5-20:(OI)(CI)F" /T /Q', Code);
   Run(PgBin + '\pg_ctl.exe', 'unregister -N ' + PG_SERVICE, Code);
-  if not Run(PgBin + '\pg_ctl.exe', 'register -N ' + PG_SERVICE + ' -U "NT AUTHORITY\NetworkService" -D "' + PgData + '" -S auto -o "-p ' + DbPage.Values[1] + ' -c listen_addresses=localhost"', Code) or (Code <> 0) then
+  if not Run(PgBin + '\pg_ctl.exe', 'register -N ' + PG_SERVICE + ' -U "NT AUTHORITY\NetworkService" -D "' + PgData + '" -S auto -o "-p ' + DbPage.Values[1] + ' -c listen_addresses=localhost -c logging_collector=on"', Code) or (Code <> 0) then
     Fail('Не удалось зарегистрировать службу PostgreSQL.');
   WizardForm.StatusLabel.Caption := 'Запуск PostgreSQL...';
   Run(ExpandConstant('{sys}\sc.exe'), 'start ' + PG_SERVICE, Code);
