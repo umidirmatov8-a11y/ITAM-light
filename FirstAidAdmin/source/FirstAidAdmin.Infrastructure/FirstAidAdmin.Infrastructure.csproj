@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>FirstAidAdmin.Infrastructure</RootNamespace>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.1" />
+    <ProjectReference Include="..\FirstAidAdmin.Core\FirstAidAdmin.Core.csproj" />
+    <ProjectReference Include="..\FirstAidAdmin.Logging\FirstAidAdmin.Logging.csproj" />
+    <InternalsVisibleTo Include="FirstAidAdmin.Tests" />
+  </ItemGroup>
+</Project>

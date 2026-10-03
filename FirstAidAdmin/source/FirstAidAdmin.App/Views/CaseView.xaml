@@ -1,0 +1,98 @@
+<UserControl x:Class="FirstAidAdmin.App.Views.CaseView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="20,14">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="5*"/>
+            <ColumnDefinition Width="12"/>
+            <ColumnDefinition Width="4*"/>
+        </Grid.ColumnDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="📁 Обращение (CASE)" Style="{StaticResource H2}"/>
+                        <TextBlock Text="{Binding CaseTitle}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/><RowDefinition/><RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Компьютер:" Margin="0,4,10,4" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" Text="{Binding Computer, UpdateSourceTrigger=PropertyChanged}" Margin="0,4"/>
+                            <TextBlock Grid.Row="1" Text="Пользователь:" Margin="0,4,10,4" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding User, UpdateSourceTrigger=PropertyChanged}" Margin="0,4"/>
+                            <TextBlock Grid.Row="2" Text="Проблема:" Margin="0,4,10,4" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Problem, UpdateSourceTrigger=PropertyChanged}" Margin="0,4"/>
+                        </Grid>
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Style="{StaticResource PrimaryButton}" Content="➕ Создать обращение" Command="{Binding CreateCommand}"/>
+                            <Button Style="{StaticResource SecondaryButton}" Content="📦 Экспорт пакета" Command="{Binding ExportCommand}"/>
+                            <Button Style="{StaticResource SecondaryButton}" Content="✔ Закрыть обращение" Command="{Binding CloseCommand}"/>
+                        </WrapPanel>
+                        <TextBlock Style="{StaticResource Muted}" FontSize="12" Margin="0,8,0,0"
+                                   Text="После создания все проверки, исправления и экспорт привязываются к обращению. Хранится локально в %LOCALAPPDATA%\FirstAidAdmin\Cases."/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="История исправлений" Style="{StaticResource H2}"/>
+                        <DataGrid ItemsSource="{Binding History}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal" MaxHeight="260" Background="Transparent" RowBackground="Transparent"
+                                  Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource LineBrush}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Время" Binding="{Binding StartedAt, StringFormat=HH:mm:ss}"/>
+                                <DataGridTextColumn Header="Действие" Binding="{Binding Title}" Width="*"/>
+                                <DataGridTextColumn Header="Риск" Binding="{Binding Risk}"/>
+                                <DataGridTextColumn Header="Результат" Binding="{Binding Outcome}"/>
+                                <DataGridTextColumn Header="Отзыв" Binding="{Binding Feedback}"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Предыдущие обращения" Style="{StaticResource H2}"/>
+                        <ListBox ItemsSource="{Binding PreviousCases}" SelectedItem="{Binding SelectedCase}" MaxHeight="220"
+                                 Background="Transparent" BorderBrush="{DynamicResource LineBrush}" Foreground="{DynamicResource TextBrush}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding DisplayId, Mode=OneWay}" FontWeight="SemiBold"/>
+                                        <Run Text=" — "/>
+                                        <Run Text="{Binding Problem, Mode=OneWay}"/>
+                                        <Run Text="{Binding Computer, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Button Style="{StaticResource SecondaryButton}" Content="Открыть выбранное" Command="{Binding OpenCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        <Border Grid.Column="2" Style="{StaticResource Card}" Margin="0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Text="🕒 Хронология (Timeline)" Style="{StaticResource H2}"/>
+                <ListBox ItemsSource="{Binding Timeline}" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="70"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Time}" FontFamily="Consolas" Style="{StaticResource Muted}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,109 @@
+[
+  {
+    "id": "app.crash",
+    "problem": "Программа аварийно завершается",
+    "category": "Application",
+    "symptoms": [
+      "Программа закрывается/не открывается"
+    ],
+    "evidence": [
+      "Application Error 1000 / .NET 1026 / Hang 1002"
+    ],
+    "possibleCauses": [
+      "Повреждённая установка",
+      "Несовместимая надстройка",
+      "Отсутствует компонент VC++/.NET"
+    ],
+    "recommendations": [
+      "Восстановить/переустановить программу",
+      "Обновить компоненты"
+    ],
+    "remediation": [
+      "open-eventvwr"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "app.missing",
+    "problem": "Не найден исполняемый файл программы",
+    "category": "Application",
+    "symptoms": [
+      "Ярлык не работает"
+    ],
+    "evidence": [
+      "Файл не существует"
+    ],
+    "possibleCauses": [
+      "Программа удалена/перемещена"
+    ],
+    "recommendations": [
+      "Переустановить программу, исправить ярлык"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  },
+  {
+    "id": "share.dns",
+    "problem": "Имя файлового сервера не разрешается",
+    "category": "NetworkShare",
+    "symptoms": [
+      "Сетевой диск не подключается"
+    ],
+    "evidence": [
+      "DNS не разрешает имя сервера"
+    ],
+    "possibleCauses": [
+      "Опечатка",
+      "Проблема DNS"
+    ],
+    "recommendations": [
+      "Проверить имя; подключиться по IP"
+    ],
+    "remediation": [
+      "flushdns"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "share.unreachable",
+    "problem": "Файловый сервер недоступен по SMB",
+    "category": "NetworkShare",
+    "symptoms": [
+      "Сетевой диск не открывается"
+    ],
+    "evidence": [
+      "TCP 445 закрыт"
+    ],
+    "possibleCauses": [
+      "Сервер выключен",
+      "Брандмауэр",
+      "VPN"
+    ],
+    "recommendations": [
+      "Проверить сервер и порт 445"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  },
+  {
+    "id": "share.access",
+    "problem": "Нет доступа к сетевой папке",
+    "category": "NetworkShare",
+    "symptoms": [
+      "«Отказано в доступе»"
+    ],
+    "evidence": [
+      "SMB доступен, папка не открывается"
+    ],
+    "possibleCauses": [
+      "Нет прав",
+      "Неверный путь",
+      "Старые учётные данные"
+    ],
+    "recommendations": [
+      "Проверить права и путь, учётные данные"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  }
+]

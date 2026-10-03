@@ -1,0 +1,68 @@
+<Window x:Class="FirstAidAdmin.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FirstAidAdmin.App.ViewModels"
+        xmlns:v="clr-namespace:FirstAidAdmin.App.Views"
+        Title="Первая помощь сисадмина — SysAdmin First Response Toolkit"
+        Width="1240" Height="860" MinWidth="980" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Icon="/FirstAidAdmin;component/Assets/app.ico"
+        Background="{DynamicResource BgBrush}" FontFamily="Segoe UI" FontSize="14">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:HomeViewModel}"><v:HomeView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RunViewModel}"><v:RunView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CaseViewModel}"><v:CaseView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView/></DataTemplate>
+    </Window.Resources>
+    <DockPanel>
+        <!-- Header -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource HeaderBrush}" Padding="20,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="🛠 ПЕРВАЯ ПОМОЩЬ СИСАДМИНА" Foreground="White" FontSize="21" FontWeight="Bold"/>
+                    <TextBlock Foreground="#D0E2FF" FontSize="12">
+                        <Run Text="SysAdmin First Response Toolkit"/>
+                        <Run Text="{Binding AppVersion, Mode=OneWay}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding SystemLine}" Foreground="White" FontSize="12" Margin="0,6,0,0" Opacity="0.95"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource NavButton}" Content="🏠 Главная" Command="{Binding GoHomeCommand}"/>
+                        <Button Style="{StaticResource NavButton}" Content="📁 Обращение" Command="{Binding OpenCaseCommand}"/>
+                        <Button Style="{StaticResource NavButton}" Content="🔁 Режим" Command="{Binding ToggleModeCommand}" ToolTip="Help Desk / Администратор"/>
+                        <Button Style="{StaticResource NavButton}" Content="🌓" Command="{Binding ToggleThemeCommand}" ToolTip="Светлая / тёмная тема"/>
+                        <Button Style="{StaticResource NavButton}" Content="⚙" FontSize="18" Command="{Binding OpenSettingsCommand}" ToolTip="Настройки"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,4,0">
+                        <Border Background="#33FFFFFF" CornerRadius="10" Padding="8,2" Margin="0,0,6,0"
+                                Visibility="{Binding CaseBadge, Converter={StaticResource Vis}}">
+                            <TextBlock Text="{Binding CaseBadge}" Foreground="White" FontSize="12"/>
+                        </Border>
+                        <Border Background="#33FFFFFF" CornerRadius="10" Padding="8,2" Margin="0,0,6,0">
+                            <TextBlock Text="{Binding NetworkBadge}" Foreground="White" FontSize="12"/>
+                        </Border>
+                        <Border CornerRadius="10" Padding="8,2">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#33FFFFFF"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAdmin}" Value="True">
+                                            <Setter Property="Background" Value="#CCD69E2E"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding AdminBadge}" Foreground="White" FontSize="12"/>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <ContentControl Content="{Binding Current}" Focusable="False"/>
+    </DockPanel>
+</Window>

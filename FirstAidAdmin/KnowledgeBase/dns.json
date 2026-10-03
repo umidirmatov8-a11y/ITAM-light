@@ -1,0 +1,84 @@
+[
+  {
+    "id": "net.dns",
+    "problem": "DNS не работает",
+    "category": "Dns",
+    "symptoms": [
+      "Сайты не открываются по имени",
+      "Ping по IP работает"
+    ],
+    "evidence": [
+      "Интернет по IP работает",
+      "DNS-запросы не проходят"
+    ],
+    "possibleCauses": [
+      "Некорректный DNS-сервер",
+      "DNS-сервер недоступен",
+      "Блокировка UDP/TCP 53",
+      "Повреждённый кэш"
+    ],
+    "recommendations": [
+      "ipconfig /flushdns",
+      "Проверить DNS-серверы адаптера",
+      "Проверить доступность UDP 53"
+    ],
+    "remediation": [
+      "flushdns",
+      "registerdns",
+      "open-ncpa"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "dns.internal-only",
+    "problem": "Не разрешаются внутренние имена",
+    "category": "Dns",
+    "symptoms": [
+      "Интернет работает, внутренние сайты/шары — нет"
+    ],
+    "evidence": [
+      "Внешние имена разрешаются",
+      "Доменные имена/SRV не разрешаются"
+    ],
+    "possibleCauses": [
+      "Используются внешние DNS",
+      "Доменный DNS недоступен",
+      "Нет зоны домена на DNS"
+    ],
+    "recommendations": [
+      "Указать DNS контроллеров домена",
+      "ipconfig /registerdns"
+    ],
+    "remediation": [
+      "flushdns",
+      "registerdns"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "domain.public-dns",
+    "problem": "Доменный ПК использует публичный DNS",
+    "category": "Dns",
+    "symptoms": [
+      "Не входит в домен",
+      "Не применяются GPO",
+      "Долгий вход"
+    ],
+    "evidence": [
+      "DNS = 8.8.8.8/1.1.1.1 и т.п.",
+      "SRV _ldap._tcp не найдены"
+    ],
+    "possibleCauses": [
+      "Ручная настройка DNS",
+      "Неверные опции DHCP"
+    ],
+    "recommendations": [
+      "Указать DNS-серверы контроллеров домена",
+      "Исправить опцию DHCP 006"
+    ],
+    "remediation": [
+      "open-ncpa"
+    ],
+    "risk": "Medium"
+  }
+]

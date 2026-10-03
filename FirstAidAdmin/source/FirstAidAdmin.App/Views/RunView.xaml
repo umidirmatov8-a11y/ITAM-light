@@ -1,0 +1,215 @@
+<UserControl x:Class="FirstAidAdmin.App.Views.RunView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:FirstAidAdmin.App.ViewModels">
+    <Grid Margin="20,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top: scenario, inputs, progress, summary -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <DockPanel>
+                    <Button DockPanel.Dock="Left" Style="{StaticResource SecondaryButton}" Content="← Назад" Command="{Binding BackCommand}" VerticalAlignment="Center"/>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource SecondaryButton}" Content="📄 Отчёт HTML" Command="{Binding ExportReportCommand}" ToolTip="report.html + report.json"/>
+                        <Button Style="{StaticResource SecondaryButton}" Content="📦 Собрать пакет диагностики" Command="{Binding BuildPackageCommand}" ToolTip="ZIP с маскированием чувствительных данных"/>
+                    </StackPanel>
+                    <StackPanel Margin="12,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" FontSize="12"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Inputs -->
+                <WrapPanel Margin="0,12,0,0" Visibility="{Binding ShowRdpInputs, Converter={StaticResource Vis}}">
+                    <TextBlock Text="Target:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox Width="220" Text="{Binding RdpTarget, UpdateSourceTrigger=PropertyChanged}" ToolTip="IP или имя компьютера (необязательно — без него проверяется этот ПК)"/>
+                    <TextBlock Text="Port:" VerticalAlignment="Center" Margin="12,0,6,0"/>
+                    <TextBox Width="70" Text="{Binding RdpPort, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Style="{StaticResource Muted}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" Text="Настройки RDP не изменяются автоматически."/>
+                </WrapPanel>
+                <WrapPanel Margin="0,12,0,0" Visibility="{Binding ShowAppInputs, Converter={StaticResource Vis}}">
+                    <TextBlock Text="Название программы:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox Width="200" Text="{Binding AppName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="EXE:" VerticalAlignment="Center" Margin="12,0,6,0"/>
+                    <TextBox Width="320" Text="{Binding AppExe, UpdateSourceTrigger=PropertyChanged}" ToolTip="Полный путь или имя, например winword.exe"/>
+                    <CheckBox Content="Разрешить пробный запуск" IsChecked="{Binding AllowLaunch}" Margin="12,0,0,0" VerticalAlignment="Center"
+                              ToolTip="По умолчанию программа НЕ запускается"/>
+                </WrapPanel>
+                <WrapPanel Margin="0,12,0,0" Visibility="{Binding ShowShareInput, Converter={StaticResource Vis}}">
+                    <TextBlock Text="Сетевой ресурс:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox Width="360" Text="{Binding SharePath, UpdateSourceTrigger=PropertyChanged}" ToolTip="\\server\share"/>
+                </WrapPanel>
+                <WrapPanel Margin="0,12,0,0" Visibility="{Binding ShowServiceInput, Converter={StaticResource Vis}}">
+                    <TextBlock Text="Служба (необязательно):" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox Width="260" Text="{Binding ServiceName, UpdateSourceTrigger=PropertyChanged}"/>
+                </WrapPanel>
+
+                <!-- Run controls -->
+                <DockPanel Margin="0,12,0,0">
+                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                        <Button Style="{StaticResource PrimaryButton}" Content="▶ Начать диагностику" Command="{Binding StartCommand}"/>
+                        <Button Style="{StaticResource SecondaryButton}" Content="■ Отмена" Command="{Binding CancelCommand}"/>
+                    </StackPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding HasRun, Converter={StaticResource Vis}}">
+                        <TextBlock Margin="12,0,0,0" FontWeight="SemiBold"><Run Text="🟢 Норма: "/><Run Text="{Binding OkCount, Mode=OneWay}"/></TextBlock>
+                        <TextBlock Margin="12,0,0,0" FontWeight="SemiBold"><Run Text="🟡 Предупреждения: "/><Run Text="{Binding WarningCount, Mode=OneWay}"/></TextBlock>
+                        <TextBlock Margin="12,0,0,0" FontWeight="SemiBold"><Run Text="🔴 Проблемы: "/><Run Text="{Binding ProblemCount, Mode=OneWay}"/></TextBlock>
+                    </StackPanel>
+                    <StackPanel Margin="12,0" VerticalAlignment="Center">
+                        <ProgressBar Height="6" Maximum="{Binding ProgressMax}" Value="{Binding ProgressValue}" IsIndeterminate="False"
+                                     Visibility="{Binding IsRunning, Converter={StaticResource Vis}}"/>
+                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource Muted}" FontSize="12" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Elevated read-only checks -->
+                <WrapPanel Margin="0,10,0,0" Visibility="{Binding ShowElevatedChecks, Converter={StaticResource Vis}}">
+                    <TextBlock Text="Проверки с правами администратора (только чтение, через UAC):" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ItemsControl ItemsSource="{Binding ElevatedChecks}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource SecondaryButton}" Content="{Binding Action.Title}" ToolTip="{Binding Tooltip}" Command="{Binding Command}" Margin="0,2,6,2"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="6*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: checks -->
+            <Border Style="{StaticResource Card}" Margin="0" Padding="10">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Проверки" Style="{StaticResource H2}" Margin="6,0,0,6"/>
+                    <TreeView ItemsSource="{Binding Modules}" Background="Transparent" BorderThickness="0">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=OneTime}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                <Setter Property="Padding" Value="2,3"/>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate DataType="{x:Type vm:ResultViewModel}" ItemsSource="{Binding Children}">
+                                <StackPanel Margin="0,1" MaxWidth="460">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="10" Height="10" Fill="{Binding Status, Converter={StaticResource StatusBrush}}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Duration}" Style="{StaticResource Muted}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text=" (admin)" Style="{StaticResource Muted}" FontSize="11" Visibility="{Binding RequiresAdmin, Converter={StaticResource Vis}}"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}" FontSize="12" Margin="18,0,0,0"/>
+                                    <TextBlock Text="{Binding Recommendation}" Foreground="{DynamicResource AccentBrush}" FontSize="12" Margin="18,0,0,0"
+                                               Visibility="{Binding Recommendation, Converter={StaticResource Vis}}"/>
+                                    <Expander Header="Подробнее" FontSize="11" Margin="18,0,0,0" Visibility="{Binding HasDetails, Converter={StaticResource Vis}}">
+                                        <StackPanel Margin="4">
+                                            <ItemsControl ItemsSource="{Binding Evidence}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate><TextBlock Text="{Binding}" FontSize="11" Style="{StaticResource Muted}" FontFamily="Consolas"/></DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="{Binding Details}" FontSize="11" Style="{StaticResource Muted}" FontFamily="Consolas" Margin="0,4,0,0"
+                                                       Visibility="{Binding Details, Converter={StaticResource Vis}}"/>
+                                        </StackPanel>
+                                    </Expander>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </DockPanel>
+            </Border>
+
+            <!-- Right: dashboard + findings -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}" Visibility="{Binding DashboardTitle, Converter={StaticResource Vis}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding DashboardTitle}" Style="{StaticResource H2}"/>
+                            <ItemsControl ItemsSource="{Binding Dashboard}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="2"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,8,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Label}" Style="{StaticResource Muted}" FontSize="12"/>
+                                                <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" ToolTip="{Binding Value}">
+                                                    <Run Text="{Binding Icon, Mode=OneWay}"/> <Run Text="{Binding Value, Mode=OneWay}"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="Находки и рекомендации" Style="{StaticResource H2}" Margin="4,0,0,8"/>
+                    <Border Style="{StaticResource Card}" Visibility="{Binding HasNoFindings, Converter={StaticResource Vis}}">
+                        <TextBlock Text="🟢 Проблем не обнаружено. Если жалоба сохраняется — запустите полную диагностику или создайте обращение." TextWrapping="Wrap"/>
+                    </Border>
+
+                    <ItemsControl ItemsSource="{Binding Findings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource Card}" BorderThickness="5,1,1,1" BorderBrush="{Binding Severity, Converter={StaticResource StatusBrush}}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                                            <Border Style="{StaticResource Badge}" Background="{Binding Severity, Converter={StaticResource StatusBrush}}">
+                                                <TextBlock Text="{Binding SeverityText}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                            </Border>
+                                            <Border Style="{StaticResource Badge}" Background="{DynamicResource InfoBrush}">
+                                                <TextBlock Text="{Binding ConfidenceText}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="Что обнаружено:" Style="{StaticResource Muted}" FontSize="12"/>
+                                        <TextBlock Text="{Binding WhatWasFound}" Margin="0,0,0,4"/>
+                                        <ItemsControl ItemsSource="{Binding Basis}" Margin="0,0,0,6" Visibility="{Binding HasBasis, Converter={StaticResource Vis}}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate><TextBlock Text="{Binding}" FontSize="13"/></DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="Вероятная причина:" Style="{StaticResource Muted}" FontSize="12"/>
+                                        <TextBlock Text="{Binding ProbableCause}" Margin="0,0,0,4"/>
+                                        <TextBlock Text="Рекомендация:" Style="{StaticResource Muted}" FontSize="12"/>
+                                        <TextBlock Text="{Binding Recommendation}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBlock Text="{Binding RebootText}" Foreground="{DynamicResource WarnBrush}" FontSize="12" Visibility="{Binding RebootText, Converter={StaticResource Vis}}"/>
+                                        <WrapPanel Margin="0,8,0,0">
+                                            <Button Style="{StaticResource SecondaryButton}" Content="Подробнее" Command="{Binding DetailsCommand}" Margin="0,2,6,2"/>
+                                            <ItemsControl ItemsSource="{Binding Actions}">
+                                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Style="{StaticResource SecondaryButton}" Command="{Binding Command}" ToolTip="{Binding Tooltip}" Margin="0,2,6,2">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Title}"/>
+                                                                <Border Style="{StaticResource Badge}" Margin="8,0,0,0" Padding="5,0" Background="{Binding Risk, Converter={StaticResource StatusBrush}}">
+                                                                    <TextBlock Text="{Binding RiskText}" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

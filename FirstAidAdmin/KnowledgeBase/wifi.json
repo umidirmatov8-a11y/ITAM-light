@@ -1,0 +1,55 @@
+[
+  {
+    "id": "wifi.stage",
+    "problem": "Wi-Fi подключён, но связи нет",
+    "category": "WiFi",
+    "symptoms": [
+      "Значок Wi-Fi есть, интернета нет"
+    ],
+    "evidence": [
+      "SSID подключён",
+      "Отказ на этапе DHCP/шлюза/Интернета"
+    ],
+    "possibleCauses": [
+      "DHCP точки доступа не выдаёт адрес",
+      "Изоляция клиентов",
+      "Маршрутизатор без интернета"
+    ],
+    "recommendations": [
+      "Переподключиться к сети",
+      "ipconfig /renew",
+      "Проверить маршрутизатор"
+    ],
+    "remediation": [
+      "renewip",
+      "open-wifi"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "wifi.weak",
+    "problem": "Слабый сигнал Wi-Fi",
+    "category": "WiFi",
+    "symptoms": [
+      "Медленно",
+      "Обрывы"
+    ],
+    "evidence": [
+      "Сигнал < 50%"
+    ],
+    "possibleCauses": [
+      "Далеко от точки доступа",
+      "Помехи на канале",
+      "Препятствия"
+    ],
+    "recommendations": [
+      "Ближе к точке доступа",
+      "Сменить канал/диапазон 5 ГГц",
+      "Использовать кабель"
+    ],
+    "remediation": [
+      "open-wifi"
+    ],
+    "risk": "Low"
+  }
+]

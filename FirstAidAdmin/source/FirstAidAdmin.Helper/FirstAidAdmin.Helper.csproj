@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- WinExe: no console window flashes when started through UAC -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>FirstAidAdmin.Helper</AssemblyName>
+    <RootNamespace>FirstAidAdmin.Helper</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishDir>$(MSBuildThisFileDirectory)..\..\publish\</PublishDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>false</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FirstAidAdmin.Remediation\FirstAidAdmin.Remediation.csproj" />
+    <ProjectReference Include="..\FirstAidAdmin.Infrastructure\FirstAidAdmin.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

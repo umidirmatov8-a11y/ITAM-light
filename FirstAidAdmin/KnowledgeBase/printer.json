@@ -1,0 +1,96 @@
+[
+  {
+    "id": "printer.spooler",
+    "problem": "Не работает Print Spooler",
+    "category": "Printer",
+    "symptoms": [
+      "Принтеры пропали",
+      "Печать не идёт"
+    ],
+    "evidence": [
+      "Служба Spooler остановлена"
+    ],
+    "possibleCauses": [
+      "Сбой драйвера принтера",
+      "Повреждённое задание"
+    ],
+    "recommendations": [
+      "Перезапустить Print Spooler"
+    ],
+    "remediation": [
+      "restart-spooler"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "printer.queue-stuck",
+    "problem": "Застряли задания печати",
+    "category": "Printer",
+    "symptoms": [
+      "Печать «висит»"
+    ],
+    "evidence": [
+      "Задания в состоянии Error/Paused"
+    ],
+    "possibleCauses": [
+      "Повреждённое задание",
+      "Принтер недоступен"
+    ],
+    "recommendations": [
+      "Перезапустить Spooler",
+      "Очистить очередь"
+    ],
+    "remediation": [
+      "restart-spooler",
+      "clear-print-queue"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "printer.unreachable",
+    "problem": "Сетевой принтер недоступен",
+    "category": "Printer",
+    "symptoms": [
+      "Задания не печатаются",
+      "Принтер «отключён»"
+    ],
+    "evidence": [
+      "TCP 9100 недоступен",
+      "Ping не проходит"
+    ],
+    "possibleCauses": [
+      "Принтер выключен",
+      "Сменился IP-адрес",
+      "Проблемы сети"
+    ],
+    "recommendations": [
+      "Проверить питание и IP на панели принтера"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  },
+  {
+    "id": "printer.offline",
+    "problem": "Принтер в ошибке / автономно",
+    "category": "Printer",
+    "symptoms": [
+      "Статус «Автономно»"
+    ],
+    "evidence": [
+      "WorkOffline = True или ошибка устройства"
+    ],
+    "possibleCauses": [
+      "Нет бумаги/тонера",
+      "Замятие",
+      "Режим «работать автономно»"
+    ],
+    "recommendations": [
+      "Проверить принтер физически",
+      "Снять режим «автономно»"
+    ],
+    "remediation": [
+      "open-printers"
+    ],
+    "risk": "Low"
+  }
+]

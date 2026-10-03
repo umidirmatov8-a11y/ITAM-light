@@ -1,0 +1,110 @@
+[
+  {
+    "id": "rdp.disabled",
+    "problem": "RDP отключён на компьютере",
+    "category": "Rdp",
+    "symptoms": [
+      "Подключение отклоняется"
+    ],
+    "evidence": [
+      "fDenyTSConnections = 1"
+    ],
+    "possibleCauses": [
+      "RDP не включали",
+      "Отключено политикой"
+    ],
+    "recommendations": [
+      "Включить RDP вручную по согласованию с политикой"
+    ],
+    "remediation": [
+      "open-remote"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "rdp.service-stopped",
+    "problem": "Служба TermService остановлена",
+    "category": "Rdp",
+    "symptoms": [
+      "Порт 3389 не отвечает"
+    ],
+    "evidence": [
+      "TermService не Running"
+    ],
+    "possibleCauses": [
+      "Служба отключена",
+      "Сбой службы"
+    ],
+    "recommendations": [
+      "Запустить службу TermService"
+    ],
+    "remediation": [
+      "open-services"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "rdp.not-listening",
+    "problem": "RDP-порт не прослушивается",
+    "category": "Rdp",
+    "symptoms": [
+      "Порт закрыт"
+    ],
+    "evidence": [
+      "Нет LISTEN на порту RDP"
+    ],
+    "possibleCauses": [
+      "Изменён PortNumber",
+      "Служба не запущена"
+    ],
+    "recommendations": [
+      "Проверить порт RDP-Tcp"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  },
+  {
+    "id": "rdp.firewall",
+    "problem": "Брандмауэр блокирует RDP",
+    "category": "Rdp",
+    "symptoms": [
+      "Подключение по тайм-ауту"
+    ],
+    "evidence": [
+      "Правила «Удалённый рабочий стол» выключены"
+    ],
+    "possibleCauses": [
+      "Правила отключены политикой"
+    ],
+    "recommendations": [
+      "Включить правила группы «Удалённый рабочий стол»"
+    ],
+    "remediation": [
+      "open-firewall"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "rdp.target",
+    "problem": "Порт RDP на целевом ПК недоступен",
+    "category": "Rdp",
+    "symptoms": [
+      "Не подключается к конкретному ПК"
+    ],
+    "evidence": [
+      "TCP 3389 закрыт",
+      "Ping проходит/не проходит"
+    ],
+    "possibleCauses": [
+      "ПК выключен",
+      "RDP выключен на цели",
+      "Брандмауэр на цели или в сети"
+    ],
+    "recommendations": [
+      "Проверить цель: включение RDP и брандмауэр",
+      "Проверить VPN/маршрут"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  }
+]

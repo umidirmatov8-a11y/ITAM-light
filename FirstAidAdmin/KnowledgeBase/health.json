@@ -1,0 +1,106 @@
+[
+  {
+    "id": "health.dism-repairable",
+    "problem": "Повреждено хранилище компонентов Windows",
+    "category": "WindowsHealth",
+    "symptoms": [
+      "Ошибки обновлений",
+      "Сбои компонентов"
+    ],
+    "evidence": [
+      "DISM: Repairable/NonRepairable"
+    ],
+    "possibleCauses": [
+      "Повреждение WinSxS"
+    ],
+    "recommendations": [
+      "DISM /RestoreHealth",
+      "sfc /scannow"
+    ],
+    "remediation": [
+      "dism-restorehealth",
+      "sfc-scannow"
+    ],
+    "risk": "High"
+  },
+  {
+    "id": "health.sfc",
+    "problem": "Повреждённые системные файлы",
+    "category": "WindowsHealth",
+    "symptoms": [
+      "Ошибки системных программ"
+    ],
+    "evidence": [
+      "SFC/CBS: нарушения целостности"
+    ],
+    "possibleCauses": [
+      "Повреждение файлов",
+      "Сбой диска"
+    ],
+    "recommendations": [
+      "DISM /RestoreHealth, затем sfc /scannow"
+    ],
+    "remediation": [
+      "dism-restorehealth",
+      "sfc-scannow"
+    ],
+    "risk": "High"
+  },
+  {
+    "id": "health.unexpected-shutdown",
+    "problem": "Неожиданные выключения / BSOD",
+    "category": "WindowsHealth",
+    "symptoms": [
+      "Самопроизвольные перезагрузки"
+    ],
+    "evidence": [
+      "Kernel-Power 41",
+      "BugCheck 1001",
+      "EventLog 6008"
+    ],
+    "possibleCauses": [
+      "Питание",
+      "Перегрев",
+      "Драйверы",
+      "Оборудование"
+    ],
+    "recommendations": [
+      "Проверить БП/ИБП и температуру",
+      "Обновить драйверы",
+      "Проанализировать дампы"
+    ],
+    "remediation": [
+      "open-eventvwr"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "events.serious",
+    "problem": "Серьёзные события в журналах Windows",
+    "category": "EventLog",
+    "symptoms": [
+      "Сбои программ/служб",
+      "Нестабильная работа"
+    ],
+    "evidence": [
+      "Service Control Manager 7031/7034",
+      "WHEA",
+      "disk/Ntfs",
+      "Kernel-Power"
+    ],
+    "possibleCauses": [
+      "Падение служб",
+      "Проблемы оборудования",
+      "Ошибки драйверов"
+    ],
+    "recommendations": [
+      "Сопоставить время событий с жалобой",
+      "Изучить событие в Просмотре событий",
+      "Проверить связанную службу/устройство"
+    ],
+    "remediation": [
+      "open-eventvwr"
+    ],
+    "risk": "Low"
+  }
+]
