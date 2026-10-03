@@ -1,0 +1,139 @@
+[
+  {
+    "id": "wu.disk-space",
+    "problem": "Мало места мешает Windows Update",
+    "category": "WindowsUpdate",
+    "symptoms": [
+      "Обновления не устанавливаются"
+    ],
+    "evidence": [
+      "Системный диск > 85–95%",
+      "Ошибка 0x80070070"
+    ],
+    "possibleCauses": [
+      "Заполненный диск",
+      "Большой кэш обновлений"
+    ],
+    "recommendations": [
+      "Освободить место",
+      "Очистка диска"
+    ],
+    "remediation": [
+      "clear-user-temp",
+      "open-cleanmgr"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "wu.component-store",
+    "problem": "Повреждено хранилище компонентов",
+    "category": "WindowsUpdate",
+    "symptoms": [
+      "Обновления откатываются"
+    ],
+    "evidence": [
+      "DISM: Repairable",
+      "Ошибки 0x80073712/0x800f081f"
+    ],
+    "possibleCauses": [
+      "Повреждение WinSxS"
+    ],
+    "recommendations": [
+      "DISM /RestoreHealth",
+      "sfc /scannow"
+    ],
+    "remediation": [
+      "dism-restorehealth",
+      "sfc-scannow"
+    ],
+    "risk": "High"
+  },
+  {
+    "id": "wu.network",
+    "problem": "Нет связи с сервером обновлений",
+    "category": "WindowsUpdate",
+    "symptoms": [
+      "Ошибки загрузки"
+    ],
+    "evidence": [
+      "0x8024402c/0x80072ee2/0x80072efd"
+    ],
+    "possibleCauses": [
+      "DNS/прокси",
+      "Межсетевой экран",
+      "WSUS недоступен"
+    ],
+    "recommendations": [
+      "Устранить сетевую проблему",
+      "Проверить прокси и WSUS"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  },
+  {
+    "id": "wu.services",
+    "problem": "Службы Windows Update отключены",
+    "category": "WindowsUpdate",
+    "symptoms": [
+      "Центр обновления не работает"
+    ],
+    "evidence": [
+      "wuauserv/BITS/CryptSvc Disabled"
+    ],
+    "possibleCauses": [
+      "Отключение «оптимизаторами»",
+      "Политика"
+    ],
+    "recommendations": [
+      "Вернуть тип запуска по умолчанию",
+      "Перезапустить службы"
+    ],
+    "remediation": [
+      "restart-wu",
+      "open-services"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "wu.outdated",
+    "problem": "Обновления давно не устанавливались",
+    "category": "WindowsUpdate",
+    "symptoms": [
+      "Нет свежих исправлений безопасности"
+    ],
+    "evidence": [
+      "Последнее обновление > 45 дней"
+    ],
+    "possibleCauses": [
+      "Ошибки установки",
+      "Отключено политикой",
+      "ПК долго был выключен"
+    ],
+    "recommendations": [
+      "Запустить поиск обновлений"
+    ],
+    "remediation": [
+      "open-windowsupdate"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "wu.pending-reboot",
+    "problem": "Ожидается перезагрузка",
+    "category": "WindowsUpdate",
+    "symptoms": [
+      "Обновления не завершены"
+    ],
+    "evidence": [
+      "RebootRequired/RebootPending"
+    ],
+    "possibleCauses": [
+      "Обновления установлены, перезагрузка не выполнялась"
+    ],
+    "recommendations": [
+      "Перезагрузить ПК в удобное время"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  }
+]

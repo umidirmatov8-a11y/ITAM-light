@@ -1,0 +1,56 @@
+[
+  {
+    "id": "disk.system-low",
+    "problem": "Мало места на системном диске",
+    "category": "Storage",
+    "symptoms": [
+      "Тормозит",
+      "Не ставятся обновления"
+    ],
+    "evidence": [
+      "Занято > 85–95%"
+    ],
+    "possibleCauses": [
+      "Временные файлы",
+      "Кэш обновлений",
+      "Большие профили"
+    ],
+    "recommendations": [
+      "Очистка диска",
+      "Удалить временные файлы",
+      "Перенести данные"
+    ],
+    "remediation": [
+      "clear-user-temp",
+      "open-cleanmgr",
+      "open-storage"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "disk.hardware",
+    "problem": "Признаки неисправности диска",
+    "category": "Storage",
+    "symptoms": [
+      "Зависания",
+      "Ошибки чтения"
+    ],
+    "evidence": [
+      "HealthStatus ≠ Healthy",
+      "События disk 7/51/153, Ntfs 55"
+    ],
+    "possibleCauses": [
+      "Износ SSD/HDD",
+      "Проблемы кабеля/контроллера"
+    ],
+    "recommendations": [
+      "Резервная копия данных",
+      "CHKDSK /scan",
+      "Замена диска"
+    ],
+    "remediation": [
+      "chkdsk-scan"
+    ],
+    "risk": "High"
+  }
+]

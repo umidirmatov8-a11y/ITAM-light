@@ -1,0 +1,125 @@
+[
+  {
+    "id": "domain.secure-channel",
+    "problem": "Нарушено доверие с доменом (Secure Channel)",
+    "category": "Domain",
+    "symptoms": [
+      "«Нарушено доверительное отношение между этой рабочей станцией и основным доменом»"
+    ],
+    "evidence": [
+      "nltest /sc_query: ошибка",
+      "DC доступен"
+    ],
+    "possibleCauses": [
+      "Рассинхронизация пароля компьютера (восстановление из снимка/бэкапа)",
+      "Учётная запись компьютера удалена/сброшена"
+    ],
+    "recommendations": [
+      "Test-ComputerSecureChannel -Repair -Credential DOMAIN\\Admin",
+      "Повторный ввод в домен"
+    ],
+    "remediation": [],
+    "risk": "High"
+  },
+  {
+    "id": "domain.dc-unreachable",
+    "problem": "Контроллер домена недоступен",
+    "category": "Domain",
+    "symptoms": [
+      "Долгий вход",
+      "Вход по кэшу",
+      "Не применяются GPO"
+    ],
+    "evidence": [
+      "nltest /dsgetdc: ошибка",
+      "Порты 53/88/389/445 закрыты"
+    ],
+    "possibleCauses": [
+      "VPN не подключён",
+      "DNS не находит SRV",
+      "Межсетевой экран"
+    ],
+    "recommendations": [
+      "Проверить DNS и VPN",
+      "Проверить порты до DC"
+    ],
+    "remediation": [
+      "flushdns",
+      "registerdns"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "domain.time-skew",
+    "problem": "Расхождение времени с DC",
+    "category": "Domain",
+    "symptoms": [
+      "Ошибки Kerberos",
+      "Нет доступа к ресурсам"
+    ],
+    "evidence": [
+      "Смещение времени > 5 минут"
+    ],
+    "possibleCauses": [
+      "Неверный источник времени",
+      "Севшая батарейка CMOS",
+      "Виртуальная машина без синхронизации"
+    ],
+    "recommendations": [
+      "w32tm /resync",
+      "Проверить иерархию времени"
+    ],
+    "remediation": [
+      "w32tm-resync"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "domain.gpo",
+    "problem": "Ошибки групповых политик",
+    "category": "Domain",
+    "symptoms": [
+      "Не применяются настройки",
+      "Не подключаются диски"
+    ],
+    "evidence": [
+      "Ошибки GroupPolicy/Operational",
+      "SYSVOL недоступен"
+    ],
+    "possibleCauses": [
+      "Нет связи с DC",
+      "Проблемы DNS",
+      "Ошибка расширения политики"
+    ],
+    "recommendations": [
+      "gpupdate /force",
+      "Проверить \\\\домен\\SYSVOL"
+    ],
+    "remediation": [
+      "gpupdate"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "ad.logon-failures",
+    "problem": "Неудачные попытки входа / блокировка",
+    "category": "ActiveDirectory",
+    "symptoms": [
+      "Пользователь не может войти"
+    ],
+    "evidence": [
+      "События 4625/4771/4740"
+    ],
+    "possibleCauses": [
+      "Неверный пароль",
+      "Блокировка учётной записи",
+      "Сохранённые старые учётные данные (диск, почта, телефон)"
+    ],
+    "recommendations": [
+      "Проверить учётную запись в AD",
+      "Очистить сохранённые учётные данные"
+    ],
+    "remediation": [],
+    "risk": "Low"
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "id": "security.no-av",
+    "problem": "Антивирусная защита отключена",
+    "category": "Security",
+    "symptoms": [
+      "—"
+    ],
+    "evidence": [
+      "Defender RealTime = False, сторонний AV не найден"
+    ],
+    "possibleCauses": [
+      "Отключено пользователем/вредоносным ПО",
+      "Политика"
+    ],
+    "recommendations": [
+      "Включить защиту в реальном времени"
+    ],
+    "remediation": [
+      "open-security"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "security.firewall",
+    "problem": "Брандмауэр отключён",
+    "category": "Security",
+    "symptoms": [
+      "—"
+    ],
+    "evidence": [
+      "Профиль брандмауэра Off"
+    ],
+    "possibleCauses": [
+      "Отключено вручную/политикой"
+    ],
+    "recommendations": [
+      "Включить брандмауэр"
+    ],
+    "remediation": [
+      "open-firewall"
+    ],
+    "risk": "Medium"
+  },
+  {
+    "id": "security.signatures",
+    "problem": "Устаревшие антивирусные базы",
+    "category": "Security",
+    "symptoms": [
+      "—"
+    ],
+    "evidence": [
+      "Возраст сигнатур > 7 дней"
+    ],
+    "possibleCauses": [
+      "Нет интернета",
+      "WSUS не распространяет сигнатуры"
+    ],
+    "recommendations": [
+      "Обновить сигнатуры"
+    ],
+    "remediation": [
+      "defender-update"
+    ],
+    "risk": "Low"
+  },
+  {
+    "id": "security.uac",
+    "problem": "UAC отключён",
+    "category": "Security",
+    "symptoms": [
+      "—"
+    ],
+    "evidence": [
+      "EnableLUA = 0"
+    ],
+    "possibleCauses": [
+      "Ручное отключение"
+    ],
+    "recommendations": [
+      "Включить UAC по согласованию с ИБ"
+    ],
+    "remediation": [],
+    "risk": "High"
+  },
+  {
+    "id": "services.critical",
+    "problem": "Не работают важные службы",
+    "category": "Services",
+    "symptoms": [
+      "Сеть/DNS/печать/обновления не работают"
+    ],
+    "evidence": [
+      "Важные службы не Running"
+    ],
+    "possibleCauses": [
+      "Сбой службы",
+      "Отключение"
+    ],
+    "recommendations": [
+      "Запустить службы",
+      "Проверить журнал System"
+    ],
+    "remediation": [
+      "start-service",
+      "open-services"
+    ],
+    "risk": "Medium"
+  }
+]

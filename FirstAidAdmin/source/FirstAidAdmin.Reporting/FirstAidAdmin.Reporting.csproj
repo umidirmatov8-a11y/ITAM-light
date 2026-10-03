@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>FirstAidAdmin.Reporting</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FirstAidAdmin.Core\FirstAidAdmin.Core.csproj" />
+    <ProjectReference Include="..\FirstAidAdmin.Remediation\FirstAidAdmin.Remediation.csproj" />
+    <InternalsVisibleTo Include="FirstAidAdmin.Tests" />
+  </ItemGroup>
+</Project>
