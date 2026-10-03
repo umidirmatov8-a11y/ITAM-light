@@ -40,7 +40,7 @@ export default function OperationCard() {
         </>} />
       {b.isCancelled && <Alert type="error" showIcon style={{ marginBottom: 16 }} message={t('operations.cancelledInfo', { date: fmtDateTime(b.cancelledAt) })} description={b.cancelReason} />}
       <Card style={{ marginBottom: 16 }}>
-        <Descriptions bordered size="small" column={{ xs: 1, md: 2 }}>
+        <Descriptions bordered size="small" column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 3 }}>
           <Descriptions.Item label={t('operations.effectiveAt')}>{fmtDateTime(b.effectiveAt)}</Descriptions.Item>
           <Descriptions.Item label={t('common.recordedAt')}>{fmtDateTime(b.recordedAt)} · {b.createdBy}</Descriptions.Item>
           <Descriptions.Item label={t('operations.employee')}>

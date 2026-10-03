@@ -50,7 +50,7 @@ export default function RepairCard() {
             <Row gutter={16}>
               <Col xs={24} xl={16}>
                 <Card>
-                  <Descriptions bordered size="small" column={{ xs: 1, md: 2 }}>
+                  <Descriptions bordered size="small" column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 3 }}>
                     <Descriptions.Item label={t('repairs.asset')}><Link to={`/assets/${r.assetId}`}>{r.inventoryNumber}</Link> {r.serialNumber && <span className="itam-mono itam-muted">S/N {r.serialNumber}</span>}</Descriptions.Item>
                     <Descriptions.Item label={t('repairs.employee')}>{r.employeeId ? <Link to={`/employees/${r.employeeId}`}>{r.employeeName}</Link> : '—'}</Descriptions.Item>
                     <Descriptions.Item label={t('repairs.openedAt')}>{fmtDateTime(r.openedAt)}</Descriptions.Item>
