@@ -243,15 +243,22 @@ begin
 end;
 
 function Run(const FileName, Params: String; var Code: Integer): Boolean;
+var LogFile: String;
 begin
   Log('Exec: ' + FileName + ' ' + Params);
-  Result := Exec(FileName, Params, '', SW_HIDE, ewWaitUntilTerminated, Code);
+  // Output of every tool is appended to <data>\logs\install.log (Exec itself does not capture it).
+  ForceDirectories(ExpandConstant('{commonappdata}\ITAM\logs'));
+  LogFile := ExpandConstant('{commonappdata}\ITAM\logs\install.log');
+  SaveStringToFile(LogFile, #13#10 + '> ' + ExtractFileName(FileName) + ' ' + Params + #13#10, True);
+  Result := Exec(ExpandConstant('{cmd}'), '/S /C ""' + FileName + '" ' + Params + ' >> "' + LogFile + '" 2>&1"', '', SW_HIDE, ewWaitUntilTerminated, Code);
   Log('Exit code: ' + IntToStr(Code));
 end;
 
 procedure Fail(const Msg: String);
 begin
-  MsgBox(Msg + #13#10#13#10 + 'Подробности: журнал установки (%TEMP%\Setup Log*.txt) и ' + DataRoot + '\logs.', mbCriticalError, MB_OK);
+  Log('FAILED: ' + Msg);
+  // SuppressibleMsgBox: a plain MsgBox would block an unattended (/VERYSILENT /SUPPRESSMSGBOXES) install forever.
+  SuppressibleMsgBox(Msg + #13#10#13#10 + 'Подробности: журнал установки (%TEMP%\Setup Log*.txt) и ' + DataRoot + '\logs.', mbCriticalError, MB_OK, IDOK);
   RaiseException(Msg);
 end;
 
@@ -399,7 +406,7 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usPostUninstall then
-    if MsgBox('Удалить также базу данных, документы и резервные копии (' + DataRoot + ')?' + #13#10 +
-              'Это действие необратимо.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    if SuppressibleMsgBox('Удалить также базу данных, документы и резервные копии (' + DataRoot + ')?' + #13#10 +
+              'Это действие необратимо.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then
       DelTree(DataRoot, True, True, True);
 end;
