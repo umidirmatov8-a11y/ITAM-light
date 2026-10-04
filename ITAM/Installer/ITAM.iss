@@ -83,6 +83,7 @@ var
   OptionsPage: TInputOptionWizardPage;
   ResultUrl: String;
   Upgrade: Boolean;
+  InstallFailed: Boolean;
 
 function SetEnvironmentVariable(lpName: String; lpValue: String): BOOL;
   external 'SetEnvironmentVariableW@kernel32.dll stdcall';
@@ -257,6 +258,7 @@ end;
 procedure Fail(const Msg: String);
 begin
   Log('FAILED: ' + Msg);
+  InstallFailed := True;
   // SuppressibleMsgBox: a plain MsgBox would block an unattended (/VERYSILENT /SUPPRESSMSGBOXES) install forever.
   SuppressibleMsgBox(Msg + #13#10#13#10 + 'Подробности: журнал установки (%TEMP%\Setup Log*.txt) и ' + DataRoot + '\logs.', mbCriticalError, MB_OK, IDOK);
   RaiseException(Msg);
@@ -411,4 +413,10 @@ begin
     if SuppressibleMsgBox('Удалить также базу данных, документы и резервные копии (' + DataRoot + ')?' + #13#10 +
               'Это действие необратимо.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2, IDNO) = IDYES then
       DelTree(DataRoot, True, True, True);
+end;
+
+// Exit code 1 when a post-install step failed, so scripted/unattended installs can detect it.
+function GetCustomSetupExitCode: Integer;
+begin
+  if InstallFailed then Result := 1 else Result := 0;
 end;

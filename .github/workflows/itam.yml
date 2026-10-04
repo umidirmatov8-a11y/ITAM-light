@@ -135,6 +135,7 @@ jobs:
 
       - name: Diagnostics
         if: always()
+        continue-on-error: true
         run: |
           icacls "$env:ProgramData\ITAM\config" "$env:ProgramData\ITAM\config\itam.json"
           New-Item -ItemType Directory -Force ci-logs | Out-Null
@@ -145,6 +146,7 @@ jobs:
           Get-ChildItem "$env:ProgramData\ITAM\logs\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 60 }
           Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddHours(-1) } -MaxEvents 30 -ErrorAction SilentlyContinue |
             Where-Object { $_.ProviderName -match 'PostgreSQL|ITAM|\.NET Runtime|Application Error' } | Format-List TimeCreated, ProviderName, Message
+          exit 0
 
       - uses: actions/upload-artifact@v4
         with:

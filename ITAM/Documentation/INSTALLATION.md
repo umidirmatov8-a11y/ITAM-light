@@ -56,7 +56,7 @@ ITAM-Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=install.log ^
   [/WebPort=8080] [/AdminUser=admin] [/Firewall=1] [/Demo=0] [/DIR="D:\ITAM"]
 ```
 
-Без `/DbMode=existing` используется встроенный PostgreSQL. Код возврата 0 — успех; подробности в `install.log`.
+Без `/DbMode=existing` используется встроенный PostgreSQL. Код возврата 0 — успех, 1 — ошибка на этапе настройки (подробности в `install.log` и `C:\ProgramData\ITAM\logs\install.log`).
 
 ## 4. Первый вход
 

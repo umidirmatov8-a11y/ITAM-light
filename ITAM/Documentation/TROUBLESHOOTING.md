@@ -5,7 +5,7 @@
 | Источник | Путь / команда |
 |---|---|
 | Журнал сервера | `C:\ProgramData\ITAM\logs\itam-ГГГГММДД.log` |
-| Журнал установки | `%TEMP%\Setup Log ГГГГ-ММ-ДД #NNN.txt` (или файл из `/LOG=`) |
+| Журнал установки | `%TEMP%\Setup Log ГГГГ-ММ-ДД #NNN.txt` (или файл из `/LOG=`) и вывод шагов настройки `C:\ProgramData\ITAM\logs\install.log` |
 | Журнал PostgreSQL (встроенный) | `C:\ProgramData\ITAM\pgdata\log\` |
 | Состояние служб | `sc query ITAM`, `sc query ITAM-PostgreSQL` или `services.msc` |
 | Проверка сервера | `http://localhost:8080/health` → `{"status":"Healthy","database":true,"version":"…"}` (503 `Degraded` — нет связи с БД) |
