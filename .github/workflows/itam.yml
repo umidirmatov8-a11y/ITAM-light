@@ -97,11 +97,29 @@ jobs:
 
       - name: Silent install with bundled PostgreSQL
         run: |
-          $p = Start-Process .\Installer\Output\ITAM-Setup.exe -Wait -PassThru -ArgumentList @(
+          # Wait for the installer process itself (Start-Process -Wait would also wait for every descendant process).
+          $p = Start-Process .\Installer\Output\ITAM-Setup.exe -PassThru -ArgumentList @(
             '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=install.log',
             '/DbPassword=Pg_Ci_Pass123', '/AdminPassword=Admin12345!', '/Org=CI', '/Demo=1')
-          Get-Content install.log -Tail 60
+          $finished = $p.WaitForExit(20 * 60 * 1000)
+          if (Test-Path install.log) { Get-Content install.log -Tail 120 }
+          if (-not $finished) {
+            Write-Host "::error::Installer did not finish in 20 minutes"
+            Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'ITAM|postgres|pg_ctl|initdb|powershell|sc\.exe|icacls|netsh' } |
+              Format-Table ProcessId, ParentProcessId, Name, CommandLine -AutoSize -Wrap
+            throw "installer timeout"
+          }
           if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
+
+      - name: Diagnostics
+        if: always()
+        run: |
+          Get-Service ITAM*, postgresql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
+          Get-ChildItem "$env:ProgramData\ITAM" -ErrorAction SilentlyContinue | Format-Table Name, Length
+          Get-ChildItem "$env:ProgramData\ITAM\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }
+          Get-ChildItem "$env:ProgramData\ITAM\logs\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 60 }
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddHours(-1) } -MaxEvents 30 -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -match 'PostgreSQL|ITAM|\.NET Runtime|Application Error' } | Format-List TimeCreated, ProviderName, Message
 
       - name: Verify service and Web UI
         run: |
@@ -131,9 +149,10 @@ jobs:
           path: ITAM/Installer/Output/ITAM-Setup.exe
 
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
           name: install-logs
           path: |
             ITAM/install.log
             C:/ProgramData/ITAM/logs
+            C:/ProgramData/ITAM/pgdata/log
