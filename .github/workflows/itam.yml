@@ -111,16 +111,6 @@ jobs:
           }
           if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
 
-      - name: Diagnostics
-        if: always()
-        run: |
-          Get-Service ITAM*, postgresql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
-          Get-ChildItem "$env:ProgramData\ITAM" -ErrorAction SilentlyContinue | Format-Table Name, Length
-          Get-ChildItem "$env:ProgramData\ITAM\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }
-          Get-ChildItem "$env:ProgramData\ITAM\logs\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 60 }
-          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddHours(-1) } -MaxEvents 30 -ErrorAction SilentlyContinue |
-            Where-Object { $_.ProviderName -match 'PostgreSQL|ITAM|\.NET Runtime|Application Error' } | Format-List TimeCreated, ProviderName, Message
-
       - name: Verify service and Web UI
         run: |
           Get-Service ITAM, ITAM-PostgreSQL | Format-Table Name, Status, StartType
@@ -143,6 +133,19 @@ jobs:
           if ($LASTEXITCODE) { throw "backup failed" }
           Get-ChildItem "$env:ProgramData\ITAM\backups" | Format-Table Name, Length
 
+      - name: Diagnostics
+        if: always()
+        run: |
+          icacls "$env:ProgramData\ITAM\config" "$env:ProgramData\ITAM\config\itam.json"
+          New-Item -ItemType Directory -Force ci-logs | Out-Null
+          Copy-Item install.log, "$env:ProgramData\ITAM\logs\*", "$env:ProgramData\ITAM\pgdata\log\*" ci-logs -ErrorAction SilentlyContinue
+          Get-Service ITAM*, postgresql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
+          Get-ChildItem "$env:ProgramData\ITAM" -ErrorAction SilentlyContinue | Format-Table Name, Length
+          Get-ChildItem "$env:ProgramData\ITAM\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }
+          Get-ChildItem "$env:ProgramData\ITAM\logs\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 60 }
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddHours(-1) } -MaxEvents 30 -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -match 'PostgreSQL|ITAM|\.NET Runtime|Application Error' } | Format-List TimeCreated, ProviderName, Message
+
       - uses: actions/upload-artifact@v4
         with:
           name: ITAM-Setup
@@ -152,7 +155,4 @@ jobs:
         if: always()
         with:
           name: install-logs
-          path: |
-            ITAM/install.log
-            C:/ProgramData/ITAM/logs
-            C:/ProgramData/ITAM/pgdata/log
+          path: ITAM/ci-logs

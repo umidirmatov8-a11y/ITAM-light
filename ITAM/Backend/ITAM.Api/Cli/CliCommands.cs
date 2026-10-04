@@ -53,6 +53,8 @@ public static partial class CliCommands
 
     public static async Task<int> RunAsync(string[] args)
     {
+        // Russian messages must survive redirection to a file (installer log) and the legacy console code page.
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         var cmd = args[0].ToLowerInvariant();
         var o = ParseOptions(args);
         try

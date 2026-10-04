@@ -365,7 +365,9 @@ begin
     Run(ExpandConstant('{sys}\sc.exe'), 'config ' + SERVICE_NAME + ' depend= ' + PG_SERVICE, Code);
 
   // Config holds the DB password: only SYSTEM and Administrators may read the data folder.
-  Run(ExpandConstant('{sys}\icacls.exe'), '"' + DataRoot + '\config" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" /T /Q', Code);
+  // Folder: drop inherited ACEs, allow only SYSTEM (the service account) and Administrators; files then inherit exactly that.
+  Run(ExpandConstant('{sys}\icacls.exe'), '"' + DataRoot + '\config" /inheritance:r /grant:r "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" /Q', Code);
+  Run(ExpandConstant('{sys}\icacls.exe'), '"' + DataRoot + '\config\*" /reset /Q', Code);
 
   if not IsUpgrade then Port := WebPage.Values[0];
   if (Port <> '') and OptionsPage.Values[0] then
