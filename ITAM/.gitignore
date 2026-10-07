@@ -1,0 +1,13 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/
+node_modules/
+Frontend/dist/
+Backend/ITAM.Api/wwwroot/
+publish/
+Installer/Output/
+Installer/staging/
+*.log

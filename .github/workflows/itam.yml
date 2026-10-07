@@ -1,0 +1,160 @@
+name: ITAM Platform
+
+on:
+  push:
+    paths:
+      - 'ITAM/**'
+      - '.github/workflows/itam.yml'
+  pull_request:
+    paths:
+      - 'ITAM/**'
+  workflow_dispatch:
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  test:
+    name: Build & test (Linux, PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: ITAM
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ITAM/Frontend/package-lock.json
+
+      - name: Frontend typecheck & build
+        working-directory: ITAM/Frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Backend build
+        run: dotnet build ITAM.slnx -c Release
+
+      - name: Unit tests
+        run: dotnet test Backend/Tests/ITAM.UnitTests -c Release --no-build --logger "trx;LogFileName=unit.trx" --results-directory TestResults
+
+      - name: Integration tests (real PostgreSQL)
+        env:
+          ITAM_TEST_PG: Host=localhost;Port=5432;Username=postgres;Password=postgres
+        run: dotnet test Backend/Tests/ITAM.IntegrationTests -c Release --no-build --logger "trx;LogFileName=integration.trx" --results-directory TestResults
+
+      - name: Migrations script is up to date
+        run: |
+          dotnet tool install -g dotnet-ef --version 10.0.12
+          dotnet ef migrations script --idempotent -p Backend/ITAM.Infrastructure -s Backend/ITAM.Api -o /tmp/migrations.sql --no-build --configuration Release
+          diff -q <(tr -d '\r' < Database/migrations.sql) <(tr -d '\r' < /tmp/migrations.sql)
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: ITAM/TestResults
+
+  installer:
+    name: Windows installer (ITAM-Setup.exe)
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: ITAM
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Build installer
+        run: .\Installer\build-installer.ps1 -Version "1.0.${{ github.run_number }}"
+
+      - name: Silent install with bundled PostgreSQL
+        run: |
+          # Wait for the installer process itself (Start-Process -Wait would also wait for every descendant process).
+          $p = Start-Process .\Installer\Output\ITAM-Setup.exe -PassThru -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=install.log',
+            '/DbPassword=Pg_Ci_Pass123', '/AdminPassword=Admin12345!', '/Org=CI', '/Demo=1')
+          $finished = $p.WaitForExit(20 * 60 * 1000)
+          if (Test-Path install.log) { Get-Content install.log -Tail 120 }
+          if (-not $finished) {
+            Write-Host "::error::Installer did not finish in 20 minutes"
+            Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'ITAM|postgres|pg_ctl|initdb|powershell|sc\.exe|icacls|netsh' } |
+              Format-Table ProcessId, ParentProcessId, Name, CommandLine -AutoSize -Wrap
+            throw "installer timeout"
+          }
+          if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
+
+      - name: Verify service and Web UI
+        run: |
+          Get-Service ITAM, ITAM-PostgreSQL | Format-Table Name, Status, StartType
+          $ok = $false
+          for ($i = 0; $i -lt 30 -and -not $ok; $i++) {
+            try { $r = Invoke-WebRequest http://localhost:8080/health -UseBasicParsing; $ok = $r.StatusCode -eq 200 } catch { Start-Sleep 2 }
+          }
+          if (-not $ok) { Get-Content "$env:ProgramData\ITAM\logs\*.log" -Tail 80; throw "ITAM did not answer on :8080" }
+          $html = (Invoke-WebRequest http://localhost:8080/ -UseBasicParsing).Content
+          if ($html -notmatch '<div id="root"') { throw "SPA is not served" }
+          $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          $login = Invoke-RestMethod http://localhost:8080/api/auth/login -Method Post -WebSession $s -ContentType 'application/json' -Body '{"userName":"admin","password":"Admin12345!"}'
+          $assets = Invoke-RestMethod http://localhost:8080/api/assets -WebSession $s
+          "Assets in demo data: $($assets.total)"
+          if ($assets.total -lt 1) { throw "demo data missing" }
+
+      - name: CLI backup
+        run: |
+          & "$env:ProgramFiles\ITAM\ITAM.Server.exe" backup --data-root "$env:ProgramData\ITAM"
+          if ($LASTEXITCODE) { throw "backup failed" }
+          Get-ChildItem "$env:ProgramData\ITAM\backups" | Format-Table Name, Length
+
+      - name: Diagnostics
+        if: always()
+        continue-on-error: true
+        run: |
+          icacls "$env:ProgramData\ITAM\config" "$env:ProgramData\ITAM\config\itam.json"
+          New-Item -ItemType Directory -Force ci-logs | Out-Null
+          Copy-Item install.log, "$env:ProgramData\ITAM\logs\*", "$env:ProgramData\ITAM\pgdata\log\*" ci-logs -ErrorAction SilentlyContinue
+          Get-Service ITAM*, postgresql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
+          Get-ChildItem "$env:ProgramData\ITAM" -ErrorAction SilentlyContinue | Format-Table Name, Length
+          Get-ChildItem "$env:ProgramData\ITAM\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }
+          Get-ChildItem "$env:ProgramData\ITAM\logs\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 60 }
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddHours(-1) } -MaxEvents 30 -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProviderName -match 'PostgreSQL|ITAM|\.NET Runtime|Application Error' } | Format-List TimeCreated, ProviderName, Message
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ITAM-Setup
+          path: ITAM/Installer/Output/ITAM-Setup.exe
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-logs
+          path: ITAM/ci-logs
