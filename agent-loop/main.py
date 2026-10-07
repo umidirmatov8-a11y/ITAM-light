@@ -18,7 +18,7 @@ def run_cli(args: argparse.Namespace) -> int:
 
     from app.config import PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, load_settings
     from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Event
-    from app.local_runtime import LocalModelProvider
+    from app.local_runtime import LlamaServer, LocalModelProvider
     from app.providers import OllamaProvider, ProviderError, create_provider
     from app.report import render_report
 
@@ -51,7 +51,10 @@ def run_cli(args: argparse.Namespace) -> int:
     try:
         provider = create_provider(settings)
         if isinstance(provider, LocalModelProvider):
-            print(f"Модель {provider.model} работает на: {provider.start().device()}", file=sys.stderr, flush=True)
+            device = provider.start().device()
+            if LlamaServer.gpu_problem:
+                print(f"Внимание: {LlamaServer.gpu_problem}", file=sys.stderr, flush=True)
+            print(f"Модель {provider.model} работает на: {device}", file=sys.stderr, flush=True)
         if isinstance(provider, OllamaProvider) and not provider.has_model():
             print(f"Скачиваю модель {provider.model}…", file=sys.stderr, flush=True)
             provider.pull(pull_progress)

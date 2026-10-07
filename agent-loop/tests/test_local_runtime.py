@@ -29,7 +29,7 @@ FAKE_SERVER = textwrap.dedent('''\
         print("ggml_vulkan: device lost", flush=True); sys.exit(1)
     if "--device" in args and os.environ.get("FAKE_OLD_BUILD"):
         print("error: invalid argument: --device", flush=True); sys.exit(1)
-    if gpu and os.environ.get("FAKE_GPU") in ("ok", "crash-on-chat"):
+    if gpu and os.environ.get("FAKE_GPU") in ("ok", "crash-on-chat", "garbage"):
         print("ggml_vulkan: 0 = Fake Radeon 9000 (AMD proprietary driver) | uma: 0 | fp16: 1", flush=True)
         print("load_tensors: offloaded 37/37 layers to GPU", flush=True)
 
@@ -43,10 +43,12 @@ FAKE_SERVER = textwrap.dedent('''\
             self._send({{"status": "ok"}})
         def do_POST(self):
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-            if gpu and os.environ.get("FAKE_GPU") == "crash-on-chat":
+            if gpu and os.environ.get("FAKE_GPU") == "crash-on-chat" and "Repeat this number" not in str(payload):
                 os._exit(3)
             log.write(json.dumps({{"args": args, "payload": payload}}) + "\\n"); log.flush()
-            if "response_format" in payload:
+            if "Repeat this number" in payload["messages"][-1]["content"]:
+                content = "an an cl" if gpu and os.environ.get("FAKE_GPU") == "garbage" else "4096"
+            elif "response_format" in payload:
                 content = json.dumps({{"approved": True, "score": 9, "issues": [], "feedback": ""}})
             else:
                 content = "готово"
@@ -65,6 +67,7 @@ def home(tmp_path):
     server.chmod(server.stat().st_mode | stat.S_IEXEC)
     (tmp_path / "models" / "tiny-q4.gguf").write_bytes(b"GGUF")
     LlamaServer.gpu_failed = False
+    LlamaServer.gpu_problem = ""
     _DEVICE_CACHE.clear()
     yield tmp_path
     LlamaServer.shutdown()
@@ -77,7 +80,7 @@ def test_bundled_model_runs_the_agent_loop(home):
     assert provider.model == "tiny-q4.gguf"
     run = AgentPipeline(provider, 2).run("задача")
     assert run.approved and run.best.result == "готово"
-    calls = [json.loads(line) for line in (home / "models" / "tiny-q4.gguf.requests").read_text().splitlines()]
+    calls = requests_log(home)
     assert len(calls) == 3
     assert calls[0]["args"][calls[0]["args"].index("-c") + 1] == "8192"
     assert calls[2]["payload"]["response_format"]["type"] == "json_schema"
@@ -113,7 +116,9 @@ posix_only = pytest.mark.skipif(os.name == "nt", reason="fake server is a POSIX 
 
 
 def requests_log(home):
-    return [json.loads(line) for line in (home / "models" / "tiny-q4.gguf.requests").read_text().splitlines()]
+    """Agent requests (the GPU self-test probe is left out)."""
+    calls = [json.loads(line) for line in (home / "models" / "tiny-q4.gguf.requests").read_text().splitlines()]
+    return [c for c in calls if "Repeat this number" not in str(c["payload"])]
 
 
 @posix_only
@@ -167,3 +172,12 @@ def test_describe_device():
     assert describe_device("", ["NVIDIA GeForce RTX 3060"]) == "видеокарта NVIDIA GeForce RTX 3060"
     log = "ggml_vulkan: 0 = Intel(R) Iris(R) Xe Graphics (Intel Corporation) | uma: 1\noffloaded 29/37 layers to GPU"
     assert describe_device(log, ["x"]) == "видеокарта Intel(R) Iris(R) Xe Graphics (29/37 слоёв)"
+
+
+@posix_only
+def test_gpu_with_wrong_results_is_dropped_by_the_self_test(home, monkeypatch):
+    monkeypatch.setenv("FAKE_GPU", "garbage")
+    provider = LocalModelProvider(Settings(), home=home)
+    assert provider.complete("s", "u") == "готово"
+    assert not LlamaServer._instance.uses_gpu and LlamaServer.gpu_failed
+    assert "самопроверка" in LlamaServer.gpu_problem and "Fake Radeon 9000" in LlamaServer.gpu_problem

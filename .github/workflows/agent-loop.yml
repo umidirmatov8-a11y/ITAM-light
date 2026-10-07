@@ -178,6 +178,14 @@ jobs:
             if (Test-Path $log) { Write-Output "--- $mode log (tail) ---"; Get-Content $log -Tail 30 }
           }
           if ($code -gt 1) { throw "agent loop failed" }
-          $device = Select-String -Path run.txt -Pattern 'работает на: (.+)$' -Encoding utf8 | Select-Object -Last 1
-          Write-Output "device: $($device.Matches[0].Groups[1].Value)"
-          if (-not $device -or $device.Matches[0].Groups[1].Value -notmatch '^видеокарта') { throw "the model did not run on the Vulkan device" }
+          # The Vulkan path must have loaded the model on the device...
+          $gpuLog = Join-Path $env:RUNNER_TEMP 'agentloop-llama-server-gpu.log'
+          if (-not (Select-String -Path $gpuLog -Pattern 'model loaded' -Quiet)) { throw "the model was not loaded on the Vulkan device" }
+          $device = (Select-String -Path run.txt -Pattern 'работает на: (.+)$' -Encoding utf8 | Select-Object -Last 1).Matches[0].Groups[1].Value
+          $problem = Select-String -Path run.txt -Pattern '^Внимание: (.+)$' -Encoding utf8 | Select-Object -Last 1
+          Write-Output "device: $device"
+          if ($problem) { Write-Output "GPU dropped by the app: $($problem.Matches[0].Groups[1].Value)" }
+          # ...and then either pass the app's GPU self-test (correct results on the device) or be dropped by it
+          # with an explanation - never keep computing on a device that returns garbage.
+          if (-not $problem -and $device -notmatch '^видеокарта') { throw "neither ran on the GPU nor explained why not" }
+          Get-Content e2e-gpu-report.md -Encoding utf8 | Select-Object -First 20

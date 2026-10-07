@@ -130,6 +130,7 @@ _OFFLOADED = re.compile(r"offloaded (\d+)/(\d+) layers to GPU")
 
 
 _DEVICE_CACHE: dict[Path, list[str]] = {}
+SELF_TEST_NUMBER = "4096"
 
 
 def list_gpus(server: Path) -> list[str]:
@@ -157,6 +158,7 @@ class LlamaServer:
     _lock = threading.Lock()
     _instance: "LlamaServer | None" = None
     gpu_failed = False  # a GPU launch crashed in this session: stay on the CPU
+    gpu_problem = ""  # why the GPU was given up, for the user
 
     def __init__(self, server: Path, model: Path, num_ctx: int, extra_args: list[str], uses_gpu: bool):
         self.server, self.model, self.num_ctx = server, model, num_ctx
@@ -203,6 +205,14 @@ class LlamaServer:
                     errors.append(str(exc))
                     if uses_gpu:
                         cls.gpu_failed = True
+                        cls.gpu_problem = "видеокарта не смогла загрузить модель — работаю на процессоре"
+                    continue
+                if uses_gpu and not candidate.self_test():
+                    device = candidate.device()
+                    candidate.stop()
+                    cls.gpu_failed = True
+                    cls.gpu_problem = (f"{device} даёт неверные результаты (самопроверка не пройдена, "
+                                       "возможно, нужен новый драйвер) — работаю на процессоре")
                     continue
                 cls._instance = candidate
                 return candidate
@@ -234,6 +244,39 @@ class LlamaServer:
                 pass  # 503 while the model is loading, or not listening yet
             time.sleep(0.5)
         raise ProviderError(f"Модель не загрузилась за {int(timeout)} с. Журнал: {self.log_path}")
+
+    def chat(self, payload: dict, timeout: float) -> str:
+        request = urllib.request.Request(f"{self.url}/v1/chat/completions",
+                                         data=json.dumps(payload).encode("utf-8"),
+                                         headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            raise ProviderError(f"Встроенная модель вернула ошибку {exc.code}: {detail}") from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise ProviderError(f"Встроенная модель не отвечает. Журнал: {self.log_path}\n{self.log_tail()}") from exc
+        except ValueError as exc:
+            raise ProviderError("Встроенная модель вернула некорректный ответ") from exc
+        try:
+            text = str(data["choices"][0]["message"]["content"] or "").strip()
+        except (KeyError, IndexError, TypeError) as exc:
+            raise ProviderError("Встроенная модель вернула ответ неожиданного формата") from exc
+        if not text:
+            raise ProviderError("Пустой ответ модели")
+        return text
+
+    def self_test(self) -> bool:
+        """Some GPU drivers load the model fine but compute garbage: ask a trivial question and check the answer."""
+        try:
+            answer = self.chat({"messages": [
+                {"role": "system", "content": "Reply with the number only."},
+                {"role": "user", "content": f"Repeat this number exactly: {SELF_TEST_NUMBER}"}],
+                "temperature": 0, "max_tokens": 16}, timeout=300)
+        except ProviderError:
+            return False
+        return SELF_TEST_NUMBER in answer
 
     def log_text(self) -> str:
         try:
@@ -302,6 +345,7 @@ class LocalModelProvider:
                 raise
         # The GPU driver crashed mid-answer: continue on the CPU for the rest of the session.
         LlamaServer.gpu_failed = True
+        LlamaServer.gpu_problem = "видеокарта дала сбой во время ответа — работаю на процессоре"
         return self._chat(self.start(), system, user, schema)
 
     def _chat(self, server: LlamaServer, system: str, user: str, schema: dict | None) -> str:
@@ -311,23 +355,4 @@ class LocalModelProvider:
         }
         if schema is not None:
             payload["response_format"] = {"type": "json_schema", "json_schema": {"name": "verdict", "schema": schema}}
-        request = urllib.request.Request(f"{server.url}/v1/chat/completions",
-                                         data=json.dumps(payload).encode("utf-8"),
-                                         headers={"Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", "replace")[:300]
-            raise ProviderError(f"Встроенная модель вернула ошибку {exc.code}: {detail}") from exc
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise ProviderError(f"Встроенная модель не отвечает. Журнал: {server.log_path}\n{server.log_tail()}") from exc
-        except ValueError as exc:
-            raise ProviderError("Встроенная модель вернула некорректный ответ") from exc
-        try:
-            text = str(data["choices"][0]["message"]["content"] or "").strip()
-        except (KeyError, IndexError, TypeError) as exc:
-            raise ProviderError("Встроенная модель вернула ответ неожиданного формата") from exc
-        if not text:
-            raise ProviderError("Пустой ответ модели")
-        return text
+        return server.chat(payload, self.timeout)

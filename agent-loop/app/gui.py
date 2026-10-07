@@ -14,7 +14,7 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 from app import __version__
 from app.config import (OLLAMA_PRESETS, PROVIDER_ANTHROPIC, PROVIDER_LOCAL, PROVIDER_OLLAMA, Settings,
                         load_settings, save_settings)
-from app.local_runtime import LocalModelProvider, app_home, list_local_models
+from app.local_runtime import LlamaServer, LocalModelProvider, app_home, list_local_models
 from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Cancelled, Event, RunResult
 from app.providers import OllamaProvider, ProviderError, create_provider
 
@@ -329,6 +329,8 @@ class MainWindow:
                 if isinstance(provider, LocalModelProvider):
                     self.events.put(("progress", f"Загружаю модель {provider.model} в память…"))
                     server = provider.start(self.cancel)
+                    if LlamaServer.gpu_problem:
+                        self.events.put(("log", f"Внимание: {LlamaServer.gpu_problem}\n"))
                     self.events.put(("device", server.device()))
                 if isinstance(provider, OllamaProvider) and not provider.has_model():
                     self.events.put(("log", f"Модель {provider.model} ещё не скачана — скачиваю (один раз)…\n"))
