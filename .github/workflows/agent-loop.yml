@@ -158,8 +158,12 @@ jobs:
       - name: Run the agents on the (software) GPU
         run: |
           $env:TEMP = $env:RUNNER_TEMP
-          Write-Output '--- llama-server --list-devices ---'
+          Write-Output '--- vulkaninfo --summary ---'
+          & "C:\VulkanSDK\$env:VULKAN_VERSION\Bin\vulkaninfo.exe" --summary 2>&1 | Out-String | Write-Output
+          Write-Output '--- llama-server --list-devices (with Vulkan loader debug) ---'
+          $env:VK_LOADER_DEBUG = 'error,warn,driver'
           & runtime\llama-server.exe --list-devices 2>&1 | Out-String | Write-Output
+          Remove-Item Env:VK_LOADER_DEBUG
           python main.py --provider local --gpu auto --iterations 1 --report e2e-gpu-report.md `
             --task "Напиши функцию на Python, которая складывает два числа, и один пример вызова." 2>&1 | Tee-Object -FilePath run.txt
           $code = $LASTEXITCODE
