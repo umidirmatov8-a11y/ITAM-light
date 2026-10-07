@@ -5,12 +5,14 @@ from __future__ import annotations
 import queue
 import threading
 import tkinter as tk
+from dataclasses import replace
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from app import __version__
-from app.config import PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, Settings, load_settings, save_settings
+from app.config import (OLLAMA_PRESETS, PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, Settings, load_settings,
+                        save_settings)
 from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Cancelled, Event, RunResult
-from app.providers import ProviderError, create_provider
+from app.providers import OllamaProvider, ProviderError, create_provider
 
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
@@ -21,7 +23,9 @@ class SettingsDialog(tk.Toplevel):
         self.title("Настройки")
         self.resizable(False, False)
         self.transient(master)
+        self.settings = settings
         self.result: Settings | None = None
+        self.pull_cancel = threading.Event()
 
         self.provider = tk.StringVar(value=settings.provider)
         self.api_key = tk.StringVar(value=settings.anthropic_api_key)
@@ -29,6 +33,7 @@ class SettingsDialog(tk.Toplevel):
         self.effort = tk.StringVar(value=settings.effort)
         self.ollama_url = tk.StringVar(value=settings.ollama_url)
         self.ollama_model = tk.StringVar(value=settings.ollama_model)
+        self.ollama_info = tk.StringVar()
         self.iterations = tk.IntVar(value=settings.max_iterations)
         self.language = tk.StringVar(value=settings.language)
 
@@ -41,27 +46,39 @@ class SettingsDialog(tk.Toplevel):
 
         ttk.Label(body, text="Нейросеть:", font=("Segoe UI", 9, "bold")).grid(row=row, column=0, sticky="w")
         row += 1
-        ttk.Radiobutton(body, text="Claude API (облако, нужен API-ключ)", value=PROVIDER_ANTHROPIC,
-                        variable=self.provider).grid(row=row, column=0, columnspan=2, sticky="w")
+        ttk.Radiobutton(body, text="Открытая модель на этом компьютере (Ollama, бесплатно, без интернета)",
+                        value=PROVIDER_OLLAMA, variable=self.provider).grid(row=row, column=0, columnspan=2, sticky="w")
+        row += 1
+        label("Модель:")
+        models = ttk.Frame(body)
+        models.grid(row=row, column=1, sticky="we")
+        combo = ttk.Combobox(models, textvariable=self.ollama_model, width=24,
+                             values=[name for name, _size, _note in OLLAMA_PRESETS])
+        combo.pack(side="left")
+        combo.bind("<<ComboboxSelected>>", lambda _e: self._describe_model())
+        combo.bind("<KeyRelease>", lambda _e: self._describe_model())
+        self.pull_btn = ttk.Button(models, text="Скачать модель", command=self._pull)
+        self.pull_btn.pack(side="left", padx=6)
+        ttk.Button(models, text="Проверить", command=self._check).pack(side="left")
+        row += 1
+        ttk.Label(body, textvariable=self.ollama_info, foreground="#57606a", wraplength=460).grid(
+            row=row, column=1, sticky="w")
+        row += 1
+        label("Адрес Ollama:")
+        ttk.Entry(body, textvariable=self.ollama_url, width=48).grid(row=row, column=1, sticky="we")
+        row += 1
+        ttk.Radiobutton(body, text="Claude API (облако, нужен платный API-ключ)", value=PROVIDER_ANTHROPIC,
+                        variable=self.provider).grid(row=row, column=0, columnspan=2, sticky="w", pady=(10, 0))
         row += 1
         label("API-ключ Claude:")
         ttk.Entry(body, textvariable=self.api_key, show="•", width=48).grid(row=row, column=1, sticky="we")
         row += 1
-        label("Модель:")
+        label("Модель Claude:")
         ttk.Entry(body, textvariable=self.model, width=48).grid(row=row, column=1, sticky="we")
         row += 1
         label("Усилие (effort):")
         ttk.Combobox(body, textvariable=self.effort, values=EFFORTS, state="readonly",
                      width=12).grid(row=row, column=1, sticky="w")
-        row += 1
-        ttk.Radiobutton(body, text="Ollama (локальная модель, без интернета)", value=PROVIDER_OLLAMA,
-                        variable=self.provider).grid(row=row, column=0, columnspan=2, sticky="w", pady=(10, 0))
-        row += 1
-        label("Адрес Ollama:")
-        ttk.Entry(body, textvariable=self.ollama_url, width=48).grid(row=row, column=1, sticky="we")
-        row += 1
-        label("Модель Ollama:")
-        ttk.Entry(body, textvariable=self.ollama_model, width=48).grid(row=row, column=1, sticky="we")
         row += 1
         ttk.Separator(body).grid(row=row, column=0, columnspan=2, sticky="we", pady=10)
         row += 1
@@ -77,15 +94,76 @@ class SettingsDialog(tk.Toplevel):
         ttk.Button(buttons, text="Сохранить", command=self._save).pack(side="left", padx=4)
         ttk.Button(buttons, text="Отмена", command=self.destroy).pack(side="left")
 
+        self._describe_model()
         self.bind("<Escape>", lambda _e: self.destroy())
+        self.protocol("WM_DELETE_WINDOW", self.destroy)
         self.grab_set()
+
+    def destroy(self):
+        self.pull_cancel.set()
+        super().destroy()
+
+    def _describe_model(self):
+        name = self.ollama_model.get().strip()
+        for preset, size, note in OLLAMA_PRESETS:
+            if preset == name:
+                self.ollama_info.set(f"{size} · {note}")
+                return
+        self.ollama_info.set("Любая модель из каталога https://ollama.com/library")
+
+    def _ollama(self) -> OllamaProvider:
+        return OllamaProvider(replace(self.settings, ollama_url=self.ollama_url.get().strip(),
+                                      ollama_model=self.ollama_model.get().strip()))
+
+    def _set_info(self, text: str):
+        # Called from worker threads: hop to the UI thread; ignore if the dialog is already closed.
+        try:
+            self.after(0, self.ollama_info.set, text)
+        except (tk.TclError, RuntimeError):
+            pass
+
+    def _check(self):
+        provider = self._ollama()
+
+        def work():
+            try:
+                models = provider.list_models()
+                state = "скачана ✔" if provider.has_model() else "не скачана — нажмите «Скачать модель»"
+                self._set_info(f"Ollama работает. {provider.model}: {state}. "
+                               f"На компьютере: {', '.join(models) or 'моделей нет'}")
+            except ProviderError as exc:
+                self._set_info(str(exc))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _pull(self):
+        provider = self._ollama()
+        self.pull_btn.configure(state="disabled")
+
+        def progress(status: str, fraction: float | None):
+            self._set_info(f"{provider.model}: {status} {fraction:.0%}" if fraction is not None
+                           else f"{provider.model}: {status}")
+
+        def work():
+            try:
+                provider.pull(progress, self.pull_cancel)
+                self._set_info(f"{provider.model} скачана ✔ — можно сохранять и запускать")
+            except ProviderError as exc:
+                self._set_info(str(exc))
+            try:
+                self.after(0, lambda: self.pull_btn.configure(state="normal"))
+            except (tk.TclError, RuntimeError):
+                pass
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _save(self):
         try:
             iterations = int(self.iterations.get())
         except (tk.TclError, ValueError):
             iterations = 3
-        self.result = Settings(
+        self.result = replace(
+            self.settings,
             provider=self.provider.get(),
             anthropic_api_key=self.api_key.get().strip(),
             anthropic_model=self.model.get().strip() or Settings.anthropic_model,
@@ -202,11 +280,17 @@ class MainWindow:
 
         def work():
             try:
+                if isinstance(provider, OllamaProvider) and not provider.has_model():
+                    self.events.put(("log", f"Модель {provider.model} ещё не скачана — скачиваю (один раз)…\n"))
+                    provider.pull(lambda status, fraction: self.events.put(
+                        ("progress", f"Скачивание {provider.model}: {status}"
+                                     + (f" {fraction:.0%}" if fraction is not None else ""))), self.cancel)
+                    self.events.put(("log", f"Модель {provider.model} скачана.\n"))
                 self.events.put(("finished", pipeline.run(task, self.events.put, self.cancel)))
             except Cancelled:
                 self.events.put(("stopped", None))
             except (ProviderError, ValueError) as exc:
-                self.events.put(("error", str(exc)))
+                self.events.put(("stopped", None) if self.cancel.is_set() else ("error", str(exc)))
             except Exception as exc:  # keep the UI alive on unexpected failures
                 self.events.put(("error", f"{type(exc).__name__}: {exc}"))
 
@@ -238,6 +322,12 @@ class MainWindow:
                 self._append(self.log, item.text + "\n")
             return
         kind, payload = item
+        if kind == "log":
+            self._append(self.log, payload)
+            return
+        if kind == "progress":
+            self.status.set(payload)
+            return
         self.run_btn.configure(state="normal")
         self.stop_btn.configure(state="disabled")
         if kind == "finished":

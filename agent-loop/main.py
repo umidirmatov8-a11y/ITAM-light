@@ -13,13 +13,20 @@ import sys
 from app import __version__
 
 
-def run_cli(task: str, report_path: str | None, iterations: int | None) -> int:
-    from app.config import load_settings
+def run_cli(args: argparse.Namespace) -> int:
+    from dataclasses import replace
+
+    from app.config import PROVIDER_OLLAMA, load_settings
     from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Event
-    from app.providers import ProviderError, create_provider
+    from app.providers import OllamaProvider, ProviderError, create_provider
     from app.report import render_report
 
     settings = load_settings()
+    if args.provider:
+        settings = replace(settings, provider=args.provider)
+    if args.model:
+        field = "ollama_model" if settings.provider == PROVIDER_OLLAMA else "anthropic_model"
+        settings = replace(settings, **{field: args.model})
 
     def show(event: Event) -> None:
         title = f"{STAGE_TITLES[event.stage]} · круг {event.iteration}"
@@ -30,15 +37,26 @@ def run_cli(task: str, report_path: str | None, iterations: int | None) -> int:
         elif event.stage != "execute":
             print(event.text, file=sys.stderr, flush=True)
 
+    last_status = [""]
+
+    def pull_progress(status: str, fraction: float | None) -> None:
+        if status != last_status[0]:  # one line per download phase, not per chunk
+            last_status[0] = status
+            print(f"  {status}", file=sys.stderr, flush=True)
+
     try:
-        pipeline = AgentPipeline(create_provider(settings), iterations or settings.max_iterations, settings.language)
-        run = pipeline.run(task, show)
+        provider = create_provider(settings)
+        if isinstance(provider, OllamaProvider) and not provider.has_model():
+            print(f"Скачиваю модель {provider.model}…", file=sys.stderr, flush=True)
+            provider.pull(pull_progress)
+        pipeline = AgentPipeline(provider, args.iterations or settings.max_iterations, settings.language)
+        run = pipeline.run(args.task, show)
     except (ProviderError, ValueError) as exc:
         print(f"Ошибка: {exc}", file=sys.stderr)
         return 2
     print(run.best.result)
-    if report_path:
-        with open(report_path, "w", encoding="utf-8") as fh:
+    if args.report:
+        with open(args.report, "w", encoding="utf-8") as fh:
             fh.write(render_report(run))
     return 0 if run.approved else 1
 
@@ -51,10 +69,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--task", help="выполнить задачу в консоли без окна")
     parser.add_argument("--report", help="сохранить подробный отчёт (Markdown) в файл")
     parser.add_argument("--iterations", type=int, help="максимум кругов проверки")
+    parser.add_argument("--provider", choices=("ollama", "anthropic"), help="переопределить нейросеть из настроек")
+    parser.add_argument("--model", help="переопределить модель, например qwen2.5:0.5b")
     parser.add_argument("--version", action="version", version=f"AgentLoop {__version__}")
     args = parser.parse_args(argv)
     if args.task:
-        return run_cli(args.task, args.report, args.iterations)
+        return run_cli(args)
     from app.gui import main as gui_main
     return gui_main()
 

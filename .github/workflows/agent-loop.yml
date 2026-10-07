@@ -44,3 +44,45 @@ jobs:
             agent-loop/dist/AgentLoop.exe
             agent-loop/installer/Output/AgentLoop-Setup.exe
           if-no-files-found: error
+
+  # End-to-end run of the three agents on a real small open-weight model.
+  e2e-small-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: agent-loop
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ['qwen2.5:0.5b', 'qwen2.5:1.5b']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Ollama and pull ${{ matrix.model }}
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/tags >/dev/null && break; sleep 2; done
+          ollama pull '${{ matrix.model }}'
+
+      - name: Run the agent loop
+        run: |
+          pip install -r requirements.txt
+          set +e
+          python main.py --provider ollama --model '${{ matrix.model }}' --iterations 2 --report e2e-report.md \
+            --task "Напиши функцию на Python, которая проверяет, является ли строка палиндромом (без учёта регистра и пробелов), и приведи 3 примера вызова."
+          code=$?
+          echo "exit code: $code (0 = accepted by verifier, 1 = best of rejected attempts, 2 = error)"
+          cat e2e-report.md
+          test $code -le 1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-report-${{ strategy.job-index }}
+          path: agent-loop/e2e-report.md
+          if-no-files-found: ignore

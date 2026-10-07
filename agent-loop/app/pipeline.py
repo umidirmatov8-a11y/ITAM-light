@@ -213,5 +213,10 @@ class AgentPipeline:
 
     def _verify(self, task: str, result: str) -> Verdict:
         user = f"Исходная задача пользователя:\n{task}\n\n--- Результат исполнителя ---\n{result}"
-        raw = self.provider.complete(VERIFIER_SYSTEM.format(language=self.language), user, schema=VERDICT_SCHEMA)
-        return parse_verdict(raw)
+        system = VERIFIER_SYSTEM.format(language=self.language)
+        raw = self.provider.complete(system, user, schema=VERDICT_SCHEMA)
+        try:
+            return parse_verdict(raw)
+        except ProviderError:
+            # Small local models occasionally break the JSON format; ask once more.
+            return parse_verdict(self.provider.complete(system, user, schema=VERDICT_SCHEMA))

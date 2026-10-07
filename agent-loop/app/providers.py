@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import threading
 import urllib.error
 import urllib.request
-from typing import Protocol
+from typing import Callable, Protocol
 
 from app.config import PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, Settings
 
@@ -77,34 +78,80 @@ class AnthropicProvider:
 class OllamaProvider:
     name = "Ollama (локально)"
 
-    def __init__(self, settings: Settings, timeout: float = 600.0):
+    def __init__(self, settings: Settings, timeout: float = 900.0):
         self.url = settings.ollama_url.rstrip("/")
         self.model = settings.ollama_model
+        self.num_ctx = settings.ollama_num_ctx
         self.timeout = timeout
+
+    def _open(self, path: str, payload: dict | None = None, timeout: float | None = None):
+        request = urllib.request.Request(
+            f"{self.url}{path}",
+            data=json.dumps(payload).encode("utf-8") if payload is not None else None,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            return urllib.request.urlopen(request, timeout=timeout or self.timeout)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            raise ProviderError(f"Ollama вернул ошибку {exc.code}: {detail}") from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise ProviderError(
+                f"Ollama не отвечает по адресу {self.url}. Установите его с https://ollama.com и запустите."
+            ) from exc
+
+    def list_models(self) -> list[str]:
+        """Names of the models already downloaded to this computer."""
+        try:
+            with self._open("/api/tags", timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except ValueError as exc:
+            raise ProviderError("Ollama вернул некорректный ответ") from exc
+        return sorted(str(m.get("name")) for m in data.get("models", []) if isinstance(m, dict) and m.get("name"))
+
+    def has_model(self) -> bool:
+        wanted = self.model if ":" in self.model else f"{self.model}:latest"
+        return wanted in self.list_models()
+
+    def pull(self, on_progress: Callable[[str, float | None], None] | None = None,
+             cancel: threading.Event | None = None) -> None:
+        """Download the model (resumable). on_progress(status, fraction 0..1 or None)."""
+        report = on_progress or (lambda _s, _f: None)
+        with self._open("/api/pull", {"model": self.model, "stream": True}) as resp:
+            for line in resp:
+                if cancel is not None and cancel.is_set():
+                    raise ProviderError("Загрузка модели остановлена")
+                try:
+                    item = json.loads(line.decode("utf-8"))
+                except ValueError:
+                    continue
+                if item.get("error"):
+                    raise ProviderError(f"Не удалось скачать модель {self.model}: {item['error']}")
+                total, done = item.get("total"), item.get("completed")
+                report(str(item.get("status", "")), done / total if total and done is not None else None)
+                if item.get("status") == "success":
+                    return
+        raise ProviderError(f"Загрузка модели {self.model} прервалась")
 
     def complete(self, system: str, user: str, schema: dict | None = None) -> str:
         payload: dict = {
             "model": self.model,
             "stream": False,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "options": {"num_ctx": self.num_ctx},
         }
         if schema is not None:
             payload["format"] = schema
-        request = urllib.request.Request(
-            f"{self.url}/api/chat",
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
+            payload["options"]["temperature"] = 0
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as resp:
+            with self._open("/api/chat", payload) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", "replace")[:300]
-            raise ProviderError(f"Ollama вернул ошибку {exc.code}: {detail}") from exc
-        except (urllib.error.URLError, TimeoutError) as exc:
-            raise ProviderError(f"Ollama недоступен по адресу {self.url} — он запущен?") from exc
         except ValueError as exc:
             raise ProviderError("Ollama вернул некорректный ответ") from exc
+        except ProviderError as exc:
+            if "404" in str(exc):
+                raise ProviderError(f"Модель {self.model} не скачана — нажмите «Скачать модель» в настройках") from exc
+            raise
         text = str((data.get("message") or {}).get("content") or "").strip()
         if not text:
             raise ProviderError("Пустой ответ модели")

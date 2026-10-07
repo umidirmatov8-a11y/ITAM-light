@@ -1,4 +1,4 @@
-; Inno Setup script: installs dist\AgentLoop.exe with Start menu / desktop shortcuts and an uninstaller.
+﻿; Inno Setup script: installs dist\AgentLoop.exe with Start menu / desktop shortcuts and an uninstaller.
 #define AppName "AgentLoop"
 #define AppVersion "1.0.0"
 
@@ -33,4 +33,5 @@ Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\AgentLoop.exe"; Tasks: desktopicon
 
 [Run]
+Filename: "https://ollama.com/download/windows"; Description: "Скачать Ollama — нужен для бесплатных локальных моделей"; Flags: shellexec postinstall skipifsilent unchecked
 Filename: "{app}\AgentLoop.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
