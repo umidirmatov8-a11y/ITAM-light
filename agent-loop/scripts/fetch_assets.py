@@ -48,18 +48,38 @@ def _pick_asset(release: dict) -> dict | None:
     return assets[0] if assets else None
 
 
+def _release_by_tag(tag: str) -> dict:
+    with _get(f"https://api.github.com/repos/{LLAMA_REPO}/releases/tags/{tag}", _github_headers()) as resp:
+        return json.load(resp)
+
+
 def find_llama_release(tag: str) -> tuple[dict, dict]:
-    """The release (given tag, or the newest one that has a Windows CPU x64 build) and that asset."""
+    """The release with a Windows CPU x64 build and that asset.
+
+    llama.cpp's stable releases (vX.Y.Z) only carry nightly-tag.txt naming the build they were cut from;
+    the binaries live in that build's (pre-)release. Order: the given tag, else the newest stable release
+    (following nightly-tag.txt), else the newest build that has the asset.
+    """
     if tag != "latest":
-        with _get(f"https://api.github.com/repos/{LLAMA_REPO}/releases/tags/{tag}", _github_headers()) as resp:
-            releases = [json.load(resp)]
+        releases = [_release_by_tag(tag)]
     else:
         with _get(f"https://api.github.com/repos/{LLAMA_REPO}/releases?per_page=40", _github_headers()) as resp:
-            releases = [r for r in json.load(resp) if not r.get("draft") and not r.get("prerelease")]
+            releases = [r for r in json.load(resp) if not r.get("draft")]
+        releases.sort(key=lambda r: bool(r.get("prerelease")))  # stable first, newest first within each
     for release in releases:
         asset = _pick_asset(release)
         if asset:
             return release, asset
+        pointer = next((a for a in release.get("assets", []) if a["name"] == "nightly-tag.txt"), None)
+        if pointer:
+            with _get(pointer["browser_download_url"]) as resp:
+                build_tag = resp.read().decode("utf-8").strip()
+            if build_tag:
+                build = _release_by_tag(build_tag)
+                asset = _pick_asset(build)
+                if asset:
+                    print(f"llama.cpp {release['tag_name']} -> build {build_tag}", flush=True)
+                    return build, asset
     names = sorted({a["name"] for r in releases[:3] for a in r.get("assets", [])})
     raise SystemExit(f"No llama.cpp release with an asset matching {LLAMA_ASSET.pattern}; recent assets: {names}")
 
