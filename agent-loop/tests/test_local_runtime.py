@@ -7,17 +7,26 @@ import textwrap
 import pytest
 
 from app.config import Settings
-from app.local_runtime import LlamaServer, LocalModelProvider, list_local_models, resolve_model
+from app.local_runtime import (LlamaServer, LocalModelProvider, describe_device, list_local_models,
+                               resolve_model)
 from app.pipeline import AgentPipeline
 from app.providers import ProviderError
 
 FAKE_SERVER = textwrap.dedent('''\
     #!{python}
-    import json, sys
+    import json, os, sys
     from http.server import BaseHTTPRequestHandler, HTTPServer
     args = sys.argv[1:]
     port = int(args[args.index("--port") + 1])
     log = open(args[args.index("-m") + 1] + ".requests", "a", encoding="utf-8")
+    gpu = "999" in args
+    if gpu and os.environ.get("FAKE_GPU") == "broken":
+        print("ggml_vulkan: device lost", flush=True); sys.exit(1)
+    if "--device" in args and os.environ.get("FAKE_OLD_BUILD"):
+        print("error: invalid argument: --device", flush=True); sys.exit(1)
+    if gpu and os.environ.get("FAKE_GPU") in ("ok", "crash-on-chat"):
+        print("ggml_vulkan: 0 = Fake Radeon 9000 (AMD proprietary driver) | uma: 0 | fp16: 1", flush=True)
+        print("load_tensors: offloaded 37/37 layers to GPU", flush=True)
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
@@ -29,6 +38,8 @@ FAKE_SERVER = textwrap.dedent('''\
             self._send({{"status": "ok"}})
         def do_POST(self):
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            if gpu and os.environ.get("FAKE_GPU") == "crash-on-chat":
+                os._exit(3)
             log.write(json.dumps({{"args": args, "payload": payload}}) + "\\n"); log.flush()
             if "response_format" in payload:
                 content = json.dumps({{"approved": True, "score": 9, "issues": [], "feedback": ""}})
@@ -48,8 +59,10 @@ def home(tmp_path):
     server.write_text(FAKE_SERVER.format(python=sys.executable), encoding="utf-8")
     server.chmod(server.stat().st_mode | stat.S_IEXEC)
     (tmp_path / "models" / "tiny-q4.gguf").write_bytes(b"GGUF")
+    LlamaServer.gpu_failed = False
     yield tmp_path
     LlamaServer.shutdown()
+    LlamaServer.gpu_failed = False
 
 
 @pytest.mark.skipif(os.name == "nt", reason="fake server is a POSIX script")
@@ -88,3 +101,54 @@ def test_server_crash_is_reported(home):
     (home / "runtime" / "llama-server").write_text("#!/bin/sh\necho 'error: model is corrupted' >&2\nexit 1\n")
     with pytest.raises(ProviderError, match="corrupted"):
         LocalModelProvider(Settings(), home=home).complete("s", "u")
+
+
+posix_only = pytest.mark.skipif(os.name == "nt", reason="fake server is a POSIX script")
+
+
+def requests_log(home):
+    return [json.loads(line) for line in (home / "models" / "tiny-q4.gguf.requests").read_text().splitlines()]
+
+
+@posix_only
+def test_gpu_used_when_available(home, monkeypatch):
+    monkeypatch.setenv("FAKE_GPU", "ok")
+    provider = LocalModelProvider(Settings(), home=home)
+    assert provider.complete("s", "u") == "готово"
+    assert LlamaServer._instance.device() == "видеокарта Fake Radeon 9000 (37/37 слоёв)"
+    assert "999" in requests_log(home)[0]["args"]
+
+
+@posix_only
+def test_broken_gpu_falls_back_to_cpu(home, monkeypatch):
+    monkeypatch.setenv("FAKE_GPU", "broken")
+    provider = LocalModelProvider(Settings(), home=home)
+    assert provider.complete("s", "u") == "готово"
+    args = requests_log(home)[0]["args"]
+    assert "999" not in args and args[args.index("--device") + 1] == "none"
+    assert LlamaServer._instance.device() == "процессор" and LlamaServer.gpu_failed
+
+
+@posix_only
+def test_gpu_crash_during_answer_retries_on_cpu(home, monkeypatch):
+    monkeypatch.setenv("FAKE_GPU", "crash-on-chat")
+    provider = LocalModelProvider(Settings(), home=home)
+    assert provider.complete("s", "u") == "готово"
+    assert not LlamaServer._instance.uses_gpu and LlamaServer.gpu_failed
+
+
+@posix_only
+def test_cpu_mode_and_old_build_without_device_none(home, monkeypatch):
+    monkeypatch.setenv("FAKE_GPU", "ok")
+    monkeypatch.setenv("FAKE_OLD_BUILD", "1")
+    provider = LocalModelProvider(Settings(gpu_mode="cpu"), home=home)
+    assert provider.complete("s", "u") == "готово"
+    args = requests_log(home)[0]["args"]
+    assert "999" not in args and "--device" not in args and args[args.index("-ngl") + 1] == "0"
+
+
+def test_describe_device():
+    assert describe_device("load_tensors: offloaded 0/37 layers to GPU", True) == "процессор"
+    assert describe_device("", False) == "процессор"
+    log = "ggml_vulkan: 0 = Intel(R) Iris(R) Xe Graphics (Intel Corporation) | uma: 1\noffloaded 29/37 layers to GPU"
+    assert describe_device(log, True) == "видеокарта Intel(R) Iris(R) Xe Graphics (29/37 слоёв)"

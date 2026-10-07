@@ -27,7 +27,13 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_REPO = "Qwen/Qwen2.5-3B-Instruct-GGUF"
 DEFAULT_MODEL_FILE = "qwen2.5-3b-instruct-q4_k_m.gguf"
 LLAMA_REPO = "ggml-org/llama.cpp"
-LLAMA_ASSET = re.compile(r"win-cpu-x64\.zip$")
+# The Vulkan build = the CPU build + ggml-vulkan.dll (backends load dynamically): it uses a GPU when the
+# machine has a Vulkan driver and runs on the CPU otherwise.
+DEFAULT_BACKEND = "vulkan"
+
+
+def asset_pattern(backend: str) -> re.Pattern:
+    return re.compile(rf"win-{re.escape(backend)}-x64\.zip$")
 CHUNK = 8 * 1024 * 1024
 
 
@@ -41,8 +47,9 @@ def _github_headers() -> dict:
     return {"Authorization": f"Bearer {token}"} if token else {}
 
 
-def _pick_asset(release: dict) -> dict | None:
-    assets = [a for a in release.get("assets", []) if LLAMA_ASSET.search(a["name"].lower())]
+def _pick_asset(release: dict, backend: str = DEFAULT_BACKEND) -> dict | None:
+    pattern = asset_pattern(backend)
+    assets = [a for a in release.get("assets", []) if pattern.search(a["name"].lower())]
     # Prefer the plain CPU build over variants (e.g. "-cpu-avx2-" or archives with extra tooling).
     assets.sort(key=lambda a: (len(a["name"]), a["name"]))
     return assets[0] if assets else None
@@ -53,8 +60,8 @@ def _release_by_tag(tag: str) -> dict:
         return json.load(resp)
 
 
-def find_llama_release(tag: str) -> tuple[dict, dict]:
-    """The release with a Windows CPU x64 build and that asset.
+def find_llama_release(tag: str, backend: str = DEFAULT_BACKEND) -> tuple[dict, dict]:
+    """The release with a Windows x64 build for `backend` (vulkan, cpu...) and that asset.
 
     llama.cpp's stable releases (vX.Y.Z) only carry nightly-tag.txt naming the build they were cut from;
     the binaries live in that build's (pre-)release. Order: the given tag, else the newest stable release
@@ -67,7 +74,7 @@ def find_llama_release(tag: str) -> tuple[dict, dict]:
             releases = [r for r in json.load(resp) if not r.get("draft")]
         releases.sort(key=lambda r: bool(r.get("prerelease")))  # stable first, newest first within each
     for release in releases:
-        asset = _pick_asset(release)
+        asset = _pick_asset(release, backend)
         if asset:
             return release, asset
         pointer = next((a for a in release.get("assets", []) if a["name"] == "nightly-tag.txt"), None)
@@ -76,16 +83,17 @@ def find_llama_release(tag: str) -> tuple[dict, dict]:
                 build_tag = resp.read().decode("utf-8").strip()
             if build_tag:
                 build = _release_by_tag(build_tag)
-                asset = _pick_asset(build)
+                asset = _pick_asset(build, backend)
                 if asset:
                     print(f"llama.cpp {release['tag_name']} -> build {build_tag}", flush=True)
                     return build, asset
     names = sorted({a["name"] for r in releases[:3] for a in r.get("assets", [])})
-    raise SystemExit(f"No llama.cpp release with an asset matching {LLAMA_ASSET.pattern}; recent assets: {names}")
+    raise SystemExit(f"No llama.cpp release with an asset matching {asset_pattern(backend).pattern}; "
+                     f"recent assets: {names}")
 
 
-def fetch_llama_server(tag: str, dest: Path) -> str:
-    release, asset = find_llama_release(tag)
+def fetch_llama_server(tag: str, dest: Path, backend: str = DEFAULT_BACKEND) -> str:
+    release, asset = find_llama_release(tag, backend)
     print(f"llama.cpp {release['tag_name']}: downloading {asset['name']} ({asset['size'] / 1e6:.0f} MB)", flush=True)
     with _get(asset["browser_download_url"]) as resp:
         archive = zipfile.ZipFile(io.BytesIO(resp.read()))
@@ -101,7 +109,7 @@ def fetch_llama_server(tag: str, dest: Path) -> str:
             shutil.copyfileobj(src, out)
     if not (dest / "llama-server.exe").is_file():
         raise SystemExit(f"{asset['name']} does not contain llama-server.exe")
-    (dest / "VERSION.txt").write_text(f"llama.cpp {release['tag_name']}\n{asset['browser_download_url']}\n",
+    (dest / "VERSION.txt").write_text(f"llama.cpp {release['tag_name']} ({backend})\n{asset['browser_download_url']}\n",
                                       encoding="utf-8")
     return release["tag_name"]
 
@@ -160,13 +168,15 @@ def fetch_model(repo: str, filename: str, dest: Path) -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--llama-tag", default=os.environ.get("LLAMA_CPP_TAG", "latest"))
+    parser.add_argument("--backend", default=os.environ.get("LLAMA_CPP_BACKEND", DEFAULT_BACKEND),
+                        help="vulkan (GPU with CPU fallback, default) or cpu")
     parser.add_argument("--model-repo", default=os.environ.get("AGENTLOOP_MODEL_REPO", DEFAULT_MODEL_REPO))
     parser.add_argument("--model-file", default=os.environ.get("AGENTLOOP_MODEL_FILE", DEFAULT_MODEL_FILE))
     parser.add_argument("--skip-runtime", action="store_true")
     parser.add_argument("--skip-model", action="store_true")
     args = parser.parse_args(argv)
     if not args.skip_runtime:
-        fetch_llama_server(args.llama_tag, ROOT / "runtime")
+        fetch_llama_server(args.llama_tag, ROOT / "runtime", args.backend)
     if not args.skip_model:
         fetch_model(args.model_repo, args.model_file, ROOT / "models")
     return 0

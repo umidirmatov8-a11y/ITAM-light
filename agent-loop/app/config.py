@@ -31,6 +31,7 @@ class Settings:
     # Built-in model: a .gguf file name from the models folder (empty = the bundled one) or a full path.
     local_model: str = ""
     num_ctx: int = 8192  # context window; 2-4K is too small for prompt + result + review
+    gpu_mode: str = "auto"  # auto: Vulkan GPU if available (falls back to CPU); cpu: never use the GPU
     # Claude API. Empty key -> the SDK reads ANTHROPIC_API_KEY from the environment.
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-5-5"

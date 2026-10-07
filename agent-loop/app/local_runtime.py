@@ -15,6 +15,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -114,20 +115,35 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+GPU_AUTO = "auto"  # use a Vulkan GPU when there is one, otherwise (or if it fails) the CPU
+GPU_OFF = "cpu"
+
+# Launch variants, best first. The Vulkan build of llama-server also contains the CPU backend and loads
+# ggml-vulkan.dll dynamically: without a Vulkan driver/GPU it silently runs on the CPU.
+GPU_ARGS = ["-ngl", "999"]
+CPU_ARGS = [["--device", "none", "-ngl", "0"], ["-ngl", "0"]]  # second form for builds without --device none
+
+# "ggml_vulkan: 0 = Intel(R) Iris(R) Xe Graphics (Intel Corporation) | uma: 1 | ..." -> name without the driver
+_VK_DEVICE = re.compile(r"ggml_vulkan: \d+ = ([^|\n]+?)(?: \([^()|\n]*\))? \|")
+_OFFLOADED = re.compile(r"offloaded (\d+)/(\d+) layers to GPU")
+
+
 class LlamaServer:
-    """One llama-server process per (model, context size); shared by all agents."""
+    """One llama-server process per (model, context size, GPU mode); shared by all agents."""
 
     _lock = threading.Lock()
     _instance: "LlamaServer | None" = None
+    gpu_failed = False  # a GPU launch crashed in this session: stay on the CPU
 
-    def __init__(self, server: Path, model: Path, num_ctx: int):
+    def __init__(self, server: Path, model: Path, num_ctx: int, extra_args: list[str], uses_gpu: bool):
         self.server, self.model, self.num_ctx = server, model, num_ctx
+        self.uses_gpu = uses_gpu
         self.port = _free_port()
         self.url = f"http://127.0.0.1:{self.port}"
         log_dir = Path(os.environ.get("TEMP") or os.environ.get("TMPDIR") or "/tmp")
         self.log_path = log_dir / "agentloop-llama-server.log"
         args = [str(server), "-m", str(model), "--host", "127.0.0.1", "--port", str(self.port),
-                "-c", str(num_ctx), "-np", "1"]
+                "-c", str(num_ctx), "-np", "1", *extra_args]
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
         self._log = open(self.log_path, "wb")
         try:
@@ -139,22 +155,34 @@ class LlamaServer:
         _kill_with_parent(self.process)
 
     @classmethod
-    def get(cls, server: Path, model: Path, num_ctx: int, timeout: float = 300.0,
+    def get(cls, server: Path, model: Path, num_ctx: int, gpu_mode: str = GPU_AUTO, timeout: float = 300.0,
             cancel: threading.Event | None = None) -> "LlamaServer":
         with cls._lock:
+            want_gpu = gpu_mode != GPU_OFF and not cls.gpu_failed
             current = cls._instance
-            if current and current.alive() and (current.model, current.num_ctx) == (model, num_ctx):
+            if (current and current.alive() and (current.model, current.num_ctx) == (model, num_ctx)
+                    and current.uses_gpu == want_gpu):
                 return current
             if current:
                 current.stop()
-            cls._instance = cls(server, model, num_ctx)
-            try:
-                cls._instance.wait_ready(timeout, cancel)
-            except Exception:
-                cls._instance.stop()
                 cls._instance = None
-                raise
-            return cls._instance
+            attempts = ([(GPU_ARGS, True)] if want_gpu else []) + [(a, False) for a in CPU_ARGS]
+            errors = []
+            for args, uses_gpu in attempts:
+                candidate = cls(server, model, num_ctx, args, uses_gpu)
+                try:
+                    candidate.wait_ready(timeout, cancel)
+                except ProviderError as exc:
+                    candidate.stop()
+                    if cancel is not None and cancel.is_set():
+                        raise
+                    errors.append(str(exc))
+                    if uses_gpu:
+                        cls.gpu_failed = True
+                    continue
+                cls._instance = candidate
+                return candidate
+            raise ProviderError(errors[-1])
 
     @classmethod
     def shutdown(cls) -> None:
@@ -183,11 +211,18 @@ class LlamaServer:
             time.sleep(0.5)
         raise ProviderError(f"Модель не загрузилась за {int(timeout)} с. Журнал: {self.log_path}")
 
-    def log_tail(self, lines: int = 15) -> str:
+    def log_text(self) -> str:
         try:
-            return "\n".join(self.log_path.read_text("utf-8", "replace").splitlines()[-lines:])
+            return self.log_path.read_text("utf-8", "replace")
         except OSError:
             return ""
+
+    def log_tail(self, lines: int = 15) -> str:
+        return "\n".join(self.log_text().splitlines()[-lines:])
+
+    def device(self) -> str:
+        """Human-readable device the model runs on, from the server log."""
+        return describe_device(self.log_text(), self.uses_gpu)
 
     def stop(self) -> None:
         if self.alive():
@@ -197,6 +232,15 @@ class LlamaServer:
             except subprocess.TimeoutExpired:
                 self.process.kill()
         self._log.close()
+
+
+def describe_device(log: str, uses_gpu: bool) -> str:
+    offloaded = _OFFLOADED.search(log)
+    gpu = _VK_DEVICE.search(log)
+    if uses_gpu and offloaded and int(offloaded.group(1)) > 0:
+        name = gpu.group(1).strip() if gpu else "GPU"
+        return f"видеокарта {name} ({offloaded.group(1)}/{offloaded.group(2)} слоёв)"
+    return "процессор"
 
 
 atexit.register(LlamaServer.shutdown)
@@ -216,13 +260,24 @@ class LocalModelProvider:
         self.server_path, self.model_path = server, model
         self.model = model.name
         self.num_ctx = settings.num_ctx
+        self.gpu_mode = settings.gpu_mode
         self.timeout = timeout
 
     def start(self, cancel: threading.Event | None = None) -> LlamaServer:
-        return LlamaServer.get(self.server_path, self.model_path, self.num_ctx, cancel=cancel)
+        return LlamaServer.get(self.server_path, self.model_path, self.num_ctx, self.gpu_mode, cancel=cancel)
 
     def complete(self, system: str, user: str, schema: dict | None = None) -> str:
         server = self.start()
+        try:
+            return self._chat(server, system, user, schema)
+        except ProviderError:
+            if not (server.uses_gpu and not server.alive()):
+                raise
+        # The GPU driver crashed mid-answer: continue on the CPU for the rest of the session.
+        LlamaServer.gpu_failed = True
+        return self._chat(self.start(), system, user, schema)
+
+    def _chat(self, server: LlamaServer, system: str, user: str, schema: dict | None) -> str:
         payload: dict = {
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "temperature": 0.2 if schema is not None else 0.7,

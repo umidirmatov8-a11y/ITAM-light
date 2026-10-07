@@ -18,12 +18,15 @@ def run_cli(args: argparse.Namespace) -> int:
 
     from app.config import PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, load_settings
     from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Event
+    from app.local_runtime import LocalModelProvider
     from app.providers import OllamaProvider, ProviderError, create_provider
     from app.report import render_report
 
     settings = load_settings()
     if args.provider:
         settings = replace(settings, provider=args.provider)
+    if args.gpu:
+        settings = replace(settings, gpu_mode=args.gpu)
     if args.model:
         field = {PROVIDER_OLLAMA: "ollama_model", PROVIDER_ANTHROPIC: "anthropic_model"}.get(
             settings.provider, "local_model")
@@ -47,6 +50,8 @@ def run_cli(args: argparse.Namespace) -> int:
 
     try:
         provider = create_provider(settings)
+        if isinstance(provider, LocalModelProvider):
+            print(f"Модель {provider.model} работает на: {provider.start().device()}", file=sys.stderr, flush=True)
         if isinstance(provider, OllamaProvider) and not provider.has_model():
             print(f"Скачиваю модель {provider.model}…", file=sys.stderr, flush=True)
             provider.pull(pull_progress)
@@ -72,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--iterations", type=int, help="максимум кругов проверки")
     parser.add_argument("--provider", choices=("local", "ollama", "anthropic"), help="переопределить нейросеть из настроек")
     parser.add_argument("--model", help="переопределить модель: файл .gguf, имя в Ollama или модель Claude")
+    parser.add_argument("--gpu", choices=("auto", "cpu"), help="встроенная модель: auto — видеокарта, если есть; cpu")
     parser.add_argument("--version", action="version", version=f"AgentLoop {__version__}")
     args = parser.parse_args(argv)
     if args.task:

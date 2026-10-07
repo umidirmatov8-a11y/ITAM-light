@@ -19,6 +19,7 @@ from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Cancelled, Eve
 from app.providers import OllamaProvider, ProviderError, create_provider
 
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
+GPU_MODES = {"Авто — видеокарта (Vulkan), если есть": "auto", "Только процессор": "cpu"}
 
 
 class SettingsDialog(tk.Toplevel):
@@ -34,6 +35,8 @@ class SettingsDialog(tk.Toplevel):
         self.provider = tk.StringVar(value=settings.provider)
         bundled = [p.name for p in list_local_models()]
         self.local_model = tk.StringVar(value=settings.local_model or (bundled[0] if bundled else ""))
+        self.gpu_mode = tk.StringVar(value=next((k for k, v in GPU_MODES.items() if v == settings.gpu_mode),
+                                                next(iter(GPU_MODES))))
         self.api_key = tk.StringVar(value=settings.anthropic_api_key)
         self.model = tk.StringVar(value=settings.anthropic_model)
         self.effort = tk.StringVar(value=settings.effort)
@@ -63,6 +66,10 @@ class SettingsDialog(tk.Toplevel):
         row += 1
         ttk.Label(body, text="Свои модели: положите файл .gguf (например, с huggingface.co) в папку моделей.",
                   foreground="#57606a").grid(row=row, column=1, sticky="w")
+        row += 1
+        label("Ускорение:")
+        ttk.Combobox(body, textvariable=self.gpu_mode, values=list(GPU_MODES), state="readonly",
+                     width=40).grid(row=row, column=1, sticky="w")
         row += 1
         ttk.Radiobutton(body, text="Ollama (если он у вас уже установлен)",
                         value=PROVIDER_OLLAMA, variable=self.provider).grid(row=row, column=0, columnspan=2,
@@ -194,6 +201,7 @@ class SettingsDialog(tk.Toplevel):
             self.settings,
             provider=self.provider.get(),
             local_model=self.local_model.get().strip(),
+            gpu_mode=GPU_MODES.get(self.gpu_mode.get(), "auto"),
             anthropic_api_key=self.api_key.get().strip(),
             anthropic_model=self.model.get().strip() or Settings.anthropic_model,
             effort=self.effort.get() or Settings.effort,
@@ -213,6 +221,7 @@ class MainWindow:
         self.cancel = threading.Event()
         self.worker: threading.Thread | None = None
         self.last_run: RunResult | None = None
+        self.device = ""  # where the built-in model runs: GPU name or CPU
 
         root.title(f"AgentLoop {__version__} — команда ИИ-агентов")
         root.geometry("1000x720")
@@ -279,6 +288,8 @@ class MainWindow:
         else:
             bundled = list_local_models()
             model = f"встроенная · {s.local_model or (bundled[0].name if bundled else 'не найдена')}"
+            if self.device:
+                model += f" · {self.device}"
         self.status.set(f"Модель: {model} · кругов: до {s.max_iterations}" + (f" · {extra}" if extra else ""))
 
     def open_settings(self):
@@ -317,14 +328,18 @@ class MainWindow:
             try:
                 if isinstance(provider, LocalModelProvider):
                     self.events.put(("progress", f"Загружаю модель {provider.model} в память…"))
-                    provider.start(self.cancel)
+                    server = provider.start(self.cancel)
+                    self.events.put(("device", server.device()))
                 if isinstance(provider, OllamaProvider) and not provider.has_model():
                     self.events.put(("log", f"Модель {provider.model} ещё не скачана — скачиваю (один раз)…\n"))
                     provider.pull(lambda status, fraction: self.events.put(
                         ("progress", f"Скачивание {provider.model}: {status}"
                                      + (f" {fraction:.0%}" if fraction is not None else ""))), self.cancel)
                     self.events.put(("log", f"Модель {provider.model} скачана.\n"))
-                self.events.put(("finished", pipeline.run(task, self.events.put, self.cancel)))
+                result = pipeline.run(task, self.events.put, self.cancel)
+                if isinstance(provider, LocalModelProvider):
+                    self.events.put(("device", provider.start().device()))  # may have fallen back to the CPU
+                self.events.put(("finished", result))
             except Cancelled:
                 self.events.put(("stopped", None))
             except (ProviderError, ValueError) as exc:
@@ -365,6 +380,12 @@ class MainWindow:
             return
         if kind == "progress":
             self.status.set(payload)
+            return
+        if kind == "device":
+            if payload != self.device:
+                self.device = payload
+                self._append(self.log, f"Модель работает на: {payload}\n")
+            self._update_status()
             return
         self.run_btn.configure(state="normal")
         self.stop_btn.configure(state="disabled")

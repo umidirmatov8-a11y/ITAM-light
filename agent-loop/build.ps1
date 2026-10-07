@@ -17,6 +17,7 @@ param(
     [string]$ModelRepo = "Qwen/Qwen2.5-3B-Instruct-GGUF",
     [string]$ModelFile = "qwen2.5-3b-instruct-q4_k_m.gguf",
     [string]$LlamaTag = "latest",
+    [string]$Backend = $(if ($env:LLAMA_CPP_BACKEND) { $env:LLAMA_CPP_BACKEND } else { "vulkan" }),
     [string]$Python = "py"
 )
 
@@ -43,8 +44,8 @@ if (-not $SkipTests) {
     if ($LASTEXITCODE -ne 0) { throw "tests failed" }
 }
 
-Step "Downloading llama.cpp ($LlamaTag) and $ModelRepo/$ModelFile"
-& $py scripts\fetch_assets.py --llama-tag $LlamaTag --model-repo $ModelRepo --model-file $ModelFile
+Step "Downloading llama.cpp ($LlamaTag, $Backend) and $ModelRepo/$ModelFile"
+& $py scripts\fetch_assets.py --llama-tag $LlamaTag --backend $Backend --model-repo $ModelRepo --model-file $ModelFile
 if ($LASTEXITCODE -ne 0) { throw "asset download failed" }
 
 Step "Building AgentLoop.exe (PyInstaller)"

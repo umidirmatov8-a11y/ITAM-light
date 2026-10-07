@@ -1,7 +1,7 @@
 ﻿; Inno Setup script: AgentLoop.exe + built-in llama.cpp engine + GGUF weights, Start menu and desktop
 ; shortcuts, uninstaller. Build with build.ps1 (it downloads runtime\ and models\ first).
 #define AppName "AgentLoop"
-#define AppVersion "1.1.0"
+#define AppVersion "1.2.0"
 
 [Setup]
 AppId={{6F1C2A4E-8B7D-4E2A-9C51-3A0E7D2B9F14}

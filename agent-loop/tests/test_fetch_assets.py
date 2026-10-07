@@ -37,14 +37,14 @@ def test_stable_release_without_binaries_follows_nightly_tag(monkeypatch):
                    "assets": [{"name": "llama-b7005-bin-win-cpu-x64.zip"}]}
     monkeypatch.setattr(fetch_assets, "_get", fake_get(
         [newer_build, stable, build], {"/nightly-tag.txt": b"b6990\n", "/tags/b6990": build}))
-    release, asset = fetch_assets.find_llama_release("latest")
+    release, asset = fetch_assets.find_llama_release("latest", "cpu")
     assert release["tag_name"] == "b6990"  # the build the stable release points to, not the newest nightly
     assert asset["name"] == "llama-b6990-bin-win-cpu-x64.zip"
 
 
 def test_falls_back_to_newest_build_with_windows_cpu_zip(monkeypatch):
     monkeypatch.setattr(fetch_assets, "_get", fake_get(RELEASES))
-    release, asset = fetch_assets.find_llama_release("latest")
+    release, asset = fetch_assets.find_llama_release("latest", "cpu")
     assert release["tag_name"] == "b7000"
     assert asset["name"] == "llama-b7000-bin-win-cpu-x64.zip"
 
@@ -52,4 +52,14 @@ def test_falls_back_to_newest_build_with_windows_cpu_zip(monkeypatch):
 def test_reports_available_assets_when_nothing_matches(monkeypatch):
     monkeypatch.setattr(fetch_assets, "_get", fake_get(RELEASES[:1]))
     with pytest.raises(SystemExit, match="llama-cpp-python-src"):
-        fetch_assets.find_llama_release("latest")
+        fetch_assets.find_llama_release("latest", "cpu")
+
+
+def test_vulkan_build_is_the_default():
+    release = {"tag_name": "b7000", "assets": [
+        {"name": "llama-b7000-bin-win-cpu-x64.zip"},
+        {"name": "llama-b7000-bin-win-vulkan-x64.zip"},
+        {"name": "llama-b7000-bin-win-vulkan-arm64.zip"},
+    ]}
+    assert fetch_assets._pick_asset(release)["name"] == "llama-b7000-bin-win-vulkan-x64.zip"
+    assert fetch_assets._pick_asset(release, "cpu")["name"] == "llama-b7000-bin-win-cpu-x64.zip"
