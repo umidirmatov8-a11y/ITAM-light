@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_REPO = "Qwen/Qwen2.5-3B-Instruct-GGUF"
 DEFAULT_MODEL_FILE = "qwen2.5-3b-instruct-q4_k_m.gguf"
 LLAMA_REPO = "ggml-org/llama.cpp"
-LLAMA_ASSET = re.compile(r"-bin-win-cpu-x64\.zip$")
+LLAMA_ASSET = re.compile(r"win-cpu-x64\.zip$")
 CHUNK = 8 * 1024 * 1024
 
 
@@ -41,14 +41,31 @@ def _github_headers() -> dict:
     return {"Authorization": f"Bearer {token}"} if token else {}
 
 
+def _pick_asset(release: dict) -> dict | None:
+    assets = [a for a in release.get("assets", []) if LLAMA_ASSET.search(a["name"].lower())]
+    # Prefer the plain CPU build over variants (e.g. "-cpu-avx2-" or archives with extra tooling).
+    assets.sort(key=lambda a: (len(a["name"]), a["name"]))
+    return assets[0] if assets else None
+
+
+def find_llama_release(tag: str) -> tuple[dict, dict]:
+    """The release (given tag, or the newest one that has a Windows CPU x64 build) and that asset."""
+    if tag != "latest":
+        with _get(f"https://api.github.com/repos/{LLAMA_REPO}/releases/tags/{tag}", _github_headers()) as resp:
+            releases = [json.load(resp)]
+    else:
+        with _get(f"https://api.github.com/repos/{LLAMA_REPO}/releases?per_page=40", _github_headers()) as resp:
+            releases = [r for r in json.load(resp) if not r.get("draft") and not r.get("prerelease")]
+    for release in releases:
+        asset = _pick_asset(release)
+        if asset:
+            return release, asset
+    names = sorted({a["name"] for r in releases[:3] for a in r.get("assets", [])})
+    raise SystemExit(f"No llama.cpp release with an asset matching {LLAMA_ASSET.pattern}; recent assets: {names}")
+
+
 def fetch_llama_server(tag: str, dest: Path) -> str:
-    path = "latest" if tag == "latest" else f"tags/{tag}"
-    with _get(f"https://api.github.com/repos/{LLAMA_REPO}/releases/{path}", _github_headers()) as resp:
-        release = json.load(resp)
-    assets = [a for a in release.get("assets", []) if LLAMA_ASSET.search(a["name"])]
-    if not assets:
-        raise SystemExit(f"llama.cpp {release.get('tag_name')}: no asset matching {LLAMA_ASSET.pattern}")
-    asset = assets[0]
+    release, asset = find_llama_release(tag)
     print(f"llama.cpp {release['tag_name']}: downloading {asset['name']} ({asset['size'] / 1e6:.0f} MB)", flush=True)
     with _get(asset["browser_download_url"]) as resp:
         archive = zipfile.ZipFile(io.BytesIO(resp.read()))
