@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from typing import Callable, Protocol
 
-from app.config import PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, Settings
+from app.config import PROVIDER_ANTHROPIC, PROVIDER_LOCAL, PROVIDER_OLLAMA, Settings
 
 
 class ProviderError(RuntimeError):
@@ -81,7 +81,7 @@ class OllamaProvider:
     def __init__(self, settings: Settings, timeout: float = 900.0):
         self.url = settings.ollama_url.rstrip("/")
         self.model = settings.ollama_model
-        self.num_ctx = settings.ollama_num_ctx
+        self.num_ctx = settings.num_ctx
         self.timeout = timeout
 
     def _open(self, path: str, payload: dict | None = None, timeout: float | None = None):
@@ -159,6 +159,9 @@ class OllamaProvider:
 
 
 def create_provider(settings: Settings) -> Provider:
+    if settings.provider == PROVIDER_LOCAL:
+        from app.local_runtime import LocalModelProvider
+        return LocalModelProvider(settings)
     if settings.provider == PROVIDER_ANTHROPIC:
         return AnthropicProvider(settings)
     if settings.provider == PROVIDER_OLLAMA:

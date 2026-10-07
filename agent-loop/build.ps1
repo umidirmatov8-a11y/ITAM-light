@@ -1,16 +1,22 @@
 <#
 .SYNOPSIS
-  Builds dist\AgentLoop.exe (single file, Python not needed on target machines)
-  and, if Inno Setup is installed, the installer installer\Output\AgentLoop-Setup.exe.
+  Builds AgentLoop for Windows:
+    dist\AgentLoop.exe                      the app (Python not needed on target machines)
+    runtime\, models\                       llama.cpp engine + GGUF weights from Hugging Face (downloaded once)
+    installer\Output\AgentLoop-Setup.exe    installer with everything inside (+ AgentLoop-Setup-*.bin slices
+                                            when the model is larger than ~2 GB; keep them next to the .exe)
 
 .EXAMPLE
-  .\build.ps1               # exe + installer
-  .\build.ps1 -SkipTests
-  .\build.ps1 -NoInstaller
+  .\build.ps1                                   # default model Qwen2.5-3B-Instruct Q4_K_M
+  .\build.ps1 -ModelRepo Qwen/Qwen2.5-1.5B-Instruct-GGUF -ModelFile qwen2.5-1.5b-instruct-q4_k_m.gguf
+  .\build.ps1 -SkipTests -NoInstaller
 #>
 param(
     [switch]$SkipTests,
     [switch]$NoInstaller,
+    [string]$ModelRepo = "Qwen/Qwen2.5-3B-Instruct-GGUF",
+    [string]$ModelFile = "qwen2.5-3b-instruct-q4_k_m.gguf",
+    [string]$LlamaTag = "latest",
     [string]$Python = "py"
 )
 
@@ -37,8 +43,14 @@ if (-not $SkipTests) {
     if ($LASTEXITCODE -ne 0) { throw "tests failed" }
 }
 
+Step "Downloading llama.cpp ($LlamaTag) and $ModelRepo/$ModelFile"
+& $py scripts\fetch_assets.py --llama-tag $LlamaTag --model-repo $ModelRepo --model-file $ModelFile
+if ($LASTEXITCODE -ne 0) { throw "asset download failed" }
+
 Step "Building AgentLoop.exe (PyInstaller)"
-& $py -m PyInstaller --noconfirm --clean --onefile --windowed --name AgentLoop main.py
+& $py scripts\make_icon.py | Out-Null
+& $py -m PyInstaller --noconfirm --clean --onefile --windowed --name AgentLoop `
+    --icon resources\agentloop.ico --add-data "resources\agentloop.ico;resources" main.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
 Get-Item dist\AgentLoop.exe | Format-Table Name, Length
 
@@ -50,10 +62,11 @@ if (-not $NoInstaller) {
     }
     if ($iscc) {
         Step "Building installer (Inno Setup)"
+        if (Test-Path installer\Output) { Remove-Item installer\Output -Recurse -Force }
         & $iscc.Source installer\AgentLoop.iss
         if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
         Get-ChildItem installer\Output | Format-Table Name, Length
     } else {
-        Write-Warning "Inno Setup 6 not found - skipping installer (https://jrsoftware.org/isinfo.php). dist\AgentLoop.exe works standalone."
+        Write-Warning "Inno Setup 6 not found - skipping installer (https://jrsoftware.org/isinfo.php)."
     }
 }

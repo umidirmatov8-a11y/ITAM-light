@@ -16,7 +16,7 @@ from app import __version__
 def run_cli(args: argparse.Namespace) -> int:
     from dataclasses import replace
 
-    from app.config import PROVIDER_OLLAMA, load_settings
+    from app.config import PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, load_settings
     from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Event
     from app.providers import OllamaProvider, ProviderError, create_provider
     from app.report import render_report
@@ -25,7 +25,8 @@ def run_cli(args: argparse.Namespace) -> int:
     if args.provider:
         settings = replace(settings, provider=args.provider)
     if args.model:
-        field = "ollama_model" if settings.provider == PROVIDER_OLLAMA else "anthropic_model"
+        field = {PROVIDER_OLLAMA: "ollama_model", PROVIDER_ANTHROPIC: "anthropic_model"}.get(
+            settings.provider, "local_model")
         settings = replace(settings, **{field: args.model})
 
     def show(event: Event) -> None:
@@ -69,8 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--task", help="выполнить задачу в консоли без окна")
     parser.add_argument("--report", help="сохранить подробный отчёт (Markdown) в файл")
     parser.add_argument("--iterations", type=int, help="максимум кругов проверки")
-    parser.add_argument("--provider", choices=("ollama", "anthropic"), help="переопределить нейросеть из настроек")
-    parser.add_argument("--model", help="переопределить модель, например qwen2.5:0.5b")
+    parser.add_argument("--provider", choices=("local", "ollama", "anthropic"), help="переопределить нейросеть из настроек")
+    parser.add_argument("--model", help="переопределить модель: файл .gguf, имя в Ollama или модель Claude")
     parser.add_argument("--version", action="version", version=f"AgentLoop {__version__}")
     args = parser.parse_args(argv)
     if args.task:

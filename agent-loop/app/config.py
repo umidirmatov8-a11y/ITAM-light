@@ -8,6 +8,7 @@ import sys
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
+PROVIDER_LOCAL = "local"  # llama.cpp + GGUF weights bundled with the installer
 PROVIDER_ANTHROPIC = "anthropic"
 PROVIDER_OLLAMA = "ollama"
 
@@ -26,7 +27,10 @@ DEFAULT_OLLAMA_MODEL = "qwen2.5:3b"
 
 @dataclass
 class Settings:
-    provider: str = PROVIDER_OLLAMA
+    provider: str = PROVIDER_LOCAL
+    # Built-in model: a .gguf file name from the models folder (empty = the bundled one) or a full path.
+    local_model: str = ""
+    num_ctx: int = 8192  # context window; 2-4K is too small for prompt + result + review
     # Claude API. Empty key -> the SDK reads ANTHROPIC_API_KEY from the environment.
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-5-5"
@@ -34,7 +38,6 @@ class Settings:
     # Local models via Ollama (https://ollama.com), no internet / key required.
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = DEFAULT_OLLAMA_MODEL
-    ollama_num_ctx: int = 8192  # context window; the default 2-4K is too small for prompt + result + review
     # Pipeline
     max_iterations: int = 3
     language: str = "русский"

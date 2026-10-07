@@ -1,6 +1,7 @@
-﻿; Inno Setup script: installs dist\AgentLoop.exe with Start menu / desktop shortcuts and an uninstaller.
+﻿; Inno Setup script: AgentLoop.exe + built-in llama.cpp engine + GGUF weights, Start menu and desktop
+; shortcuts, uninstaller. Build with build.ps1 (it downloads runtime\ and models\ first).
 #define AppName "AgentLoop"
-#define AppVersion "1.0.0"
+#define AppVersion "1.1.0"
 
 [Setup]
 AppId={{6F1C2A4E-8B7D-4E2A-9C51-3A0E7D2B9F14}
@@ -11,11 +12,17 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 OutputBaseFilename=AgentLoop-Setup
-Compression=lzma2
-SolidCompression=yes
-WizardStyle=modern
+SetupIconFile=..\resources\agentloop.ico
 UninstallDisplayIcon={app}\AgentLoop.exe
+Compression=lzma2
+SolidCompression=no
+; The model weighs ~2 GB: setups above 2.1 GB need disk spanning (AgentLoop-Setup.exe + AgentLoop-Setup-N.bin).
+DiskSpanning=yes
+DiskSliceSize=max
+WizardStyle=modern
 
 [Languages]
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
@@ -26,12 +33,16 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\dist\AgentLoop.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs
+; GGUF weights are already compressed: storing them as-is keeps the build fast.
+Source: "..\models\*.gguf"; DestDir: "{app}\models"; Flags: ignoreversion nocompression
+Source: "..\models\SOURCE.txt"; DestDir: "{app}\models"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\AgentLoop.exe"
+Name: "{group}\Папка моделей {#AppName}"; Filename: "{app}\models"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\AgentLoop.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "https://ollama.com/download/windows"; Description: "Скачать Ollama — нужен для бесплатных локальных моделей"; Flags: shellexec postinstall skipifsilent unchecked
 Filename: "{app}\AgentLoop.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent

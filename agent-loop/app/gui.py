@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import os
 import queue
+import sys
 import threading
 import tkinter as tk
 from dataclasses import replace
+from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from app import __version__
-from app.config import (OLLAMA_PRESETS, PROVIDER_ANTHROPIC, PROVIDER_OLLAMA, Settings, load_settings,
-                        save_settings)
+from app.config import (OLLAMA_PRESETS, PROVIDER_ANTHROPIC, PROVIDER_LOCAL, PROVIDER_OLLAMA, Settings,
+                        load_settings, save_settings)
+from app.local_runtime import LocalModelProvider, app_home, list_local_models
 from app.pipeline import STAGE_DONE, STAGE_TITLES, AgentPipeline, Cancelled, Event, RunResult
 from app.providers import OllamaProvider, ProviderError, create_provider
 
@@ -28,6 +32,8 @@ class SettingsDialog(tk.Toplevel):
         self.pull_cancel = threading.Event()
 
         self.provider = tk.StringVar(value=settings.provider)
+        bundled = [p.name for p in list_local_models()]
+        self.local_model = tk.StringVar(value=settings.local_model or (bundled[0] if bundled else ""))
         self.api_key = tk.StringVar(value=settings.anthropic_api_key)
         self.model = tk.StringVar(value=settings.anthropic_model)
         self.effort = tk.StringVar(value=settings.effort)
@@ -46,8 +52,21 @@ class SettingsDialog(tk.Toplevel):
 
         ttk.Label(body, text="Нейросеть:", font=("Segoe UI", 9, "bold")).grid(row=row, column=0, sticky="w")
         row += 1
-        ttk.Radiobutton(body, text="Открытая модель на этом компьютере (Ollama, бесплатно, без интернета)",
-                        value=PROVIDER_OLLAMA, variable=self.provider).grid(row=row, column=0, columnspan=2, sticky="w")
+        ttk.Radiobutton(body, text="Встроенная модель (работает из коробки, без интернета)",
+                        value=PROVIDER_LOCAL, variable=self.provider).grid(row=row, column=0, columnspan=2, sticky="w")
+        row += 1
+        label("Файл модели:")
+        local = ttk.Frame(body)
+        local.grid(row=row, column=1, sticky="we")
+        ttk.Combobox(local, textvariable=self.local_model, values=bundled, width=40).pack(side="left")
+        ttk.Button(local, text="Папка моделей", command=self._open_models).pack(side="left", padx=6)
+        row += 1
+        ttk.Label(body, text="Свои модели: положите файл .gguf (например, с huggingface.co) в папку моделей.",
+                  foreground="#57606a").grid(row=row, column=1, sticky="w")
+        row += 1
+        ttk.Radiobutton(body, text="Ollama (если он у вас уже установлен)",
+                        value=PROVIDER_OLLAMA, variable=self.provider).grid(row=row, column=0, columnspan=2,
+                                                                           sticky="w", pady=(10, 0))
         row += 1
         label("Модель:")
         models = ttk.Frame(body)
@@ -102,6 +121,15 @@ class SettingsDialog(tk.Toplevel):
     def destroy(self):
         self.pull_cancel.set()
         super().destroy()
+
+    @staticmethod
+    def _open_models():
+        folder = app_home() / "models"
+        folder.mkdir(parents=True, exist_ok=True)
+        if hasattr(os, "startfile"):
+            os.startfile(folder)  # type: ignore[attr-defined]
+        else:
+            messagebox.showinfo("Папка моделей", str(folder))
 
     def _describe_model(self):
         name = self.ollama_model.get().strip()
@@ -165,6 +193,7 @@ class SettingsDialog(tk.Toplevel):
         self.result = replace(
             self.settings,
             provider=self.provider.get(),
+            local_model=self.local_model.get().strip(),
             anthropic_api_key=self.api_key.get().strip(),
             anthropic_model=self.model.get().strip() or Settings.anthropic_model,
             effort=self.effort.get() or Settings.effort,
@@ -243,7 +272,13 @@ class MainWindow:
 
     def _update_status(self, extra: str = ""):
         s = self.settings
-        model = s.anthropic_model if s.provider == PROVIDER_ANTHROPIC else f"Ollama · {s.ollama_model}"
+        if s.provider == PROVIDER_ANTHROPIC:
+            model = s.anthropic_model
+        elif s.provider == PROVIDER_OLLAMA:
+            model = f"Ollama · {s.ollama_model}"
+        else:
+            bundled = list_local_models()
+            model = f"встроенная · {s.local_model or (bundled[0].name if bundled else 'не найдена')}"
         self.status.set(f"Модель: {model} · кругов: до {s.max_iterations}" + (f" · {extra}" if extra else ""))
 
     def open_settings(self):
@@ -280,6 +315,9 @@ class MainWindow:
 
         def work():
             try:
+                if isinstance(provider, LocalModelProvider):
+                    self.events.put(("progress", f"Загружаю модель {provider.model} в память…"))
+                    provider.start(self.cancel)
                 if isinstance(provider, OllamaProvider) and not provider.has_model():
                     self.events.put(("log", f"Модель {provider.model} ещё не скачана — скачиваю (один раз)…\n"))
                     provider.pull(lambda status, fraction: self.events.put(
@@ -369,6 +407,11 @@ def main() -> int:
     root = tk.Tk()
     try:
         ttk.Style(root).theme_use("vista")
+    except tk.TclError:
+        pass
+    icon = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "resources" / "agentloop.ico"
+    try:
+        root.iconbitmap(default=str(icon))
     except tk.TclError:
         pass
     MainWindow(root)

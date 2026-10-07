@@ -10,10 +10,14 @@ on:
       - 'agent-loop/**'
   workflow_dispatch:
 
+env:
+  MODEL_REPO: Qwen/Qwen2.5-3B-Instruct-GGUF
+  MODEL_FILE: qwen2.5-3b-instruct-q4_k_m.gguf
+
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     defaults:
       run:
         shell: pwsh
@@ -29,64 +33,66 @@ jobs:
         run: |
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
 
-      - name: Build exe and installer
-        run: .\build.ps1 -Python python
+      - name: Cache model weights
+        uses: actions/cache@v4
+        with:
+          path: agent-loop/models
+          key: gguf-${{ env.MODEL_FILE }}
+
+      - name: Build exe, download engine + weights, build installer
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: .\build.ps1 -Python python -ModelRepo $env:MODEL_REPO -ModelFile $env:MODEL_FILE
 
       - name: Smoke test exe
         run: |
           $p = Start-Process dist\AgentLoop.exe -ArgumentList '--version' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "AgentLoop.exe --version exited with $($p.ExitCode)" }
+          Get-Content runtime\VERSION.txt
+
+      - name: Silent install (as a user would get it)
+        run: |
+          $p = Start-Process installer\Output\AgentLoop-Setup.exe -Wait -PassThru `
+            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/CURRENTUSER', '/NORESTART', "/LOG=$PWD\install.log"
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 40; throw "installer exited with $($p.ExitCode)" }
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\AgentLoop'
+          Get-ChildItem $app -Recurse | Format-Table FullName, Length
+          foreach ($f in 'AgentLoop.exe', 'runtime\llama-server.exe', "models\$env:MODEL_FILE") {
+            if (-not (Test-Path (Join-Path $app $f))) { throw "missing after install: $f" }
+          }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'AgentLoop.lnk'
+          if (-not (Test-Path $lnk)) { throw "desktop shortcut not created: $lnk" }
+          $target = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk).TargetPath
+          Write-Output "Desktop shortcut -> $target"
+          if ($target -ne (Join-Path $app 'AgentLoop.exe')) { throw "shortcut points to $target" }
+
+      - name: Run the three agents on the installed app (built-in model, no Ollama, no internet)
+        run: |
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\AgentLoop\AgentLoop.exe'
+          $report = Join-Path $PWD 'e2e-report.md'
+          $task = 'Напиши функцию на Python, которая проверяет, является ли строка палиндромом (без учёта регистра и пробелов), и приведи 3 примера вызова.'
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $p = Start-Process $exe -PassThru -ArgumentList '--provider', 'local', '--iterations', '2', '--report', "`"$report`"", '--task', "`"$task`""
+          if (-not $p.WaitForExit(45 * 60 * 1000)) { $p.Kill(); throw "timed out" }
+          Write-Output "exit code: $($p.ExitCode) (0 = accepted by verifier, 1 = best of rejected attempts, 2 = error); $([int]$sw.Elapsed.TotalSeconds) s"
+          if (Test-Path $report) { Get-Content $report -Encoding utf8 }
+          $log = Join-Path $env:TEMP 'agentloop-llama-server.log'
+          if (Test-Path $log) { Write-Output '--- llama-server log (tail) ---'; Get-Content $log -Tail 25 }
+          if ($p.ExitCode -gt 1 -or -not (Test-Path $report)) { throw "agent loop failed" }
+          if (Get-Process llama-server -ErrorAction SilentlyContinue) { throw "llama-server still running after AgentLoop exited" }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AgentLoop-windows
-          path: |
-            agent-loop/dist/AgentLoop.exe
-            agent-loop/installer/Output/AgentLoop-Setup.exe
+          name: AgentLoop-Setup-windows
+          path: agent-loop/installer/Output/
           if-no-files-found: error
-
-  # End-to-end run of the three agents on a real small open-weight model.
-  e2e-small-model:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    defaults:
-      run:
-        working-directory: agent-loop
-    strategy:
-      fail-fast: false
-      matrix:
-        model: ['qwen2.5:0.5b', 'qwen2.5:1.5b']
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Ollama and pull ${{ matrix.model }}
-        run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          if ! curl -sf http://localhost:11434/api/tags >/dev/null; then
-            nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
-          fi
-          for i in $(seq 1 30); do curl -sf http://localhost:11434/api/tags >/dev/null && break; sleep 2; done
-          curl -sf http://localhost:11434/api/tags || { cat "$RUNNER_TEMP/ollama.log"; exit 1; }
-          ollama pull '${{ matrix.model }}'
-
-      - name: Run the agent loop
-        run: |
-          pip install -r requirements.txt
-          set +e
-          python main.py --provider ollama --model '${{ matrix.model }}' --iterations 2 --report e2e-report.md \
-            --task "Напиши функцию на Python, которая проверяет, является ли строка палиндромом (без учёта регистра и пробелов), и приведи 3 примера вызова."
-          code=$?
-          echo "exit code: $code (0 = accepted by verifier, 1 = best of rejected attempts, 2 = error)"
-          cat e2e-report.md
-          test $code -le 1
+          compression-level: 0
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-report-${{ strategy.job-index }}
-          path: agent-loop/e2e-report.md
+          name: e2e-report
+          path: |
+            agent-loop/e2e-report.md
+            agent-loop/install.log
           if-no-files-found: ignore
