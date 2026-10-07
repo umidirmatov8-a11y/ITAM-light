@@ -144,6 +144,8 @@ jobs:
           Write-Output "ICD: $($icd.FullName)"
           Add-Content $env:GITHUB_ENV "VK_DRIVER_FILES=$($icd.FullName)"
           Add-Content $env:GITHUB_ENV "VK_ICD_FILENAMES=$($icd.FullName)"
+          # ggml-vulkan skips CPU-type Vulkan devices such as llvmpipe unless they are selected explicitly
+          Add-Content $env:GITHUB_ENV "GGML_VK_VISIBLE_DEVICES=0"
 
       - name: Download the Vulkan llama.cpp build and a tiny model
         env:
