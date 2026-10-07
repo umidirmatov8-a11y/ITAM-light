@@ -66,7 +66,11 @@ jobs:
       - name: Install Ollama and pull ${{ matrix.model }}
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
+          if ! curl -sf http://localhost:11434/api/tags >/dev/null; then
+            nohup ollama serve > "$RUNNER_TEMP/ollama.log" 2>&1 &
+          fi
           for i in $(seq 1 30); do curl -sf http://localhost:11434/api/tags >/dev/null && break; sleep 2; done
+          curl -sf http://localhost:11434/api/tags || { cat "$RUNNER_TEMP/ollama.log"; exit 1; }
           ollama pull '${{ matrix.model }}'
 
       - name: Run the agent loop
