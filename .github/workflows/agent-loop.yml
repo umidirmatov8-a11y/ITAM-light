@@ -120,13 +120,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Vulkan loader (LunarG SDK)
+      - name: Vulkan loader
         run: |
-          curl.exe -sSL -o "$env:RUNNER_TEMP\VulkanSDK.exe" "https://sdk.lunarg.com/sdk/download/$env:VULKAN_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_VERSION.exe"
-          & "$env:RUNNER_TEMP\VulkanSDK.exe" --accept-licenses --default-answer --confirm-command install | Out-Null
-          $bin = "C:\VulkanSDK\$env:VULKAN_VERSION\Bin"
-          if (-not (Test-Path "$env:WINDIR\System32\vulkan-1.dll")) { Copy-Item "$bin\vulkan-1.dll" "$env:WINDIR\System32\" }
-          Get-Item "$env:WINDIR\System32\vulkan-1.dll" | Format-Table FullName, Length
+          $dll = "$env:WINDIR\System32\vulkan-1.dll"
+          if (-not (Test-Path $dll)) {
+            curl.exe -sSL -o "$env:RUNNER_TEMP\VulkanRT.exe" "https://sdk.lunarg.com/sdk/download/$env:VULKAN_VERSION/windows/VulkanRT-X64-$env:VULKAN_VERSION-Installer.exe"
+            Start-Process "$env:RUNNER_TEMP\VulkanRT.exe" -ArgumentList '/S' -Wait
+          }
+          Get-Item $dll | Select-Object FullName, Length, @{n='Version'; e={$_.VersionInfo.FileVersion}} | Format-List
 
       - name: Software GPU (Mesa lavapipe)
         env:
@@ -158,10 +159,10 @@ jobs:
       - name: Run the agents on the (software) GPU
         run: |
           $env:TEMP = $env:RUNNER_TEMP
-          Write-Output '--- vulkaninfo --summary ---'
-          & "C:\VulkanSDK\$env:VULKAN_VERSION\Bin\vulkaninfo.exe" --summary 2>&1 | Out-String | Write-Output
+          Get-ChildItem (Split-Path $env:VK_DRIVER_FILES) | Format-Table Name, Length
+          Get-Content $env:VK_DRIVER_FILES
           Write-Output '--- llama-server --list-devices (with Vulkan loader debug) ---'
-          $env:VK_LOADER_DEBUG = 'error,warn,driver'
+          $env:VK_LOADER_DEBUG = 'all'
           & runtime\llama-server.exe --list-devices 2>&1 | Out-String | Write-Output
           Remove-Item Env:VK_LOADER_DEBUG
           python main.py --provider local --gpu auto --iterations 1 --report e2e-gpu-report.md `
