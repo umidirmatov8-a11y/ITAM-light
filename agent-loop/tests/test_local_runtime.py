@@ -7,7 +7,7 @@ import textwrap
 import pytest
 
 from app.config import Settings
-from app.local_runtime import (LlamaServer, LocalModelProvider, describe_device, list_local_models,
+from app.local_runtime import (_DEVICE_CACHE, LlamaServer, LocalModelProvider, describe_device, list_local_models,
                                resolve_model)
 from app.pipeline import AgentPipeline
 from app.providers import ProviderError
@@ -17,6 +17,11 @@ FAKE_SERVER = textwrap.dedent('''\
     import json, os, sys
     from http.server import BaseHTTPRequestHandler, HTTPServer
     args = sys.argv[1:]
+    if args == ["--list-devices"]:
+        print("Available devices:")
+        if os.environ.get("FAKE_GPU"):
+            print("  Vulkan0: Fake Radeon 9000 (8176 MiB, 8000 MiB free)")
+        sys.exit(0)
     port = int(args[args.index("--port") + 1])
     log = open(args[args.index("-m") + 1] + ".requests", "a", encoding="utf-8")
     gpu = "999" in args
@@ -60,6 +65,7 @@ def home(tmp_path):
     server.chmod(server.stat().st_mode | stat.S_IEXEC)
     (tmp_path / "models" / "tiny-q4.gguf").write_bytes(b"GGUF")
     LlamaServer.gpu_failed = False
+    _DEVICE_CACHE.clear()
     yield tmp_path
     LlamaServer.shutdown()
     LlamaServer.gpu_failed = False
@@ -147,8 +153,17 @@ def test_cpu_mode_and_old_build_without_device_none(home, monkeypatch):
     assert "999" not in args and "--device" not in args and args[args.index("-ngl") + 1] == "0"
 
 
+@posix_only
+def test_no_gpu_skips_the_gpu_attempt(home):
+    provider = LocalModelProvider(Settings(), home=home)
+    assert provider.complete("s", "u") == "готово"
+    assert "999" not in requests_log(home)[0]["args"] and not LlamaServer.gpu_failed
+    assert LlamaServer._instance.device() == "процессор"
+
+
 def test_describe_device():
-    assert describe_device("load_tensors: offloaded 0/37 layers to GPU", True) == "процессор"
-    assert describe_device("", False) == "процессор"
+    assert describe_device("load_tensors: offloaded 0/37 layers to GPU", ["RTX"]) == "процессор"
+    assert describe_device("", []) == "процессор"
+    assert describe_device("", ["NVIDIA GeForce RTX 3060"]) == "видеокарта NVIDIA GeForce RTX 3060"
     log = "ggml_vulkan: 0 = Intel(R) Iris(R) Xe Graphics (Intel Corporation) | uma: 1\noffloaded 29/37 layers to GPU"
-    assert describe_device(log, True) == "видеокарта Intel(R) Iris(R) Xe Graphics (29/37 слоёв)"
+    assert describe_device(log, ["x"]) == "видеокарта Intel(R) Iris(R) Xe Graphics (29/37 слоёв)"

@@ -76,9 +76,11 @@ jobs:
           if (-not $p.WaitForExit(45 * 60 * 1000)) { $p.Kill(); throw "timed out" }
           Write-Output "exit code: $($p.ExitCode) (0 = accepted by verifier, 1 = best of rejected attempts, 2 = error); $([int]$sw.Elapsed.TotalSeconds) s"
           if (Test-Path $report) { Get-Content $report -Encoding utf8 }
-          $log = Join-Path $env:TEMP 'agentloop-llama-server.log'
-          if (Test-Path $log) { Write-Output '--- llama-server log (tail) ---'; Get-Content $log -Tail 25 }
-          if (Test-Path $log) { Write-Output '--- device ---'; Select-String -Path $log -Pattern 'ggml_vulkan|offloaded|no usable GPU|load_backend' | Select-Object -First 10 }
+          & (Join-Path (Split-Path $exe) 'runtime\llama-server.exe') --list-devices 2>&1 | Out-String | Write-Output
+          foreach ($mode in 'gpu', 'cpu') {
+            $log = Join-Path $env:TEMP "agentloop-llama-server-$mode.log"
+            if (Test-Path $log) { Write-Output "--- $mode log (tail) ---"; Get-Content $log -Tail 20 }
+          }
           if ($p.ExitCode -gt 1 -or -not (Test-Path $report)) { throw "agent loop failed" }
           if (Get-Process llama-server -ErrorAction SilentlyContinue) { throw "llama-server still running after AgentLoop exited" }
 
@@ -154,13 +156,17 @@ jobs:
       - name: Run the agents on the (software) GPU
         run: |
           $env:TEMP = $env:RUNNER_TEMP
+          Write-Output '--- llama-server --list-devices ---'
+          & runtime\llama-server.exe --list-devices 2>&1 | Out-String | Write-Output
           python main.py --provider local --gpu auto --iterations 1 --report e2e-gpu-report.md `
-            --task "Напиши функцию на Python, которая складывает два числа, и один пример вызова."
+            --task "Напиши функцию на Python, которая складывает два числа, и один пример вызова." 2>&1 | Tee-Object -FilePath run.txt
           $code = $LASTEXITCODE
-          $log = Join-Path $env:RUNNER_TEMP 'agentloop-llama-server.log'
           Write-Output "exit code: $code"
-          Select-String -Path $log -Pattern 'ggml_vulkan|offloaded|llvmpipe|load_backend' | Select-Object -First 15
-          if ($code -gt 1) { Get-Content $log -Tail 40; throw "agent loop failed" }
-          $off = Select-String -Path $log -Pattern 'offloaded (\d+)/(\d+) layers to GPU' | Select-Object -First 1
-          if (-not $off -or [int]$off.Matches[0].Groups[1].Value -eq 0) { Get-Content $log -Tail 60; throw "model was not offloaded to the Vulkan device" }
-          Get-Content e2e-gpu-report.md -Encoding utf8 | Select-Object -First 25
+          foreach ($mode in 'gpu', 'cpu') {
+            $log = Join-Path $env:RUNNER_TEMP "agentloop-llama-server-$mode.log"
+            if (Test-Path $log) { Write-Output "--- $mode log (tail) ---"; Get-Content $log -Tail 30 }
+          }
+          if ($code -gt 1) { throw "agent loop failed" }
+          $device = Select-String -Path run.txt -Pattern 'работает на: (.+)$' -Encoding utf8 | Select-Object -Last 1
+          Write-Output "device: $($device.Matches[0].Groups[1].Value)"
+          if (-not $device -or $device.Matches[0].Groups[1].Value -notmatch '^видеокарта') { throw "the model did not run on the Vulkan device" }

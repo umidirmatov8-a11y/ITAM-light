@@ -124,8 +124,31 @@ GPU_ARGS = ["-ngl", "999"]
 CPU_ARGS = [["--device", "none", "-ngl", "0"], ["-ngl", "0"]]  # second form for builds without --device none
 
 # "ggml_vulkan: 0 = Intel(R) Iris(R) Xe Graphics (Intel Corporation) | uma: 1 | ..." -> name without the driver
+_LISTED_DEVICE = re.compile(r"^\s*([A-Za-z]+\d+): (.+?)(?: \(\d+ MiB.*\))?\s*$")
 _VK_DEVICE = re.compile(r"ggml_vulkan: \d+ = ([^|\n]+?)(?: \([^()|\n]*\))? \|")
 _OFFLOADED = re.compile(r"offloaded (\d+)/(\d+) layers to GPU")
+
+
+_DEVICE_CACHE: dict[Path, list[str]] = {}
+
+
+def list_gpus(server: Path) -> list[str]:
+    """GPU names llama-server can use (`llama-server --list-devices`), e.g. ["NVIDIA GeForce RTX 3060"]."""
+    if server not in _DEVICE_CACHE:
+        flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        try:
+            out = subprocess.run([str(server), "--list-devices"], capture_output=True, timeout=60,
+                                 cwd=str(server.parent), creationflags=flags, stdin=subprocess.DEVNULL)
+            text = (out.stdout + out.stderr).decode("utf-8", "replace")
+        except (OSError, subprocess.TimeoutExpired):
+            text = ""
+        names = []
+        for line in text.splitlines():
+            match = _LISTED_DEVICE.match(line)
+            if match and not match.group(1).upper().startswith("CPU"):
+                names.append(match.group(2).strip())
+        _DEVICE_CACHE[server] = names
+    return _DEVICE_CACHE[server]
 
 
 class LlamaServer:
@@ -141,7 +164,8 @@ class LlamaServer:
         self.port = _free_port()
         self.url = f"http://127.0.0.1:{self.port}"
         log_dir = Path(os.environ.get("TEMP") or os.environ.get("TMPDIR") or "/tmp")
-        self.log_path = log_dir / "agentloop-llama-server.log"
+        # One log per mode, so a failed GPU attempt's log survives the CPU fallback.
+        self.log_path = log_dir / f"agentloop-llama-server-{'gpu' if uses_gpu else 'cpu'}.log"
         args = [str(server), "-m", str(model), "--host", "127.0.0.1", "--port", str(self.port),
                 "-c", str(num_ctx), "-np", "1", *extra_args]
         flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
@@ -158,7 +182,7 @@ class LlamaServer:
     def get(cls, server: Path, model: Path, num_ctx: int, gpu_mode: str = GPU_AUTO, timeout: float = 300.0,
             cancel: threading.Event | None = None) -> "LlamaServer":
         with cls._lock:
-            want_gpu = gpu_mode != GPU_OFF and not cls.gpu_failed
+            want_gpu = gpu_mode != GPU_OFF and not cls.gpu_failed and bool(list_gpus(server))
             current = cls._instance
             if (current and current.alive() and (current.model, current.num_ctx) == (model, num_ctx)
                     and current.uses_gpu == want_gpu):
@@ -222,7 +246,7 @@ class LlamaServer:
 
     def device(self) -> str:
         """Human-readable device the model runs on, from the server log."""
-        return describe_device(self.log_text(), self.uses_gpu)
+        return describe_device(self.log_text(), list_gpus(self.server) if self.uses_gpu else [])
 
     def stop(self) -> None:
         if self.alive():
@@ -234,13 +258,16 @@ class LlamaServer:
         self._log.close()
 
 
-def describe_device(log: str, uses_gpu: bool) -> str:
+def describe_device(log: str, gpus: list[str]) -> str:
+    """`gpus` is empty when the server runs on the CPU only."""
     offloaded = _OFFLOADED.search(log)
-    gpu = _VK_DEVICE.search(log)
-    if uses_gpu and offloaded and int(offloaded.group(1)) > 0:
-        name = gpu.group(1).strip() if gpu else "GPU"
-        return f"видеокарта {name} ({offloaded.group(1)}/{offloaded.group(2)} слоёв)"
-    return "процессор"
+    if not gpus or (offloaded and int(offloaded.group(1)) == 0):
+        return "процессор"
+    named = _VK_DEVICE.search(log)
+    text = f"видеокарта {named.group(1).strip() if named else gpus[0]}"
+    if offloaded:
+        text += f" ({offloaded.group(1)}/{offloaded.group(2)} слоёв)"
+    return text
 
 
 atexit.register(LlamaServer.shutdown)
