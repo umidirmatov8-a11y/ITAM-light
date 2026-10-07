@@ -143,8 +143,12 @@ jobs:
           if (-not $icd) { $icd = Get-ChildItem "$env:RUNNER_TEMP\mesa" -Recurse -Filter 'lvp_icd*.json' | Select-Object -First 1 }
           if (-not $icd) { throw "lavapipe ICD manifest not found" }
           Write-Output "ICD: $($icd.FullName)"
+          # The runner is elevated, so the Vulkan loader ignores VK_DRIVER_FILES: register the driver in the
+          # registry, the way a GPU driver installer does.
+          $key = 'HKLM:\SOFTWARE\Khronos\Vulkan\Drivers'
+          New-Item -Path $key -Force | Out-Null
+          New-ItemProperty -Path $key -Name $icd.FullName -PropertyType DWord -Value 0 -Force | Out-Null
           Add-Content $env:GITHUB_ENV "VK_DRIVER_FILES=$($icd.FullName)"
-          Add-Content $env:GITHUB_ENV "VK_ICD_FILENAMES=$($icd.FullName)"
           # ggml-vulkan skips CPU-type Vulkan devices such as llvmpipe unless they are selected explicitly
           Add-Content $env:GITHUB_ENV "GGML_VK_VISIBLE_DEVICES=0"
 
