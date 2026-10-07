@@ -1,0 +1,46 @@
+name: AgentLoop (Windows)
+
+on:
+  push:
+    paths:
+      - 'agent-loop/**'
+      - '.github/workflows/agent-loop.yml'
+  pull_request:
+    paths:
+      - 'agent-loop/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: agent-loop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Build exe and installer
+        run: .\build.ps1 -Python python
+
+      - name: Smoke test exe
+        run: |
+          $p = Start-Process dist\AgentLoop.exe -ArgumentList '--version' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "AgentLoop.exe --version exited with $($p.ExitCode)" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgentLoop-windows
+          path: |
+            agent-loop/dist/AgentLoop.exe
+            agent-loop/installer/Output/AgentLoop-Setup.exe
+          if-no-files-found: error

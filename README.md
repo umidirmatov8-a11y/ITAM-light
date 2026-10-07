@@ -8,3 +8,5 @@ This repository contains:
   diagnostics tool (C#/.NET 8/WPF). See [`FirstAidAdmin/README.md`](FirstAidAdmin/README.md).
 * **Wazuh Security Analyzer** – a Windows desktop Security Analysis Assistant for Wazuh alerts.
   See [`wazuh-security-analyzer/README.md`](wazuh-security-analyzer/README.md).
+* **AgentLoop** — a desktop app with three cooperating AI agents (prompt engineer → executor → verifier,
+  looping until the verifier approves). See [`agent-loop/README.md`](agent-loop/README.md).
