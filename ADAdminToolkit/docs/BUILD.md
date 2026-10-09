@@ -35,6 +35,43 @@ build_exe.bat onedir notests
 Результат — в папке `dist`. Конечному пользователю не нужны Python и библиотеки: копируется вся папка
 `dist\ADAdminToolkit` (onedir) или один файл (onefile; запускается медленнее из-за распаковки во временную папку).
 
+## Установщик
+
+```bat
+build_installer.bat           :: dist\ADAdminToolkit-Setup-<версия>.exe (собирает EXE, если его ещё нет)
+build_installer.bat rebuild   :: пересобрать EXE перед упаковкой
+```
+
+Нужен [Inno Setup 6](https://jrsoftware.org/isdl.php) (`winget install JRSoftware.InnoSetup`). Скрипт —
+`installer\ADAdminToolkit.iss`. Установщик — один файл, поэтому при передаче не теряются отдельные DLL (типичная
+причина ошибки `shiboken6\libshiboken does not exist` при копировании папки onedir).
+
+Мастер установки:
+
+* выбор режима: для всех пользователей (администратор) или только для текущего (без прав администратора);
+* выбор папки установки;
+* флажок «Создать значок на Рабочем столе» (по умолчанию включён);
+* ярлыки в меню «Пуск»: программа, демо-режим, руководство, удаление; запись в «Приложениях» Windows;
+* при обновлении старая версия заменяется полностью; `config\settings.json` и данные пользователя
+  (`%LOCALAPPDATA%\ADAdminToolkit`) сохраняются.
+
+Тихая установка (SCCM, GPO, скрипты):
+
+```bat
+ADAdminToolkit-Setup-1.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /ALLUSERS /DIR="D:\Tools\AD Admin Toolkit" /TASKS="desktopicon"
+ADAdminToolkit-Setup-1.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER /TASKS=""     :: без ярлыка на рабочем столе
+"C:\Program Files\AD Admin Toolkit\unins000.exe" /VERYSILENT                           :: удаление
+```
+
+Файл конфигурации организации можно положить после установки в `<папка установки>\config\settings.json`.
+
+Установщик не подписан цифровой подписью: Windows SmartScreen может показать «Неизвестный издатель» → «Подробнее» →
+«Выполнить в любом случае». Для распространения в организации подпишите EXE корпоративным сертификатом
+(`signtool sign`) или добавьте его в разрешённые в антивирусе.
+
+CI (`.github/workflows/adadmintoolkit.yml`) собирает установщик, ставит его в выбранную папку с ярлыком на рабочем
+столе и для всех пользователей без ярлыка, запускает самопроверку установленной программы и удаляет её.
+
 ## Конфигурация организации
 
 Скопируйте `config\settings.example.json` в `config\settings.json` рядом с EXE и задайте профили подключения и

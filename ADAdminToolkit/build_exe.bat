@@ -82,6 +82,7 @@ if "%MODE%"=="onefile" (
     set "OUTDIR=dist\ADAdminToolkit"
 )
 if not exist "%EXE%" ( echo [ОШИБКА] Не найден %EXE% & exit /b 1 )
+if "%MODE%"=="onedir" if not exist "dist\ADAdminToolkit\_internal\shiboken6" ( echo [ОШИБКА] В сборке нет _internal\shiboken6 ^(PySide6 не запустится^) & exit /b 1 )
 
 echo.
 echo [6/7] Копирование документации и примера конфигурации...
@@ -102,6 +103,7 @@ echo.
 echo ============================================================================================
 echo  Готово: %EXE%
 echo  Запуск в тестовом режиме без домена: "%EXE%" --demo
+if "%MODE%"=="onedir" echo  Установщик для передачи пользователям: build_installer.bat
 echo ============================================================================================
 endlocal
 exit /b 0
