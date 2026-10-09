@@ -147,6 +147,10 @@ public static class ItamHost
             {
                 var errors = ctx.ModelState.Where(kv => kv.Value?.Errors.Count > 0)
                     .ToDictionary(kv => JsonNamingPolicy.CamelCase.ConvertName(kv.Key.Split('.').Last()), kv => kv.Value!.Errors.Select(e => string.IsNullOrEmpty(e.ErrorMessage) ? "Некорректное значение" : e.ErrorMessage).ToArray());
+                // Machine clients (agents, scripts) have no UI to show the details: keep them in the server log.
+                ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("ITAM.Validation")
+                    .LogWarning("Validation failed for {Method} {Path}: {Errors}", ctx.HttpContext.Request.Method, ctx.HttpContext.Request.Path,
+                        string.Join("; ", errors.Select(e => $"{e.Key}: {string.Join(", ", e.Value)}")));
                 return new UnprocessableEntityObjectResult(new ApiErrorEnvelope(false, new ApiErrorBody("VALIDATION_FAILED", "Проверьте заполнение полей", errors)));
             });
 

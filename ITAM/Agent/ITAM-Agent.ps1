@@ -170,7 +170,8 @@ function Get-Inventory {
     $product = Get-Safe { (Get-Cim Win32_ComputerSystemProduct)[0] }
     $enclosure = Get-Safe { (Get-Cim Win32_SystemEnclosure)[0] }
     $os = Get-Safe { (Get-Cim Win32_OperatingSystem)[0] }
-    $cpus = Get-Safe { Get-Cim Win32_Processor } @()
+    # @(): a single CIM instance has no usable .Count in Windows PowerShell 5.1.
+    $cpus = @(Get-Safe { Get-Cim Win32_Processor } @())
     $nt = Get-Safe { Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' }
 
     $manufacturer = Text $cs.Manufacturer
@@ -207,7 +208,7 @@ function Get-Inventory {
     if ($nt) {
         $osVersion = Text $nt.DisplayVersion
         if (-not $osVersion) { $osVersion = Text $nt.ReleaseId }
-        if ($nt.CurrentBuild) { $osBuild = "$($nt.CurrentBuild)$(if ($nt.UBR) { '.' + $nt.UBR })" }
+        if ($nt.CurrentBuild) { $osBuild = "$($nt.CurrentBuild)$(if ($nt.UBR) { '.' + $nt.UBR } else { '' })" }
     }
     if (-not $osVersion -and $os) { $osVersion = Text $os.Version }
     if (-not $osBuild -and $os) { $osBuild = Text $os.BuildNumber }
@@ -215,25 +216,25 @@ function Get-Inventory {
     $hostname = $env:COMPUTERNAME
     if ($cs -and $cs.Name) { $hostname = $cs.Name }
 
-    [ordered]@{
+    $inv = [ordered]@{
         agentVersion   = $AgentVersion
         hostname       = $hostname
         domain         = $(if ($cs -and $cs.PartOfDomain) { Text $cs.Domain } else { $null })
         manufacturer   = $manufacturer
         model          = $model
-        serialNumber   = $(if ($bios) { Text $bios.SerialNumber })
-        hardwareUuid   = $(if ($product) { Text $product.UUID })
+        serialNumber   = $(if ($bios) { Text $bios.SerialNumber } else { $null })
+        hardwareUuid   = $(if ($product) { Text $product.UUID } else { $null })
         formFactor     = (Get-FormFactor $cs $enclosure $manufacturer $model)
-        osName         = $(if ($os) { Text $os.Caption })
+        osName         = $(if ($os) { Text $os.Caption } else { $null })
         osVersion      = $osVersion
         osBuild        = $osBuild
-        osArchitecture = $(if ($os) { Text $os.OSArchitecture })
-        osInstallDate  = $(if ($os) { Iso $os.InstallDate })
-        lastBootAt     = $(if ($os) { Iso $os.LastBootUpTime })
-        cpu            = $(if ($cpus.Count -gt 0) { (Text $cpus[0].Name) -replace '\s+', ' ' })
-        cpuCores       = $(if ($cpus.Count -gt 0) { [int](($cpus | Measure-Object NumberOfCores -Sum).Sum) })
+        osArchitecture = $(if ($os) { Text $os.OSArchitecture } else { $null })
+        osInstallDate  = $(if ($os) { Iso $os.InstallDate } else { $null })
+        lastBootAt     = $(if ($os) { Iso $os.LastBootUpTime } else { $null })
+        cpu            = $(if ($cpus.Count -gt 0) { (Text $cpus[0].Name) -replace '\s+', ' ' } else { $null })
+        cpuCores       = $(if ($cpus.Count -gt 0) { [int](($cpus | Measure-Object NumberOfCores -Sum).Sum) } else { $null })
         ramMb          = $ramMb
-        biosVersion    = $(if ($bios) { Text $bios.SMBIOSBIOSVersion })
+        biosVersion    = $(if ($bios) { Text $bios.SMBIOSBIOSVersion } else { $null })
         currentUser    = (Get-Safe { Get-CurrentUser $cs })
         antivirus      = (Text $antivirus)
         disks          = [object[]](ConvertTo-PlainArray $disks)
@@ -244,6 +245,14 @@ function Get-Inventory {
         printers       = [object[]](ConvertTo-PlainArray $printers)
         software       = [object[]](ConvertTo-PlainArray $software)
     }
+    # Scalars must be plain strings/numbers: anything else (e.g. AutomationNull, which Windows PowerShell 5.1 writes as {})
+    # would make the whole report invalid for the server.
+    foreach ($k in @($inv.Keys)) {
+        $v = $inv[$k]
+        if ($v -is [array]) { continue }
+        if ($null -eq $v -or -not ($v -is [string] -or $v -is [ValueType])) { $inv[$k] = $null }
+    }
+    $inv
 }
 
 # ------------------------------------------------------------------ transport
@@ -320,6 +329,9 @@ try {
 } catch {
     $detail = ''
     if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $detail = ' | ' + $_.ErrorDetails.Message }
+    elseif ($_.Exception.Response -and $_.Exception.Response.GetType().GetMethod('GetResponseStream')) {
+        try { $detail = ' | ' + (New-Object IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd() } catch { }
+    }
     Write-Log ($_.Exception.Message + $detail) 'ERROR'
     Write-Error $_.Exception.Message
     exit 1
