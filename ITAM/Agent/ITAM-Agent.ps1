@@ -25,6 +25,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 adds an extended Count property to arrays, so ConvertTo-Json may write {"value":[...],"Count":n}.
+Remove-TypeData -TypeName System.Array -ErrorAction SilentlyContinue
 $AgentVersion = '1.0.0'
 $InstallDir = Join-Path $env:ProgramFiles 'ITAM Agent'
 $DataDir = Join-Path $env:ProgramData 'ITAM Agent'
@@ -62,6 +64,14 @@ function Text($v) {
 }
 
 function Iso($dt) { if ($dt) { ([datetime]$dt).ToUniversalTime().ToString('o') } else { $null } }
+
+# Windows PowerShell 5.1: an array that passed through a function return is wrapped in a PSObject and ConvertTo-Json
+# writes it as {"value":[...],"Count":n}. Copy the items into a plain object[] so it is serialized as a JSON array.
+function ConvertTo-PlainArray($items) {
+    $list = New-Object System.Collections.Generic.List[object]
+    foreach ($i in @($items)) { if ($null -ne $i) { $list.Add($i) } }
+    , $list.ToArray()
+}
 
 function Decode-WmiString($arr) {
     if (-not $arr) { return $null }
@@ -226,13 +236,13 @@ function Get-Inventory {
         biosVersion    = $(if ($bios) { Text $bios.SMBIOSBIOSVersion })
         currentUser    = (Get-Safe { Get-CurrentUser $cs })
         antivirus      = (Text $antivirus)
-        disks          = @($disks)
-        volumes        = @($volumes)
-        network        = @($network)
-        monitors       = @($monitors)
-        gpus           = @($gpus)
-        printers       = @($printers)
-        software       = @($software)
+        disks          = [object[]](ConvertTo-PlainArray $disks)
+        volumes        = [object[]](ConvertTo-PlainArray $volumes)
+        network        = [object[]](ConvertTo-PlainArray $network)
+        monitors       = [object[]](ConvertTo-PlainArray $monitors)
+        gpus           = [object[]](ConvertTo-PlainArray $gpus)
+        printers       = [object[]](ConvertTo-PlainArray $printers)
+        software       = [object[]](ConvertTo-PlainArray $software)
     }
 }
 
@@ -308,7 +318,9 @@ try {
     Write-Log ("Inventory sent: {0} programs, user {1}{2}" -f @($inv.software).Count, $inv.currentUser, $asset)
     exit 0
 } catch {
-    Write-Log $_.Exception.Message 'ERROR'
+    $detail = ''
+    if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $detail = ' | ' + $_.ErrorDetails.Message }
+    Write-Log ($_.Exception.Message + $detail) 'ERROR'
     Write-Error $_.Exception.Message
     exit 1
 }

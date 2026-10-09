@@ -144,6 +144,11 @@ jobs:
           $body = @{ autoCreateAssets = $true; defaultRegionId = $region; updateAssetFields = $true; inventoryIntervalHours = 4; staleAfterDays = 7 } | ConvertTo-Json
           Invoke-RestMethod "$base/api/agents/settings" -Method Put -WebSession $s -Headers $xsrf -ContentType 'application/json' -Body $body | Out-Null
 
+          # What the agent collects on this machine (printed for diagnostics).
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\ITAM\agent\ITAM-Agent.ps1" -Output "$env:TEMP\inventory.json"
+          $inv = Get-Content "$env:TEMP\inventory.json" -Raw
+          $inv.Substring(0, [Math]::Min(4000, $inv.Length))
+
           # Install exactly what an administrator gets: the agent shipped with the server.
           & "$env:ProgramFiles\ITAM\agent\install.cmd" -ServerUrl $base -EnrollmentKey $cfg.enrollmentKey
           if ($LASTEXITCODE) { Get-Content "$env:ProgramData\ITAM Agent\*.log" -ErrorAction SilentlyContinue; throw "agent install failed ($LASTEXITCODE)" }
