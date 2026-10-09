@@ -1,0 +1,51 @@
+{
+  "_comment": "Пример конфигурации организации для AD Admin Toolkit. Скопируйте в config/settings.json рядом с EXE. Пароли здесь НЕ указываются и игнорируются.",
+  "profiles": [
+    {
+      "name": "Основной домен (LDAPS)",
+      "server": "dc01.company.local",
+      "port": 636,
+      "security": "ldaps",
+      "auth": "simple",
+      "base_dn": "DC=company,DC=local",
+      "username": "administrator@company.local",
+      "ca_file": "",
+      "tls_server_name": "",
+      "connect_timeout": 10,
+      "operation_timeout": 60,
+      "page_size": 500,
+      "reconnect_attempts": 3,
+      "allow_unencrypted_kerberos": false,
+      "use_credential_manager": false,
+      "read_only": true
+    },
+    {
+      "name": "Текущие учётные данные Windows (Kerberos + StartTLS)",
+      "server": "dc01.company.local",
+      "port": 389,
+      "security": "starttls",
+      "auth": "kerberos",
+      "base_dn": "",
+      "username": "",
+      "read_only": true
+    }
+  ],
+  "settings": {
+    "theme": "dark",
+    "stale_user_days": 90,
+    "stale_computer_days": 90,
+    "password_expiring_days": 14,
+    "recent_days": 14,
+    "required_user_attributes": ["department", "title", "mail"],
+    "standard_groups": [],
+    "extra_privileged_groups": ["DnsAdmins", "Cert Publishers"],
+    "require_account_expiry_ous": [],
+    "bulk_max_items": 500,
+    "bulk_rate_per_second": 5,
+    "bulk_allow_privileged": false,
+    "network_timeout_s": 3,
+    "events_max": 500,
+    "events_timeout_s": 60,
+    "upn_suffix": ""
+  }
+}
