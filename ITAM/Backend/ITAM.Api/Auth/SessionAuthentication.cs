@@ -86,6 +86,9 @@ public sealed class SessionAuthenticationHandler : AuthenticationHandler<Session
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, p.UserName),
+            // Stable identity claim: antiforgery binds CSRF tokens to it. Without it the token would be bound to a hash of all
+            // claims (including the permission list), and a reloaded session could invalidate a valid token.
+            new(ClaimTypes.NameIdentifier, p.UserId.ToString()),
             new(ItamClaims.UserId, p.UserId.ToString()),
             new(ItamClaims.SessionId, p.SessionId.ToString()),
             new(ItamClaims.DisplayName, p.DisplayName),
