@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<BackupService>();
         services.AddScoped<ContractService>();
         services.AddScoped<InventoryService>();
+        services.AddScoped<Agents.AgentService>();
         services.AddScoped<StockService>();
         services.AddScoped<DashboardService>();
         services.AddScoped<SearchService>();

@@ -27,8 +27,8 @@ public sealed class DataSeeder
         await _db.Database.MigrateAsync(ct);
         _sp.GetRequiredService<SystemContext>().Enabled = true;
         await SeedOrganizationAsync(ct);
-        await SyncPermissionsAsync(ct);
-        await SeedRolesAsync(ct);
+        var added = await SyncPermissionsAsync(ct);
+        await SeedRolesAsync(added, ct);
         if (!await _db.Regions.AnyAsync(ct)) await SeedReferenceDataAsync(ct);
         if (!await _db.DocumentTemplates.AnyAsync(ct)) await SeedTemplatesAsync(ct);
         _log.LogInformation("Database is up to date");
@@ -41,19 +41,23 @@ public sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
     }
 
-    private async Task SyncPermissionsAsync(CancellationToken ct)
+    /// <summary>Synchronizes the permission catalogue; returns codes that did not exist before (introduced by an upgrade).</summary>
+    private async Task<HashSet<string>> SyncPermissionsAsync(CancellationToken ct)
     {
         var existing = await _db.Permissions.ToDictionaryAsync(p => p.Code, ct);
+        var added = new HashSet<string>();
         foreach (var (code, (group, description)) in Permissions.Catalogue)
         {
             if (existing.TryGetValue(code, out var p)) { p.Group = group; p.Description = description; }
-            else _db.Permissions.Add(new Permission { Code = code, Group = group, Description = description });
+            else { _db.Permissions.Add(new Permission { Code = code, Group = group, Description = description }); added.Add(code); }
         }
         foreach (var stale in existing.Values.Where(p => !Permissions.Catalogue.ContainsKey(p.Code))) _db.Permissions.Remove(stale);
         await _db.SaveChangesAsync(ct);
+        // On a fresh database every permission is "new" — that case is handled by role creation itself.
+        return existing.Count == 0 ? new HashSet<string>() : added;
     }
 
-    private async Task SeedRolesAsync(CancellationToken ct)
+    private async Task SeedRolesAsync(HashSet<string> newPermissions, CancellationToken ct)
     {
         foreach (var (code, name, description, permissions) in BuiltInRoles.Definitions)
         {
@@ -69,6 +73,13 @@ public sealed class DataSeeder
                 // The super administrator always holds every capability (new permissions after upgrades included).
                 var have = role.Permissions.Select(p => p.PermissionCode).ToHashSet();
                 foreach (var p in permissions.Where(p => !have.Contains(p))) _db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionCode = p });
+            }
+            else if (newPermissions.Count > 0)
+            {
+                // Permissions introduced by an upgrade go to the built-in roles that define them (customized grants stay as they are).
+                var have = role.Permissions.Select(p => p.PermissionCode).ToHashSet();
+                foreach (var p in permissions.Where(p => newPermissions.Contains(p) && !have.Contains(p)))
+                    _db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionCode = p });
             }
         }
         await _db.SaveChangesAsync(ct);

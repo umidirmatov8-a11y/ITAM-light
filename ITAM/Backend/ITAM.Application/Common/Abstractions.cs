@@ -145,4 +145,6 @@ public interface ISignatureProvider
 public sealed class SystemContext
 {
     public bool Enabled { get; set; }
+    /// <summary>Name recorded as the author of changes made in system mode (e.g. "agent:PC-0042"); default "system".</summary>
+    public string? ActorName { get; set; }
 }

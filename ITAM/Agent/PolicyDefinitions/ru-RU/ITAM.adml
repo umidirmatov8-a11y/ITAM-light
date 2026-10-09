@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Агент ITAM</displayName>
+  <description>Параметры агента инвентаризации ITAM</description>
+  <resources>
+    <stringTable>
+      <string id="SUPPORTED_Win10">Windows 10, Windows Server 2016 и новее</string>
+      <string id="Cat_ITAM">ITAM</string>
+      <string id="Cat_ITAMAgent">Агент инвентаризации</string>
+      <string id="ServerUrl">Адрес сервера ITAM</string>
+      <string id="ServerUrl_Help">Адрес веб-сервера ITAM, на который агент отправляет данные компьютера, например http://itam.company.local:8080.
+
+Агент устанавливается сценарием автозагрузки компьютера install.cmd (см. документацию AGENT.md).</string>
+      <string id="EnrollmentKey">Ключ регистрации</string>
+      <string id="EnrollmentKey_Help">Ключ регистрации агентов из раздела ITAM «Агенты → Установка». Используется один раз при первом подключении компьютера; дальше агент работает с собственным токеном.
+
+После смены ключа в ITAM обновите это значение — уже зарегистрированные компьютеры продолжат работать.</string>
+      <string id="IntervalHours">Интервал отправки данных (часы)</string>
+      <string id="IntervalHours_Help">Как часто агент отправляет инвентаризацию (1–168 часов). Если параметр не задан, используется интервал из настроек сервера ITAM (по умолчанию 4 часа). Дополнительно данные отправляются при смене вошедшего пользователя.</string>
+      <string id="IgnoreCertificateErrors">Не проверять сертификат HTTPS сервера</string>
+      <string id="IgnoreCertificateErrors_Help">Разрешает подключение к серверу ITAM с самоподписанным сертификатом. Используйте только во внутренней сети, если сертификат сервера не выдан доверенным центром сертификации.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="ServerUrl">
+        <textBox refId="ServerUrl"><label>Адрес сервера (http://сервер:8080):</label></textBox>
+      </presentation>
+      <presentation id="EnrollmentKey">
+        <textBox refId="EnrollmentKey"><label>Ключ регистрации:</label></textBox>
+      </presentation>
+      <presentation id="IntervalHours">
+        <decimalTextBox refId="IntervalHours" defaultValue="4">Интервал, часов:</decimalTextBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

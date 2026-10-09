@@ -2744,3 +2744,133 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE TABLE "AgentDevices" (
+        "Id" uuid NOT NULL,
+        "OrganizationId" uuid NOT NULL,
+        "MachineId" character varying(64) NOT NULL,
+        "TokenHash" character varying(128) NOT NULL,
+        "Status" integer NOT NULL,
+        "AssetId" uuid,
+        "Hostname" character varying(128) NOT NULL,
+        "Domain" character varying(256),
+        "Manufacturer" character varying(256),
+        "Model" character varying(256),
+        "SerialNumber" character varying(256),
+        "HardwareUuid" character varying(256),
+        "FormFactor" character varying(64),
+        "OsName" character varying(256),
+        "OsVersion" character varying(64),
+        "OsBuild" character varying(64),
+        "OsArchitecture" character varying(64),
+        "OsInstallDate" timestamp with time zone,
+        "LastBootAt" timestamp with time zone,
+        "Cpu" character varying(256),
+        "CpuCores" integer,
+        "RamMb" integer,
+        "StorageGb" integer,
+        "IpAddress" character varying(64),
+        "MacAddress" character varying(64),
+        "BiosVersion" character varying(64),
+        "CurrentUser" character varying(256),
+        "CurrentEmployeeId" uuid,
+        "Antivirus" character varying(256),
+        "AgentVersion" character varying(64),
+        "Data" jsonb,
+        "SoftwareCount" integer NOT NULL,
+        "RegisteredAt" timestamp with time zone NOT NULL,
+        "LastSeenAt" timestamp with time zone,
+        "LastIp" character varying(64),
+        "Comment" text,
+        CONSTRAINT "PK_AgentDevices" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_AgentDevices_Assets_AssetId" FOREIGN KEY ("AssetId") REFERENCES "Assets" ("Id") ON DELETE SET NULL,
+        CONSTRAINT "FK_AgentDevices_Employees_CurrentEmployeeId" FOREIGN KEY ("CurrentEmployeeId") REFERENCES "Employees" ("Id") ON DELETE SET NULL
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE TABLE "DiscoveredSoftware" (
+        "Id" uuid NOT NULL,
+        "DeviceId" uuid NOT NULL,
+        "Name" character varying(512) NOT NULL,
+        "Version" character varying(128),
+        "Publisher" character varying(256),
+        "InstallDate" date,
+        CONSTRAINT "PK_DiscoveredSoftware" PRIMARY KEY ("Id"),
+        CONSTRAINT "FK_DiscoveredSoftware_AgentDevices_DeviceId" FOREIGN KEY ("DeviceId") REFERENCES "AgentDevices" ("Id") ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE INDEX "IX_AgentDevices_AssetId" ON "AgentDevices" ("AssetId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE INDEX "IX_AgentDevices_CurrentEmployeeId" ON "AgentDevices" ("CurrentEmployeeId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE INDEX "IX_AgentDevices_Hostname" ON "AgentDevices" USING gin ("Hostname" gin_trgm_ops);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE UNIQUE INDEX "IX_AgentDevices_OrganizationId_MachineId" ON "AgentDevices" ("OrganizationId", "MachineId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE INDEX "IX_AgentDevices_SerialNumber" ON "AgentDevices" ("SerialNumber");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE UNIQUE INDEX "IX_AgentDevices_TokenHash" ON "AgentDevices" ("TokenHash");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE INDEX "IX_DiscoveredSoftware_DeviceId" ON "DiscoveredSoftware" ("DeviceId");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    CREATE INDEX "IX_DiscoveredSoftware_Name" ON "DiscoveredSoftware" ("Name");
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261009061338_AgentInventory') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261009061338_AgentInventory', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+

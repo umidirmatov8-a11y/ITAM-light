@@ -1,0 +1,4 @@
+# Windows agent files must keep CRLF and their UTF-8 BOM (Windows PowerShell 5.1 reads BOM-less scripts as ANSI).
+ITAM/Agent/*.ps1 -text
+ITAM/Agent/*.cmd -text
+ITAM/Agent/*.txt -text

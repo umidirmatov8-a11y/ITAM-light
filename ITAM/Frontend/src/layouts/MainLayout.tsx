@@ -3,8 +3,7 @@ import { Avatar, Badge, Button, Dropdown, Input, Layout, Menu, Select, Space, To
 import {
   AppstoreOutlined, AuditOutlined, BarChartOutlined, BellOutlined, CloudServerOutlined, ContainerOutlined, DashboardOutlined, DatabaseOutlined,
   FileTextOutlined, ImportOutlined, InboxOutlined, KeyOutlined, LaptopOutlined, LogoutOutlined, MoonOutlined, PlusOutlined, ProfileOutlined,
-  SafetyCertificateOutlined, ScanOutlined, SettingOutlined, SolutionOutlined, SunOutlined, SwapOutlined, TeamOutlined, ToolOutlined, UserOutlined,
-} from '@ant-design/icons';
+  SafetyCertificateOutlined, ScanOutlined, SettingOutlined, SolutionOutlined, SunOutlined, SwapOutlined, TeamOutlined, ToolOutlined, UserOutlined, DesktopOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -54,6 +53,7 @@ export default function MainLayout() {
               it('/repairs', <ToolOutlined />, t('menu.repairs')),
               it('/inventory', <ScanOutlined />, t('menu.inventory'), can('inventory.view')),
               it('/stock', <InboxOutlined />, t('menu.stock'), can('stock.view')),
+              it('/agents', <DesktopOutlined />, t('menu.agents'), can('agents.view')),
             ].filter(Boolean) as Item[],
           }
         : null,
@@ -81,7 +81,7 @@ export default function MainLayout() {
   const selected = useMemo(() => {
     const p = location.pathname;
     const keys = ['/admin/dictionaries', '/admin/custom-fields', '/admin/templates', '/admin/checklist-templates', '/admin/users', '/admin/roles', '/admin/audit',
-      '/admin/settings', '/admin/backup', '/admin/system', '/employees', '/assets', '/operations', '/repairs', '/inventory', '/stock', '/licenses', '/software',
+      '/admin/settings', '/admin/backup', '/admin/system', '/employees', '/assets', '/operations', '/repairs', '/inventory', '/stock', '/agents', '/licenses', '/software',
       '/access', '/onboarding', '/offboarding', '/documents', '/contracts', '/reports', '/import'];
     return [keys.find((k) => p.startsWith(k)) ?? '/'];
   }, [location.pathname]);

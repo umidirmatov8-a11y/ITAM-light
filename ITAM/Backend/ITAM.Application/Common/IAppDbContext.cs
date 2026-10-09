@@ -67,9 +67,13 @@ public interface IAppDbContext
     DbSet<StockItem> StockItems { get; }
     DbSet<StockBalance> StockBalances { get; }
     DbSet<StockMovement> StockMovements { get; }
+    DbSet<AgentDevice> AgentDevices { get; }
+    DbSet<DiscoveredSoftware> DiscoveredSoftware { get; }
 
     DatabaseFacade Database { get; }
     Microsoft.EntityFrameworkCore.Metadata.IModel Model { get; }
     DbSet<T> Set<T>() where T : class;
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+    /// <summary>Discards all pending (unsaved) changes tracked by this context.</summary>
+    void ResetChanges();
 }

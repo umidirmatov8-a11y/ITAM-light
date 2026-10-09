@@ -56,6 +56,9 @@ public static class Permissions
     public const string StockManage = "stock.manage";
     public const string ContractsView = "contracts.view";
     public const string ContractsManage = "contracts.manage";
+    // Agents (automatic inventory)
+    public const string AgentsView = "agents.view";
+    public const string AgentsManage = "agents.manage";
     // Reporting / data
     public const string ReportsView = "reports.view";
     public const string ImportRun = "import.run";
@@ -119,6 +122,8 @@ public static class Permissions
         [StockManage] = ("Склад", "Движения склада"),
         [ContractsView] = ("Договоры", "Просмотр договоров и поставщиков"),
         [ContractsManage] = ("Договоры", "Управление договорами и поставщиками"),
+        [AgentsView] = ("Агенты", "Просмотр компьютеров и данных агентов инвентаризации"),
+        [AgentsManage] = ("Агенты", "Ключ регистрации, привязка устройств к активам, настройки агентов"),
         [ReportsView] = ("Отчёты", "Просмотр и выгрузка отчётов"),
         [ImportRun] = ("Данные", "Импорт данных"),
         [ExportRun] = ("Данные", "Экспорт данных"),
@@ -167,20 +172,21 @@ public static class BuiltInRoles
             Permissions.AssetsFinanceView, Permissions.LicensesView, Permissions.LicensesManage, Permissions.SoftwareView, Permissions.SoftwareManage,
             Permissions.ChecklistsView, Permissions.ChecklistsManage, Permissions.DocumentsView, Permissions.DocumentsGenerate, Permissions.DocumentsSign,
             Permissions.FilesUpload, Permissions.InventoryView, Permissions.InventoryManage, Permissions.StockView, Permissions.StockManage,
-            Permissions.ContractsView, Permissions.ReportsView, Permissions.ImportRun, Permissions.ExportRun, Permissions.NotificationsView
+            Permissions.ContractsView, Permissions.ReportsView, Permissions.ImportRun, Permissions.ExportRun, Permissions.NotificationsView,
+            Permissions.AgentsView, Permissions.AgentsManage
         }),
         ("helpdesk", "Служба поддержки (Helpdesk)", "Выдача/возврат, ремонты, просмотр", new[]
         {
             Permissions.EmployeesView, Permissions.OrgView, Permissions.AssetsView, Permissions.AssetsAssign, Permissions.AssetsReturn,
             Permissions.AssetsRepair, Permissions.SoftwareView, Permissions.LicensesView, Permissions.AccessView, Permissions.ChecklistsView,
             Permissions.ChecklistsManage, Permissions.DocumentsView, Permissions.DocumentsGenerate, Permissions.FilesUpload, Permissions.StockView,
-            Permissions.NotificationsView
+            Permissions.NotificationsView, Permissions.AgentsView
         }),
         ("infosec", "Информационная безопасность", "Доступы, лицензии, аудит", new[]
         {
             Permissions.EmployeesView, Permissions.OrgView, Permissions.AssetsView, Permissions.AccessView, Permissions.AccessManage,
             Permissions.LicensesView, Permissions.SoftwareView, Permissions.ChecklistsView, Permissions.ChecklistsManage, Permissions.DocumentsView,
-            Permissions.AuditView, Permissions.ReportsView, Permissions.ExportRun, Permissions.NotificationsView
+            Permissions.AuditView, Permissions.ReportsView, Permissions.ExportRun, Permissions.NotificationsView, Permissions.AgentsView
         }),
         ("department_manager", "Руководитель подразделения", "Просмотр сотрудников и оборудования своего подразделения", new[]
         {
@@ -191,7 +197,8 @@ public static class BuiltInRoles
         {
             Permissions.EmployeesView, Permissions.OrgView, Permissions.AssetsView, Permissions.AssetsFinanceView, Permissions.LicensesView,
             Permissions.SoftwareView, Permissions.AccessView, Permissions.ChecklistsView, Permissions.DocumentsView, Permissions.InventoryView,
-            Permissions.StockView, Permissions.ContractsView, Permissions.ReportsView, Permissions.ExportRun, Permissions.AuditView
+            Permissions.StockView, Permissions.ContractsView, Permissions.ReportsView, Permissions.ExportRun, Permissions.AuditView,
+            Permissions.AgentsView
         }),
         ("read_only", "Только чтение", "Просмотр основных разделов", new[]
         {

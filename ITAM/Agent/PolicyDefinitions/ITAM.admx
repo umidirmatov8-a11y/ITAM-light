@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Group Policy template for the ITAM inventory agent. Copy ITAM.admx to \\<domain>\SYSVOL\<domain>\Policies\PolicyDefinitions
+     and the .adml files to the matching language subfolders (ru-RU, en-US). -->
+<policyDefinitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <policyNamespaces>
+    <target prefix="itam" namespace="ITAM.Policies.Agent" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <supportedOn>
+    <definitions>
+      <definition name="SUPPORTED_Win10" displayName="$(string.SUPPORTED_Win10)" />
+    </definitions>
+  </supportedOn>
+  <categories>
+    <category name="ITAM" displayName="$(string.Cat_ITAM)" />
+    <category name="ITAMAgent" displayName="$(string.Cat_ITAMAgent)">
+      <parentCategory ref="ITAM" />
+    </category>
+  </categories>
+  <policies>
+    <policy name="ServerUrl" class="Machine" displayName="$(string.ServerUrl)" explainText="$(string.ServerUrl_Help)"
+            presentation="$(presentation.ServerUrl)" key="Software\Policies\ITAM\Agent">
+      <parentCategory ref="ITAMAgent" />
+      <supportedOn ref="SUPPORTED_Win10" />
+      <elements>
+        <text id="ServerUrl" valueName="ServerUrl" required="true" maxLength="512" />
+      </elements>
+    </policy>
+    <policy name="EnrollmentKey" class="Machine" displayName="$(string.EnrollmentKey)" explainText="$(string.EnrollmentKey_Help)"
+            presentation="$(presentation.EnrollmentKey)" key="Software\Policies\ITAM\Agent">
+      <parentCategory ref="ITAMAgent" />
+      <supportedOn ref="SUPPORTED_Win10" />
+      <elements>
+        <text id="EnrollmentKey" valueName="EnrollmentKey" required="true" maxLength="256" />
+      </elements>
+    </policy>
+    <policy name="IntervalHours" class="Machine" displayName="$(string.IntervalHours)" explainText="$(string.IntervalHours_Help)"
+            presentation="$(presentation.IntervalHours)" key="Software\Policies\ITAM\Agent">
+      <parentCategory ref="ITAMAgent" />
+      <supportedOn ref="SUPPORTED_Win10" />
+      <elements>
+        <decimal id="IntervalHours" valueName="IntervalHours" minValue="1" maxValue="168" required="true" />
+      </elements>
+    </policy>
+    <policy name="IgnoreCertificateErrors" class="Machine" displayName="$(string.IgnoreCertificateErrors)"
+            explainText="$(string.IgnoreCertificateErrors_Help)" key="Software\Policies\ITAM\Agent" valueName="IgnoreCertificateErrors">
+      <parentCategory ref="ITAMAgent" />
+      <supportedOn ref="SUPPORTED_Win10" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+  </policies>
+</policyDefinitions>

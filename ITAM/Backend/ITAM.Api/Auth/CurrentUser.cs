@@ -29,7 +29,7 @@ public sealed class HttpCurrentUser : ICurrentUser
     private bool IsSystem => _system.Enabled || _http.HttpContext is null;
 
     public Guid? UserId => Guid.TryParse(Principal?.FindFirstValue(ItamClaims.UserId), out var id) ? id : null;
-    public string? UserName => Principal?.Identity?.Name ?? (IsSystem ? "system" : null);
+    public string? UserName => Principal?.Identity?.Name ?? (IsSystem ? _system.ActorName ?? "system" : null);
     public string? DisplayName => Principal?.FindFirstValue(ItamClaims.DisplayName) ?? UserName;
     public bool IsAuthenticated => Principal is not null && !_system.Enabled;
     public bool AllRegions => IsSystem || Principal?.FindFirstValue(ItamClaims.AllRegions) == "true";

@@ -40,6 +40,8 @@ const InventoryPage = lazy(() => import('@/pages/inventory/InventoryPage'));
 const InventoryCard = lazy(() => import('@/pages/inventory/InventoryCard'));
 const StockPage = lazy(() => import('@/pages/inventory/StockPage'));
 const ContractsPage = lazy(() => import('@/pages/inventory/ContractsPage'));
+const AgentsPage = lazy(() => import('@/pages/agents/AgentsPage'));
+const AgentCard = lazy(() => import('@/pages/agents/AgentCard'));
 const DictionariesPage = lazy(() => import('@/pages/admin/DictionariesPage'));
 const CustomFieldsPage = lazy(() => import('@/pages/admin/CustomFieldsPage'));
 const TemplatesPage = lazy(() => import('@/pages/admin/TemplatesPage'));
@@ -140,6 +142,8 @@ export default function App() {
             <Route path="inventory" element={<Guard perm="inventory.view"><InventoryPage /></Guard>} />
             <Route path="inventory/:id" element={<Guard perm="inventory.view"><InventoryCard /></Guard>} />
             <Route path="stock" element={<Guard perm="stock.view"><StockPage /></Guard>} />
+            <Route path="agents" element={<Guard perm="agents.view"><AgentsPage /></Guard>} />
+            <Route path="agents/:id" element={<Guard perm="agents.view"><AgentCard /></Guard>} />
             <Route path="admin/dictionaries" element={<DictionariesPage />} />
             <Route path="admin/dictionaries/:key" element={<DictionariesPage />} />
             <Route path="admin/custom-fields" element={<Guard perm="customfields.manage"><CustomFieldsPage /></Guard>} />

@@ -9,6 +9,7 @@ import { useApiMutation, useNotify } from '@/api/hooks';
 import { useAuth } from '@/app/auth';
 import type { Asset, AssetEvent, BatchListItem, LicenseAssignment, RepairListItem, TimelineItem } from '@/api/types';
 import { Attachments } from '@/components/Attachments';
+import { AssetAgentAlert, AssetAgentCard } from '@/components/AssetAgentInfo';
 import { AuditTable, type AuditRow } from '@/components/AuditTable';
 import { CustomFieldsView } from '@/components/CustomFields';
 import { DocumentsTable } from '@/components/Documents';
@@ -88,6 +89,7 @@ export default function AssetCard() {
           </Dropdown>
         </>}
       />
+      <AssetAgentAlert assetId={a.id} />
       <Tabs activeKey={tab} onChange={setTab} items={[
         {
           key: 'overview', label: t('tabs.overview'), children: (
@@ -128,6 +130,7 @@ export default function AssetCard() {
               </Col>
               <Col xs={24} xl={7}>
                 <Space direction="vertical" style={{ width: '100%' }} size={16}>
+                  <AssetAgentCard assetId={a.id} />
                   <Card size="small" title="QR" style={{ textAlign: 'center' }}>
                     {qr && <Image src={qr} className="itam-qr" preview={false} />}
                     <div className="itam-mono" style={{ marginTop: 6 }}>{a.inventoryNumber}</div>

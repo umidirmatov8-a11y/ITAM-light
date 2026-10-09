@@ -488,6 +488,36 @@ internal static class ModelConfiguration
             e.HasIndex(x => x.StockItemId);
         });
 
+        // ---------------- Agents ----------------
+        b.Entity<AgentDevice>(e =>
+        {
+            e.Property(x => x.MachineId).HasMaxLength(64).IsRequired();
+            e.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
+            e.Property(x => x.Hostname).HasMaxLength(128).IsRequired();
+            foreach (var name in new[] { nameof(AgentDevice.Domain), nameof(AgentDevice.Manufacturer), nameof(AgentDevice.Model), nameof(AgentDevice.SerialNumber),
+                         nameof(AgentDevice.HardwareUuid), nameof(AgentDevice.OsName), nameof(AgentDevice.Cpu), nameof(AgentDevice.CurrentUser), nameof(AgentDevice.Antivirus) })
+                e.Property(name).HasMaxLength(256);
+            foreach (var name in new[] { nameof(AgentDevice.FormFactor), nameof(AgentDevice.OsVersion), nameof(AgentDevice.OsBuild), nameof(AgentDevice.OsArchitecture),
+                         nameof(AgentDevice.IpAddress), nameof(AgentDevice.MacAddress), nameof(AgentDevice.BiosVersion), nameof(AgentDevice.AgentVersion), nameof(AgentDevice.LastIp) })
+                e.Property(name).HasMaxLength(64);
+            e.HasOne(x => x.Asset).WithMany().HasForeignKey(x => x.AssetId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.CurrentEmployeeId).OnDelete(DeleteBehavior.SetNull);
+            e.HasMany(x => x.Software).WithOne(x => x.Device).HasForeignKey(x => x.DeviceId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.OrganizationId, x.MachineId }).IsUnique();
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => x.AssetId);
+            e.HasIndex(x => x.SerialNumber);
+            e.HasIndex(x => x.Hostname).HasMethod("gin").HasOperators("gin_trgm_ops");
+        });
+        b.Entity<DiscoveredSoftware>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Version).HasMaxLength(128);
+            e.Property(x => x.Publisher).HasMaxLength(256);
+            e.HasIndex(x => x.DeviceId);
+            e.HasIndex(x => x.Name);
+        });
+
         // ---------------- Conventions ----------------
         foreach (var et in b.Model.GetEntityTypes())
         {
@@ -513,7 +543,8 @@ internal static class ModelConfiguration
     private static readonly HashSet<Type> OwnedChildren = new()
     {
         typeof(ChecklistTemplateItem), typeof(EmployeeChecklistItem), typeof(RolePermission), typeof(UserRole),
-        typeof(UserRegion), typeof(UserSession), typeof(ApiToken), typeof(RepairStatusHistory), typeof(InventoryCampaignItem)
+        typeof(UserRegion), typeof(UserSession), typeof(ApiToken), typeof(RepairStatusHistory), typeof(InventoryCampaignItem),
+        typeof(DiscoveredSoftware)
     };
 
     private static bool IsOwnedChild(IMutableForeignKey fk) => OwnedChildren.Contains(fk.DeclaringEntityType.ClrType);
