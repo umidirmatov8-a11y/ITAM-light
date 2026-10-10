@@ -114,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     services = Services.create(controller=create_controller(force_mock=args.mock))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(("127.0.0.1", args.port))
+    sock.listen(128)  # accept connections (queued) before announcing readiness
     port = sock.getsockname()[1]
 
     server_ref: dict = {}

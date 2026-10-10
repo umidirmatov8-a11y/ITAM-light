@@ -1,0 +1,79 @@
+/* A.R.C. design tokens. Three phosphor themes; red is reserved for errors and critical actions. */
+:root,
+:root[data-theme="amber"] {
+  --bg: #0b0b09;
+  --bg-grid: rgba(255, 176, 0, 0.035);
+  --panel: #11110e;
+  --panel-2: #171612;
+  --panel-3: #1e1c16;
+  --line: rgba(255, 176, 0, 0.16);
+  --line-strong: rgba(255, 176, 0, 0.42);
+  --accent: #ffb000;
+  --accent-2: #ff7a1a;
+  --accent-soft: rgba(255, 176, 0, 0.12);
+  --accent-dim: #8f6a1c;
+  --text: #f3dcaa;
+  --text-dim: #a08c64;
+  --text-faint: #6c5f45;
+  --ok: #8fc47a;
+  --ok-soft: rgba(143, 196, 122, 0.14);
+  --warn: #ffcf5c;
+  --danger: #ff4d3d;
+  --danger-soft: rgba(255, 77, 61, 0.14);
+  --glow: 0 0 10px rgba(255, 176, 0, 0.28);
+  --glow-text: 0 0 6px rgba(255, 176, 0, 0.45);
+}
+
+:root[data-theme="phosphor"] {
+  --bg: #070a07;
+  --bg-grid: rgba(120, 255, 150, 0.03);
+  --panel: #0c110c;
+  --panel-2: #111811;
+  --panel-3: #172017;
+  --line: rgba(120, 230, 140, 0.16);
+  --line-strong: rgba(120, 230, 140, 0.42);
+  --accent: #7be08f;
+  --accent-2: #c6f26a;
+  --accent-soft: rgba(123, 224, 143, 0.12);
+  --accent-dim: #3f7a4a;
+  --text: #cdf5d2;
+  --text-dim: #7ea585;
+  --text-faint: #4d6a52;
+  --ok: #c6f26a;
+  --ok-soft: rgba(198, 242, 106, 0.14);
+  --warn: #ffd166;
+  --glow: 0 0 10px rgba(123, 224, 143, 0.26);
+  --glow-text: 0 0 6px rgba(123, 224, 143, 0.45);
+}
+
+:root[data-theme="ice"] {
+  --bg: #080a0d;
+  --bg-grid: rgba(127, 200, 255, 0.03);
+  --panel: #0d1116;
+  --panel-2: #121821;
+  --panel-3: #18202b;
+  --line: rgba(127, 200, 255, 0.16);
+  --line-strong: rgba(127, 200, 255, 0.42);
+  --accent: #7fc8ff;
+  --accent-2: #b48cff;
+  --accent-soft: rgba(127, 200, 255, 0.12);
+  --accent-dim: #3d6787;
+  --text: #d6e9fa;
+  --text-dim: #8098b0;
+  --text-faint: #50627a;
+  --ok: #8fd6a3;
+  --ok-soft: rgba(143, 214, 163, 0.14);
+  --warn: #ffd166;
+  --glow: 0 0 10px rgba(127, 200, 255, 0.26);
+  --glow-text: 0 0 6px rgba(127, 200, 255, 0.45);
+}
+
+:root {
+  --font: "IBM Plex Mono", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --radius: 2px;
+  --gap: 14px;
+  --titlebar-h: 38px;
+  --rail-w: 76px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: dark;
+}
