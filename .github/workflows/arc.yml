@@ -39,6 +39,31 @@ jobs:
       - name: Build (backend tests, PyInstaller, self-test, UI tests, electron-builder)
         run: powershell -ExecutionPolicy Bypass -File ARC\scripts\build.ps1
 
+      - name: Cache speech models for the voice end-to-end test
+        uses: actions/cache@v4
+        with:
+          path: ARC/ci-models
+          key: arc-voice-models-v1-whisper-small-piper-irina
+
+      - name: Voice end-to-end (Piper speaks -> VAD -> Whisper -> Assistant -> action)
+        working-directory: ARC/backend
+        env:
+          ARC_TEST_MODELS: ${{ github.workspace }}\ARC\ci-models
+          ARC_TEST_STT: whisper-small
+        run: |
+          .venv\Scripts\python -m pytest tests\test_voice_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'voice end-to-end failed' }
+
+      - name: Frozen backend recognizes Russian speech (arc-backend.exe --transcribe)
+        working-directory: ARC/backend
+        run: |
+          [Console]::OutputEncoding = [Text.Encoding]::UTF8
+          $models = Join-Path $env:GITHUB_WORKSPACE 'ARC\ci-models'
+          $out = & dist\arc-backend\arc-backend.exe --transcribe (Join-Path $models 'check-command.wav') --model-dir (Join-Path $models 'whisper-small')
+          $out
+          $json = $out | ConvertFrom-Json
+          if ($json.text -notmatch '(?i)блокнот') { throw "unexpected transcript: $($json.text)" }
+
       - name: Smoke test of the unpacked app (Electron + backend + IPC)
         working-directory: ARC/app
         run: |

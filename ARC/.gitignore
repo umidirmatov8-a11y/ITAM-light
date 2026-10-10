@@ -11,3 +11,4 @@ app/release/
 app/coverage/
 *.log
 ci-logs/
+ci-models/

@@ -1,15 +1,17 @@
 import { FormEvent, useState } from "react";
 
 import { ArcCore } from "../components/ArcCore";
-import { IconExpand, IconSend, IconStop } from "../components/Icons";
+import { IconExpand, IconMic, IconSend, IconStop } from "../components/Icons";
 import { useArc } from "../lib/store";
 
 /** Floating always-on-top widget: status, last answer, text command. */
 export function Compact() {
-  const { state, backend, busy, conversation, sendCommand, setEmergency } = useArc();
+  const { state, backend, busy, conversation, sendCommand, setEmergency, voice, voiceAction } = useArc();
+  const voiceReady = voice && !["disabled", "not_installed"].includes(voice.state);
   const [text, setText] = useState("");
   const last = conversation[conversation.length - 1] ?? state?.last_response ?? null;
-  const core = backend.state !== "ready" ? "offline" : state?.emergency_stop ? "alert" : busy ? "busy" : "idle";
+  const core = backend.state !== "ready" ? "offline" : state?.emergency_stop ? "alert"
+    : busy || voice?.ptt || voice?.state === "processing" ? "busy" : "idle";
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -27,6 +29,10 @@ export function Compact() {
           <span className={`tag ${state?.mode === "ONLINE" ? "tag--accent" : "tag--ok"}`}>{state?.mode ?? "…"}</span>
           {state?.emergency_stop && <span className="tag tag--danger">E-STOP</span>}
           <span style={{ flex: 1 }} />
+          <button className={`btn btn--sm ${voice?.ptt ? "btn--solid" : ""}`} disabled={!voiceReady}
+                  title={voice?.message ?? "Голос"} onClick={() => void voiceAction("toggle")}>
+            <IconMic size={14} />
+          </button>
           <button className="btn btn--sm btn--danger" title="Аварийная остановка"
                   onClick={() => void setEmergency(!state?.emergency_stop)}><IconStop size={14} /></button>
           <button className="btn btn--sm" title="Развернуть" onClick={() => window.arc?.window("expand")}>

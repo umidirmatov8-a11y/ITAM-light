@@ -60,7 +60,7 @@ export interface ArcState {
   silent: boolean;
   dry_run: boolean;
   simulated: boolean;
-  voice: ModuleState;
+  voice: { state: VoiceStateName; message: string; ptt: boolean; continuous: boolean };
   camera: ModuleState;
 }
 
@@ -85,6 +85,57 @@ export interface Settings {
   };
   ui: { theme: "amber" | "phosphor" | "ice"; scale: number; animations: boolean; scanlines: boolean };
   profile: { silent: boolean };
+  voice: VoiceSettings;
+}
+
+export interface VoiceSettings {
+  mode: "ptt" | "continuous";
+  stt_model: string;
+  stt_device: "auto" | "cpu" | "cuda";
+  input_device: string | null;
+  tts_engine: "sapi" | "piper" | "off";
+  tts_voice: string;
+  tts_rate: number;
+  tts_volume: number;
+  vad_sensitivity: number;
+  silence_ms: number;
+  max_utterance_s: number;
+}
+
+export type VoiceStateName =
+  | "disabled"
+  | "not_installed"
+  | "idle"
+  | "listening"
+  | "continuous"
+  | "hearing"
+  | "processing"
+  | "speaking"
+  | "error";
+
+export interface VoiceStatus {
+  state: VoiceStateName;
+  message: string;
+  mode: "ptt" | "continuous";
+  ptt: boolean;
+  continuous: boolean;
+  capturing: boolean;
+  levels: number[];
+  stt: { model: string; installed: boolean; device: string | null; loaded: boolean };
+  tts: { engine: string; warning: string | null };
+  last_transcript: { text: string; confidence: number; duration_s: number; elapsed_s: number; ts: number; explicit: boolean } | null;
+}
+
+export interface VoiceModel {
+  id: string;
+  title: string;
+  kind: "stt" | "tts_runtime" | "tts_voice";
+  size_mb: number;
+  description: string;
+  license: string;
+  supported: boolean;
+  installed: boolean;
+  download: { state: "downloading" | "done" | "error" | "cancelled"; done_mb: number; total_mb: number; progress: number; message: string } | null;
 }
 
 export type LaunchType = "exe" | "lnk" | "uwp" | "protocol";

@@ -45,18 +45,39 @@ function StatusRow({ icon, name, value, tone, children }: {
   );
 }
 
+export const VOICE_LABEL: Record<string, string> = {
+  disabled: "выключен",
+  not_installed: "нет модели речи",
+  idle: "готов",
+  listening: "слушаю",
+  continuous: "слушаю постоянно",
+  hearing: "слышу речь",
+  processing: "распознаю",
+  speaking: "отвечаю",
+  error: "ошибка",
+};
+
+function micTone(state: string | undefined): "ok" | "warn" | "danger" | "accent" | "off" {
+  if (!state || state === "disabled") return "off";
+  if (state === "error") return "danger";
+  if (state === "not_installed") return "warn";
+  if (state === "idle") return "ok";
+  return "accent";
+}
+
 function StatusPanel() {
-  const { state, ai, settings, updateSettings } = useArc();
+  const { state, ai, settings, updateSettings, voice } = useArc();
   if (!state || !settings) return <Panel title="Состояние"><div className="empty">Ожидание ядра…</div></Panel>;
   const mic = settings.devices.microphone_enabled;
   const cam = settings.devices.camera_enabled;
   const aiOn = settings.devices.local_ai_enabled;
+  const voiceState = voice?.state ?? state.voice.state;
   return (
     <Panel title="Состояние" testId="status-panel">
-      <StatusRow icon={<IconMic size={16} />} name="Микрофон" tone={mic ? "warn" : "off"}
-                 value={mic ? "модуль не установлен" : "выключен"}>
+      <StatusRow icon={<IconMic size={16} />} name="Микрофон" tone={micTone(voiceState)}
+                 value={VOICE_LABEL[voiceState] ?? voiceState}>
         <button className="btn btn--sm" onClick={() => updateSettings({ devices: { microphone_enabled: !mic } })}
-                title={state.voice.message} data-testid="toggle-mic">{mic ? "Откл." : "Вкл."}</button>
+                title={voice?.message ?? state.voice.message} data-testid="toggle-mic">{mic ? "Откл." : "Вкл."}</button>
       </StatusRow>
       <StatusRow icon={<IconCam size={16} />} name="Камера" tone={cam ? "warn" : "off"}
                  value={cam ? "модуль не установлен" : "выключена"}>
@@ -269,8 +290,33 @@ function HistoryPanel() {
   );
 }
 
+function VoiceControl() {
+  const { voice, voiceAction, setContinuous, settings } = useArc();
+  const state = voice?.state ?? "idle";
+  const unavailable = !voice || state === "disabled" || state === "not_installed";
+  const active = Boolean(voice?.ptt || state === "hearing" || state === "processing");
+  const note = voice?.message || "Ядро голоса недоступно";
+  return (
+    <div className="voice">
+      <button className={`voice__btn ${active ? "voice__btn--active" : ""} ${voice?.continuous ? "voice__btn--continuous" : ""}`}
+              disabled={unavailable || state === "processing"} data-testid="voice-button" data-state={state}
+              aria-pressed={active} title={`${note} (Ctrl+Alt+Space)`}
+              onClick={() => void voiceAction("toggle")}>
+        <IconMic size={22} />
+        <span>{active ? "СТОП" : "ГОЛОС"}</span>
+      </button>
+      <button className={`btn btn--sm ${voice?.continuous ? "btn--solid" : ""}`} disabled={unavailable}
+              data-testid="voice-continuous" onClick={() => void setContinuous(!voice?.continuous)}
+              title={`Постоянное прослушивание: команды выполняются только после слова «${settings?.general.wake_word ?? "арк"}»`}>
+        {voice?.continuous ? "Слушаю постоянно" : "Слушать постоянно"}
+      </button>
+      <div className="voice__note faint" data-testid="voice-note">{note}</div>
+    </div>
+  );
+}
+
 export function Home() {
-  const { state, backend, busy, conversation } = useArc();
+  const { state, backend, busy, conversation, voice } = useArc();
   const last = conversation[conversation.length - 1] ?? state?.last_response ?? null;
   let core: CoreState = "idle";
   let coreLabel = "ОЖИДАНИЕ";
@@ -280,9 +326,15 @@ export function Home() {
   } else if (state?.emergency_stop) {
     core = "alert";
     coreLabel = "АВАРИЙНЫЙ СТОП";
-  } else if (busy) {
+  } else if (busy || voice?.state === "processing") {
     core = "busy";
-    coreLabel = "ОБРАБОТКА";
+    coreLabel = voice?.state === "processing" ? "РАСПОЗНАВАНИЕ" : "ОБРАБОТКА";
+  } else if (voice?.ptt || voice?.state === "hearing") {
+    core = "busy";
+    coreLabel = "СЛУШАЮ";
+  } else if (voice?.state === "speaking") {
+    core = "busy";
+    coreLabel = "ОТВЕТ";
   } else if (state?.pending_confirmation || state?.dialog) {
     core = "attention";
     coreLabel = state?.pending_confirmation ? "ПОДТВЕРЖДЕНИЕ" : "УТОЧНЕНИЕ";
@@ -297,17 +349,25 @@ export function Home() {
       <div className="home__center">
         <div className="core-stage">
           <ArcCore state={core} mode={state?.mode ?? "LOCAL"} label={coreLabel} />
-          <div className="voice">
-            <button className="voice__btn" disabled aria-disabled="true" data-testid="voice-button"
-                    title={state?.voice.message ?? "Голосовой модуль подключается на этапе 2"}>
-              <IconMic size={22} />
-              <span>ГОЛОС</span>
-            </button>
-            <div className="voice__note faint">{state?.voice.message ?? "Голосовой модуль подключается на этапе 2"}</div>
-          </div>
+          <VoiceControl />
         </div>
-        <Panel title="Сигнал" className="scope-panel" tag={busy ? "активность" : "микрофон не подключён"}>
-          <Oscilloscope active={busy} label={busy ? "ОБРАБОТКА КОМАНДЫ" : "НЕТ СИГНАЛА"} />
+        <Panel title="Сигнал" className="scope-panel"
+               tag={voice?.capturing ? "микрофон открыт" : busy ? "активность" : "микрофон закрыт"}>
+          <Oscilloscope active={busy || voice?.state === "processing" || voice?.state === "speaking"}
+                        levels={voice?.capturing ? voice.levels : undefined}
+                        label={voice?.capturing ? (VOICE_LABEL[voice.state] ?? "").toUpperCase()
+                          : busy ? "ОБРАБОТКА КОМАНДЫ" : "НЕТ СИГНАЛА"} />
+          {voice?.last_transcript && (
+            <div className="last-line">
+              <span className="mono-label">Распознано</span>
+              <span className="last-line__text selectable" data-testid="last-transcript">
+                «{voice.last_transcript.text || "—"}»{" "}
+                <span className="faint">
+                  {Math.round(voice.last_transcript.confidence * 100)}% · {voice.last_transcript.elapsed_s} с
+                </span>
+              </span>
+            </div>
+          )}
           <div className="last-line">
             <span className="mono-label">Последняя команда</span>
             <span className="last-line__text selectable" data-testid="last-command">{last?.input || "—"}</span>

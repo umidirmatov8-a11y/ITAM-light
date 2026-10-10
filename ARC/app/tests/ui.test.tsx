@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { App } from "../src/App";
 import { ConfirmDialog } from "../src/components/ConfirmDialog";
 import { ArcProvider } from "../src/lib/store";
-import { installBridge, response } from "./mockBridge";
+import { installBridge, response, voiceStatus } from "./mockBridge";
 
 describe("home screen", () => {
   it("sends a typed command through the bridge and shows the answer", async () => {
@@ -24,12 +24,44 @@ describe("home screen", () => {
     expect(api).toHaveBeenCalledWith("POST", "/api/command", { text: "открой проводник", source: "text" });
   });
 
-  it("is honest about modules that are not installed yet", async () => {
-    installBridge();
+  it("voice button toggles push-to-talk", async () => {
+    let current = voiceStatus;
+    const { api } = installBridge((method, path) => {
+      if (method === "POST" && path === "/api/voice/ptt") current = { ...voiceStatus, state: "listening", ptt: true, capturing: true };
+      return path.startsWith("/api/voice/ptt") || path === "/api/voice/status" ? current : undefined;
+    });
     render(<App />);
     const voice = (await screen.findByTestId("voice-button")) as HTMLButtonElement;
+    await waitFor(() => expect(voice.disabled).toBe(false));
+    await act(async () => {
+      fireEvent.click(voice);
+    });
+    expect(api).toHaveBeenCalledWith("POST", "/api/voice/ptt", { action: "toggle" });
+    await waitFor(() => expect(voice.textContent).toContain("СТОП"));
+  });
+
+  it("is honest when the speech model is not installed", async () => {
+    installBridge((_m, path) =>
+      path === "/api/voice/status" ? { ...voiceStatus, state: "not_installed", message: "Модель распознавания речи не установлена" } : undefined,
+    );
+    render(<App />);
+    const voice = (await screen.findByTestId("voice-button")) as HTMLButtonElement;
+    await waitFor(() => expect(screen.getByTestId("voice-note").textContent).toContain("не установлена"));
     expect(voice.disabled).toBe(true);
-    await waitFor(() => expect(screen.getByTestId("status-panel").textContent).toContain("модуль не установлен"));
+    expect(screen.getByTestId("status-panel").textContent).toContain("нет модели речи");
+  });
+
+  it("downloads a model only after the size is confirmed", async () => {
+    const { api } = installBridge();
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("nav-settings"));
+    fireEvent.click(await screen.findByTestId("download-whisper-small"));
+    expect(api).not.toHaveBeenCalledWith("POST", "/api/voice/models/download", expect.anything());
+    expect(screen.getByTestId("confirm-download").textContent).toContain("484 МБ");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("confirm-download"));
+    });
+    expect(api).toHaveBeenCalledWith("POST", "/api/voice/models/download", { id: "whisper-small", confirm: true });
   });
 
   it("switches LOCAL/ONLINE through settings", async () => {

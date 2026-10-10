@@ -10,6 +10,7 @@ import type {
   HistoryItem,
   Settings,
   SystemStats,
+  VoiceStatus,
 } from "./types";
 
 export interface Toast {
@@ -27,6 +28,9 @@ export interface ArcContextValue {
   apps: AppEntry[];
   history: HistoryItem[];
   conversation: CommandResponse[];
+  voice: VoiceStatus | null;
+  voiceAction(action: "start" | "stop" | "toggle"): Promise<void>;
+  setContinuous(enabled: boolean): Promise<void>;
   busy: boolean;
   toasts: Toast[];
   sendCommand(text: string): Promise<CommandResponse | null>;
@@ -70,6 +74,8 @@ export function ArcProvider({ children }: { children: ReactNode }) {
   const [apps, setApps] = useState<AppEntry[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [conversation, setConversation] = useState<CommandResponse[]>([]);
+  const [voice, setVoice] = useState<VoiceStatus | null>(null);
+  const lastTranscriptTs = useRef(0);
   const [busy, setBusy] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const toastId = useRef(0);
@@ -105,6 +111,7 @@ export function ArcProvider({ children }: { children: ReactNode }) {
     const offStatus = window.arc.onBackendStatus(setBackend);
     const offEvent = window.arc.onEvent((event) => {
       if (event.type === "emergency-stop") notify("error", "Аварийная остановка активирована горячей клавишей");
+      if (event.type === "voice-error") notify("error", String((event as { detail?: string }).detail ?? "Голос недоступен"));
     });
     return () => {
       offStatus();
@@ -169,6 +176,64 @@ export function ArcProvider({ children }: { children: ReactNode }) {
       window.clearInterval(historyTimer);
     };
   }, [ready, refreshState, refreshApps, refreshHistory, refreshAi]);
+
+  // ---------------------------------------------------------------- voice
+  const voiceActive = Boolean(voice && (voice.capturing || voice.state === "processing" || voice.state === "speaking"));
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await get<VoiceStatus>("/api/voice/status");
+        if (cancelled) return;
+        setVoice(status);
+        const t = status.last_transcript;
+        if (t && t.ts > lastTranscriptTs.current) {
+          // a voice command was handled by the backend: refresh what the UI shows
+          if (lastTranscriptTs.current) {
+            void refreshState();
+            void refreshHistory();
+            get<HistoryItem[]>("/api/history?limit=1")
+              .then((items) => {
+                const h = items[0];
+                if (h && h.source === "voice")
+                  setConversation((all) => [...all.slice(-29), {
+                    id: `voice-${h.id}`, ts: h.ts, input: h.input, source: "voice", status: h.status,
+                    message: h.message, intent: h.intent, action: h.action, risk: null, data: {},
+                    confirmation: null, clarify: null, dry_run: h.status === "dry_run",
+                  }]);
+              })
+              .catch(() => undefined);
+          }
+          lastTranscriptTs.current = t.ts;
+        }
+      } catch {
+        /* backend banner covers this */
+      }
+    };
+    void poll();
+    const timer = window.setInterval(poll, voiceActive ? 120 : 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [ready, voiceActive, refreshState, refreshHistory]);
+
+  const voiceAction = useCallback(
+    async (action: "start" | "stop" | "toggle") => {
+      const status = await guard(() => post<VoiceStatus>("/api/voice/ptt", { action }));
+      if (status) setVoice(status);
+    },
+    [guard],
+  );
+
+  const setContinuous = useCallback(
+    async (enabled: boolean) => {
+      const status = await guard(() => post<VoiceStatus>("/api/voice/listen", { enabled }));
+      if (status) setVoice(status);
+    },
+    [guard],
+  );
 
   // ---------------------------------------------------------------- actions
   const record = useCallback(
@@ -257,6 +322,9 @@ export function ArcProvider({ children }: { children: ReactNode }) {
       apps,
       history,
       conversation,
+      voice,
+      voiceAction,
+      setContinuous,
       busy,
       toasts,
       sendCommand,
@@ -273,7 +341,7 @@ export function ArcProvider({ children }: { children: ReactNode }) {
       notify,
       dismissToast,
     }),
-    [backend, state, settings, stats, ai, apps, history, conversation, busy, toasts, sendCommand, confirm, undo, repeat,
+    [backend, state, settings, stats, ai, apps, history, conversation, voice, voiceAction, setContinuous, busy, toasts, sendCommand, confirm, undo, repeat,
      setEmergency, launchApp, updateSettings, refreshApps, refreshHistory, refreshAi, refreshState, notify, dismissToast],
   );
   return <ArcContext.Provider value={value}>{children}</ArcContext.Provider>;

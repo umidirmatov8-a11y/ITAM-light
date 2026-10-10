@@ -61,19 +61,25 @@ class Assistant:
         self._pool.shutdown(wait=False, cancel_futures=True)
 
     # ================================================================== entry points
-    def handle_text(self, text: str, source: Source = Source.TEXT, confidence: float = 1.0) -> CommandResponse:
+    def handle_text(self, text: str, source: Source = Source.TEXT, confidence: float = 1.0,
+                    explicit: bool = False) -> CommandResponse:
+        """`explicit` — voice captured after a deliberate activation (push-to-talk): no wake word needed."""
         with self._lock:
             settings = self.settings.get()
             if source == Source.VOICE and confidence < settings.general.min_confidence:
-                return self._finish(CommandResponse(input=text, source=source, status=Status.IGNORED,
+                # after push-to-talk the user expects an answer; background speech is ignored silently
+                return self._finish(CommandResponse(input=text, source=source,
+                                                    status=Status.UNKNOWN if explicit else Status.IGNORED,
                                                     message="Не расслышал команду. Повторите, пожалуйста.",
-                                                    intent="low_confidence"), record=False)
+                                                    intent="low_confidence", data={"confidence": confidence}),
+                                    record=explicit)
             ctx = RouterContext(
                 apps=self.registry.list(include_disabled=False),
                 scenarios=self.scenarios.list(),
                 folders=self.folders(),
                 wake_word=settings.general.wake_word,
-                require_wake_word=source == Source.VOICE and settings.general.require_wake_word_for_voice,
+                require_wake_word=(source == Source.VOICE and not explicit
+                                   and settings.general.require_wake_word_for_voice),
                 dialog=self._dialog,
                 has_pending_confirmation=self.permissions.latest_pending() is not None,
                 now=self.clock(),

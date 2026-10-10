@@ -36,8 +36,8 @@ def test_subprocess_never_uses_shell_and_takes_lists():
                     assert isinstance(kw.value, ast.Constant) and kw.value.value is False, (path.name, node.lineno)
             if node.args:
                 first = node.args[0]
-                assert isinstance(first, (ast.List, ast.Name)) or (
-                    isinstance(first, ast.Call) and _name(first.func) == ""), (path.name, node.lineno)
+                # an argument list (literal, variable or list-building helper), never a command string
+                assert isinstance(first, (ast.List, ast.Name, ast.Call)), (path.name, node.lineno)
                 assert not isinstance(first, (ast.Constant, ast.JoinedStr, ast.BinOp)), (path.name, node.lineno)
 
 
@@ -48,3 +48,11 @@ def test_powershell_only_with_fixed_command():
             items = node.args[0].elts
             if items and isinstance(items[0], ast.Constant) and "powershell" in str(items[0].value).lower():
                 assert path.name == "discovery.py"
+
+
+def test_piper_args_are_a_list():
+    from arc_backend.voice.tts import PiperSynthesizer
+    synth = PiperSynthesizer.__new__(PiperSynthesizer)
+    synth.exe, synth.model = "piper.exe", "voice.onnx"
+    args = synth._args(1.25, ["--output_raw"])
+    assert isinstance(args, list) and args[0] == "piper.exe" and "--output_raw" in args

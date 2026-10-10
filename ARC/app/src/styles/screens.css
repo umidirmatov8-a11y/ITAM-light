@@ -132,3 +132,44 @@ code {
   font-family: var(--font);
   font-size: 12px;
 }
+.model-group {
+  margin-top: 12px;
+}
+.model-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.model-row__info {
+  min-width: 0;
+  flex: 1;
+}
+.model-row__actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.progress {
+  position: relative;
+  height: 14px;
+  margin-top: 6px;
+  border: 1px solid var(--line-strong);
+  background: rgba(0, 0, 0, 0.35);
+}
+.progress span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 6px, var(--accent-dim) 6px 8px);
+  transition: width 0.4s var(--ease);
+}
+.progress em {
+  position: relative;
+  font-style: normal;
+  font-size: 10px;
+  padding-left: 6px;
+  color: var(--text);
+  mix-blend-mode: difference;
+}

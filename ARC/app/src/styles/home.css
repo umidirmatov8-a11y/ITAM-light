@@ -554,3 +554,18 @@
   min-height: 26px;
   padding: 3px 8px;
 }
+
+.voice__btn:not(:disabled):hover {
+  border-color: var(--accent);
+  box-shadow: var(--glow);
+}
+.voice__btn--active {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent-soft), var(--panel));
+  box-shadow: 0 0 18px var(--accent-soft), var(--glow);
+  animation: pulse 1.2s infinite;
+}
+.voice__btn--continuous {
+  border-style: double;
+  border-width: 3px;
+}

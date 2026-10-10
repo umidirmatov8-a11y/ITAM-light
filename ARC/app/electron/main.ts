@@ -205,6 +205,7 @@ function updateTrayMenu(): void {
     Menu.buildFromTemplate([
       { label: "Показать A.R.C.", click: showMain },
       { label: "Компактный виджет", click: showCompact },
+      { label: "Голосовая команда (Ctrl+Alt+Space)", click: () => void pushToTalk() },
       { type: "separator" },
       { label: "Аварийная остановка (Ctrl+Alt+End)", click: () => void emergencyStop() },
       { type: "separator" },
@@ -221,10 +222,22 @@ function createTray(): void {
   updateTrayMenu();
 }
 
+async function pushToTalk(): Promise<void> {
+  const result = await backend.request("POST", "/api/voice/ptt", { action: "toggle" });
+  if (result.status !== 200) {
+    const detail = (result.body as { detail?: string } | null)?.detail ?? "голос недоступен";
+    log(`push-to-talk: ${detail}`);
+    for (const win of [mainWindow, compactWindow]) {
+      if (win && !win.isDestroyed()) win.webContents.send("arc:event", { type: "voice-error", detail });
+    }
+  }
+}
+
 function registerShortcuts(): void {
   const shortcuts: Array<[string, () => void]> = [
     ["Control+Alt+A", toggleMain],
     ["Control+Alt+End", () => void emergencyStop()],
+    ["Control+Alt+Space", () => void pushToTalk()],
   ];
   for (const [accelerator, handler] of shortcuts) {
     if (!globalShortcut.register(accelerator, handler)) log(`shortcut ${accelerator} is taken by another program`);

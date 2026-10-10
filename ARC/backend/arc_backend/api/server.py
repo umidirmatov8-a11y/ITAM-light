@@ -23,6 +23,8 @@ from ..permissions.catalog import catalog_view
 from ..services import Services
 from ..storage.scenarios import SCENARIO_ACTIONS, ScenarioInput
 from ..storage.settings import NetworkMode
+from ..voice.engine import VoiceError, stt_device_info
+from ..voice.models import DownloadError
 
 TOKEN_HEADER = "x-arc-token"
 
@@ -83,6 +85,19 @@ class ConfirmBody(BaseModel):
 
 class EmergencyBody(BaseModel):
     engaged: bool
+
+
+class PttBody(BaseModel):
+    action: Literal["start", "stop", "toggle"]
+
+
+class ListenBody(BaseModel):
+    enabled: bool
+
+
+class ModelBody(BaseModel):
+    id: str = Field(min_length=1, max_length=64, pattern=r"^[a-z0-9\-]+$")
+    confirm: bool = False
 
 
 class AppCreateBody(AppInput):
@@ -151,7 +166,7 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
                 "online_allowed": settings.network.online_allowed, "devices": settings.devices.model_dump(),
                 "silent": settings.profile.silent, "dry_run": settings.safety.dry_run,
                 "simulated": s.controller.simulated,
-                "voice": {"state": "not_installed", "message": "Голосовой модуль подключается на этапе 2"},
+                "voice": {k: v for k, v in s.voice.status().items() if k in ("state", "message", "ptt", "continuous")},
                 "camera": {"state": "not_installed", "message": "Модуль жестов подключается на этапе 3"}}
 
     @app.post("/api/command")
@@ -187,6 +202,8 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
     @app.put("/api/settings")
     def put_settings(patch: dict[str, Any] = Body(...)) -> dict[str, Any]:
         updated = s.settings.update(patch)
+        if not updated.devices.microphone_enabled:
+            s.voice.stop_all()
         if "ai" in patch or "devices" in patch or "network" in patch:
             ai_cache["ts"] = 0.0
         s.journal.audit(action="settings.update", params={"sections": sorted(patch)}, risk="-", source="ui",
@@ -338,12 +355,84 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         add("Локальный ИИ (Ollama)", "ok" if ai_state["state"] == "ready" else "warn", ai_state.get("message", ""))
         add("GPU", "ok" if s.gpu.available else "warn",
             "nvidia-smi найден" if s.gpu.available else "nvidia-smi не найден: метрики GPU недоступны, ИИ будет на CPU")
-        add("Микрофон / распознавание речи", "info", "Модуль голоса подключается на этапе 2")
+        mics = s.voice.devices()
+        add("Микрофон", "ok" if mics else "warn",
+            ", ".join(d["name"] for d in mics[:3]) if mics else "Устройства записи не найдены: работают текстовые команды")
+        stt_id = settings.voice.stt_model
+        add("Распознавание речи", "ok" if s.models.installed(stt_id) else "warn",
+            f"{stt_id}: {'установлена' if s.models.installed(stt_id) else 'не установлена (Настройки → Голос)'}; "
+            f"ускорение: {'CUDA доступна' if stt_device_info()['cuda'] else 'CPU (CUDA не найдена)'}")
+        voice_status = s.voice.status()
+        add("Синтез речи", "warn" if voice_status["tts"]["warning"] else "ok",
+            voice_status["tts"]["warning"] or f"Движок: {settings.voice.tts_engine}")
         add("Камера / жесты", "info", "Модуль жестов подключается на этапе 3")
         add("Сеть", "ok", f"Режим {settings.network.mode.value}; онлайн-функции "
                           f"{'разрешены' if settings.network.online_allowed else 'выключены'}")
         add("Приложения", "ok", f"В реестре: {len(s.registry.list())}")
         return {"checks": checks, "data_dir": str(s.data_dir), "ts": time.time()}
+
+    # ------------------------------------------------------------------ voice
+    def voice_call(fn):
+        try:
+            return fn()
+        except VoiceError as exc:
+            return JSONResponse({"error": "voice_unavailable", "detail": str(exc)}, status_code=409)
+
+    @app.get("/api/voice/status")
+    def voice_status() -> dict[str, Any]:
+        return s.voice.status()
+
+    @app.post("/api/voice/ptt")
+    def voice_ptt(body: PttBody) -> dict[str, Any]:
+        action = {"start": s.voice.start_ptt, "stop": s.voice.stop_ptt, "toggle": s.voice.toggle_ptt}[body.action]
+        return voice_call(action)
+
+    @app.post("/api/voice/listen")
+    def voice_listen(body: ListenBody) -> dict[str, Any]:
+        return voice_call(lambda: s.voice.set_continuous(body.enabled))
+
+    @app.post("/api/voice/tts-test")
+    def voice_tts_test() -> dict[str, Any]:
+        spoken = s.voice.speak("Проверка голоса. A.R.C. на связи.", force=True)
+        status = s.voice.status()
+        return {"spoken": spoken, "warning": status["tts"]["warning"]}
+
+    @app.get("/api/voice/devices")
+    def voice_devices() -> dict[str, Any]:
+        voices: list[dict] = []
+        try:
+            voices = s.voice._synthesizer().voices()
+        except Exception as exc:  # SAPI/COM problems should not break the settings screen
+            voices = [{"name": f"недоступно: {exc}", "language": "", "russian": False}]
+        return {"inputs": s.voice.devices(), "voices": voices, **stt_device_info()}
+
+    @app.get("/api/voice/models")
+    def voice_models() -> dict[str, Any]:
+        return {"models": s.models.list(), "free_mb": round(s.models.free_mb()), "dir": str(s.models.models_dir)}
+
+    @app.post("/api/voice/models/download")
+    def voice_model_download(body: ModelBody) -> dict[str, Any]:
+        if not body.confirm:
+            raise ValueError("Загрузка требует подтверждения пользователя")
+        try:
+            job = s.models.start_download(body.id, online_allowed=s.settings.get().network.online_allowed)
+        except DownloadError as exc:
+            raise ValueError(str(exc))
+        s.journal.audit(action="voice.model_download", params={"id": body.id}, risk="-", source="ui",
+                        decision="allow", status="started", message=f"Загрузка модели {body.id}")
+        return job.view()
+
+    @app.post("/api/voice/models/cancel")
+    def voice_model_cancel(body: ModelBody) -> dict[str, Any]:
+        return {"cancelled": s.models.cancel(body.id)}
+
+    @app.delete("/api/voice/models/{model_id}")
+    def voice_model_delete(model_id: str) -> dict[str, Any]:
+        try:
+            removed = s.models.remove(model_id)
+        except DownloadError as exc:
+            raise ValueError(str(exc))
+        return {"removed": removed}
 
     @app.post("/api/shutdown")
     def shutdown() -> dict[str, Any]:

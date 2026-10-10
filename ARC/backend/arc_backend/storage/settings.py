@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import threading
 from enum import Enum
-from typing import Any, Callable
+from typing import Any, Callable, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -23,7 +23,7 @@ class GeneralSettings(BaseModel):
     start_minimized: bool = False
     # Text typed into the UI is explicit, so the wake word is only required for voice.
     require_wake_word_for_voice: bool = True
-    min_confidence: float = Field(0.6, ge=0.0, le=1.0)
+    min_confidence: float = Field(0.5, ge=0.0, le=1.0)
 
 
 class NetworkSettings(BaseModel):
@@ -93,6 +93,20 @@ class UISettings(BaseModel):
         return value
 
 
+class VoiceSettings(BaseModel):
+    mode: Literal["ptt", "continuous"] = "ptt"
+    stt_model: str = Field("whisper-small", pattern=r"^whisper-(tiny|base|small|medium)$")
+    stt_device: Literal["auto", "cpu", "cuda"] = "auto"
+    input_device: Optional[str] = Field(None, max_length=200)
+    tts_engine: Literal["sapi", "piper", "off"] = "sapi"
+    tts_voice: str = Field("", max_length=200)
+    tts_rate: float = Field(1.0, ge=0.5, le=2.0)
+    tts_volume: int = Field(80, ge=0, le=100)
+    vad_sensitivity: float = Field(0.5, ge=0.0, le=1.0)
+    silence_ms: int = Field(800, ge=300, le=3000)
+    max_utterance_s: float = Field(12.0, ge=3.0, le=30.0)
+
+
 class ProfileSettings(BaseModel):
     silent: bool = False
 
@@ -105,6 +119,7 @@ class Settings(BaseModel):
     safety: SafetySettings = Field(default_factory=SafetySettings)
     ui: UISettings = Field(default_factory=UISettings)
     profile: ProfileSettings = Field(default_factory=ProfileSettings)
+    voice: VoiceSettings = Field(default_factory=VoiceSettings)
 
     @model_validator(mode="after")
     def _online_switch(self) -> "Settings":

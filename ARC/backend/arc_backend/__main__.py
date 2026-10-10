@@ -6,6 +6,7 @@ Prints one JSON line {"event": "ready", "port": N} to stdout when listening on 1
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import logging
 import logging.handlers
@@ -47,6 +48,20 @@ def _watch_parent(pid: int, on_exit, interval: float = 1.5) -> None:
     threading.Thread(target=loop, name="parent-watchdog", daemon=True).start()
 
 
+def _voice_libs() -> dict:
+    """The frozen EXE must contain the speech stack (models themselves are downloaded later)."""
+    result: dict = {}
+    for name in ("numpy", "ctranslate2", "faster_whisper", "sounddevice"):
+        try:
+            module = importlib.import_module(name)
+            result[name] = getattr(module, "__version__", "ok")
+        except Exception as exc:  # sounddevice raises OSError when PortAudio is missing (Linux CI)
+            result[name] = f"error: {type(exc).__name__}: {exc}"
+    required = ["numpy", "ctranslate2", "faster_whisper"] + (["sounddevice"] if sys.platform == "win32" else [])
+    result["ok"] = all(not str(result[n]).startswith("error") for n in required)
+    return result
+
+
 def selftest(out: str | None) -> int:
     """Runs core scenarios against a temporary database with the mock controller."""
     from .automation.controller import MockController
@@ -71,13 +86,39 @@ def selftest(out: str | None) -> int:
                                 "ok": response.status == expected, "message": response.message})
         finally:
             services.close()
-    passed = all(r["ok"] for r in results)
-    report = json.dumps({"passed": passed, "results": results}, ensure_ascii=False, indent=2)
+    libs = _voice_libs()
+    passed = all(r["ok"] for r in results) and libs["ok"]
+    report = json.dumps({"passed": passed, "results": results, "voice_libs": libs}, ensure_ascii=False, indent=2)
     if out:
         Path(out).write_text(report, encoding="utf-8")
     else:
         sys.stdout.buffer.write(report.encode("utf-8") + b"\n")
     return 0 if passed else 1
+
+
+def transcribe_file(wav_path: str, model_dir: str) -> int:
+    """Diagnostics: `arc-backend --transcribe file.wav --model-dir <models>/whisper-small`."""
+    import wave
+
+    import numpy as np
+
+    from .voice.audio import resample
+    from .voice.stt import WhisperRecognizer
+
+    with wave.open(wav_path, "rb") as wf:
+        if wf.getsampwidth() != 2:
+            print(json.dumps({"error": "only 16-bit PCM WAV is supported"}))
+            return 2
+        audio = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)
+        if wf.getnchannels() > 1:
+            audio = audio.reshape(-1, wf.getnchannels())[:, 0]
+        audio = resample(audio, wf.getframerate())
+    recognizer = WhisperRecognizer(Path(model_dir), "auto")
+    result = recognizer.transcribe(audio)
+    payload = {"text": result.text, "confidence": round(result.confidence, 3), "device": recognizer.device,
+               "elapsed_s": round(result.elapsed_s, 2)}
+    sys.stdout.buffer.write(json.dumps(payload, ensure_ascii=False).encode("utf-8") + b"\n")
+    return 0 if result.text else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -89,7 +130,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--selftest", action="store_true")
     parser.add_argument("--selftest-out", type=str, default="")
+    parser.add_argument("--transcribe", type=str, default="", help="recognize a WAV file and print JSON")
+    parser.add_argument("--model-dir", type=str, default="", help="Whisper model directory for --transcribe")
     args = parser.parse_args(argv)
+
+    if args.transcribe:
+        return transcribe_file(args.transcribe, args.model_dir)
 
     if args.selftest:
         return selftest(args.selftest_out or None)

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Field, Panel, Toggle } from "../components/ui";
 import { useArc } from "../lib/store";
 import type { Settings as SettingsT } from "../lib/types";
+import { VoiceSettingsPanel } from "./VoiceSettings";
 
 /** Text input that saves on blur / Enter instead of on every keystroke. */
 function LazyInput({ value, onCommit, ...rest }: {
@@ -89,13 +90,14 @@ export function Settings() {
         </Panel>
         <Panel title="Устройства">
           <Toggle checked={s.devices.microphone_enabled} onChange={(v) => save("devices", { microphone_enabled: v })}
-                  label="Микрофон" hint="Модуль голоса (этап 2) не будет открывать микрофон, если выключено" />
+                  label="Микрофон" hint="Выключено — A.R.C. не открывает микрофон ни при каких условиях" />
           <Toggle checked={s.devices.camera_enabled} onChange={(v) => save("devices", { camera_enabled: v })}
                   label="Камера" hint="Модуль жестов (этап 3) не будет открывать камеру, если выключено" />
           <Toggle checked={s.devices.local_ai_enabled} onChange={(v) => save("devices", { local_ai_enabled: v })}
                   label="Локальный ИИ (Ollama)" />
         </Panel>
       </div>
+      <VoiceSettingsPanel />
       <Panel title="Локальная модель (Ollama)" tag={ai ? ai.state : "—"}>
         <div className="form-grid">
           <Field label="Адрес сервера" hint="Адрес вне этого компьютера считается внешним сервисом (нужен ONLINE)">

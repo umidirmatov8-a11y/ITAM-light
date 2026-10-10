@@ -5,7 +5,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 from . import paths
 from .apps.registry import AppRegistry
@@ -13,11 +13,14 @@ from .assistant import Assistant
 from .automation.controller import SystemController, create_controller
 from .automation.executor import Executor
 from .automation.sysinfo import GpuProbe
+from .models import Source
 from .permissions.manager import PermissionManager
 from .storage.db import Database
 from .storage.journal import Journal
 from .storage.scenarios import ScenarioInput, ScenarioStep, ScenarioStore
 from .storage.settings import SettingsStore
+from .voice.engine import VoiceEngine
+from .voice.models import ModelManager
 
 log = logging.getLogger(__name__)
 
@@ -48,10 +51,14 @@ class Services:
     gpu: GpuProbe
     assistant: Assistant
     folders: Callable[[], dict[str, str]]
+    models: ModelManager
+    voice: VoiceEngine
 
     @classmethod
     def create(cls, data_dir: Optional[Path] = None, controller: Optional[SystemController] = None,
-               folders: Optional[Callable[[], dict[str, str]]] = None, db_name: str = "arc.db") -> "Services":
+               folders: Optional[Callable[[], dict[str, str]]] = None, db_name: str = "arc.db",
+               voice_options: Optional[dict[str, Any]] = None, models_dir: Optional[Path] = None) -> "Services":
+        """`voice_options` are passed to VoiceEngine (tests inject fake audio/recognizer/synthesizer)."""
         data_dir = data_dir or paths.data_dir()
         data_dir.mkdir(parents=True, exist_ok=True)
         db = Database(data_dir / db_name)
@@ -78,10 +85,22 @@ class Services:
         executor = Executor(controller, registry, settings, folder_map, gpu)
         assistant = Assistant(settings=settings, registry=registry, scenarios=scenarios, journal=journal,
                               permissions=permissions, executor=executor, folders=folder_map)
+        models = ModelManager(models_dir or data_dir / "models")
+
+        def hints() -> list[str]:
+            names = [a.name for a in registry.list(include_disabled=False)]
+            names += [sc.name for sc in scenarios.list()]
+            return names[:40]
+
+        def on_utterance(text: str, confidence: float, explicit: bool):
+            return assistant.handle_text(text, Source.VOICE, confidence, explicit=explicit)
+
+        voice = VoiceEngine(settings, models, on_utterance, hints=hints, **(voice_options or {}))
         log.info("services ready: data=%s controller=%s first_run=%s", data_dir, controller.name, first_run)
         return cls(data_dir, db, settings, registry, scenarios, journal, permissions, controller, executor, gpu,
-                   assistant, folder_map)
+                   assistant, folder_map, models, voice)
 
     def close(self) -> None:
+        self.voice.shutdown()
         self.assistant.close()
         self.db.close()
