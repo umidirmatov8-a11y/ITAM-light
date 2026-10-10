@@ -1,0 +1,9 @@
+# Runtime dependencies of the A.R.C. backend (bundled by PyInstaller; end users do not install Python).
+fastapi==0.143.0
+starlette==1.7.0
+uvicorn==0.54.0
+pydantic==2.14.0
+psutil==7.2.2
+httpx==0.28.1
+comtypes>=1.4.10,<2; sys_platform == "win32"     # COM: Shell.Application, Core Audio
+pycaw>=20240316; sys_platform == "win32"          # exact master volume (IAudioEndpointVolume)
