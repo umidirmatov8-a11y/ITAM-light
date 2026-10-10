@@ -42,7 +42,7 @@ jobs:
       - name: Smoke test of the unpacked app (Electron + backend + IPC)
         working-directory: ARC/app
         run: |
-          $out = Join-Path $env:RUNNER_TEMP 'smoke-unpacked.json'
+          $out = Join-Path $PWD 'release\smoke-unpacked.json'
           $p = Start-Process -FilePath release\win-unpacked\ARC.exe -ArgumentList "--smoke-test=$out" -Wait -PassThru
           Get-Content $out -Encoding UTF8
           if ($p.ExitCode -ne 0) { throw "Smoke test failed ($($p.ExitCode))" }
@@ -66,7 +66,7 @@ jobs:
           $target = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk).TargetPath
           "Start menu shortcut -> $target"
 
-          $out = Join-Path $env:RUNNER_TEMP 'smoke-installed.json'
+          $out = Join-Path $PWD 'release\smoke-installed.json'
           $p = Start-Process -FilePath (Join-Path $dir 'ARC.exe') -ArgumentList "--smoke-test=$out" -Wait -PassThru
           Get-Content $out -Encoding UTF8
           if ($p.ExitCode -ne 0) { throw "Installed smoke test failed ($($p.ExitCode))" }
@@ -85,6 +85,14 @@ jobs:
           name: ARC-Setup
           path: ARC/app/release/ARC-Setup-*.exe
 
+      - name: Collect logs
+        if: always()
+        run: |
+          New-Item -ItemType Directory -Force ARC\ci-logs | Out-Null
+          foreach ($d in "$env:APPDATA\ARC\logs", "$env:LOCALAPPDATA\ARC\logs") {
+            if (Test-Path $d) { Copy-Item "$d\*.log" ARC\ci-logs -ErrorAction SilentlyContinue }
+          }
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -92,6 +100,5 @@ jobs:
           path: |
             ARC/backend/build/test-results.xml
             ARC/backend/build/selftest.json
-            ${{ runner.temp }}/smoke-*.json
-            ~/AppData/Roaming/ARC/logs/*.log
-            ~/AppData/Local/ARC/logs/*.log
+            ARC/app/release/smoke-*.json
+            ARC/ci-logs/

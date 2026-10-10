@@ -232,8 +232,10 @@ class Executor:
             disks = sysinfo.disks()
             if not disks:
                 return fail(Status.ERROR, "Не удалось получить сведения о дисках")
-            parts = [f"{d['mount'].rstrip(chr(92))}: свободно {d['free_gb']:g} из {d['total_gb']:g} ГБ" for d in disks]
-            return ok("; ".join(parts) + ".", {"disks": disks})
+            parts = [f"диск {d['mount'].rstrip(chr(92)).rstrip(':')}: свободно {d['free_gb']:g} из {d['total_gb']:g} ГБ"
+                     for d in disks]
+            text = "; ".join(parts)
+            return ok(text[0].upper() + text[1:] + ".", {"disks": disks})
         if p.topic == "processes":
             programs = sysinfo.running_programs(self.controller.windowed_pids())
             if not programs:

@@ -10,3 +10,4 @@ app/dist-electron/
 app/release/
 app/coverage/
 *.log
+ci-logs/
