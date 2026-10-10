@@ -1,0 +1,10 @@
+# Runtime dependencies (bundled into the EXE by PyInstaller; end users do not install Python)
+PySide6>=6.6,<7
+ldap3==2.9.1
+openpyxl>=3.1
+keyring>=25.0
+dnspython>=2.6
+cryptography>=42.0          # TLS channel binding for Kerberos over LDAPS/StartTLS
+pycryptodome>=3.20          # MD4 for NTLM bind (OpenSSL 3 removed MD4 from hashlib)
+pywin32-ctypes>=0.2.2; sys_platform == "win32"   # keyring backend: Windows Credential Manager
+winkerberos>=0.10; sys_platform == "win32"       # Kerberos (SASL GSSAPI) with current Windows logon

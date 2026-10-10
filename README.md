@@ -8,3 +8,6 @@ This repository contains:
   diagnostics tool (C#/.NET 8/WPF). See [`FirstAidAdmin/README.md`](FirstAidAdmin/README.md).
 * **Wazuh Security Analyzer** – a Windows desktop Security Analysis Assistant for Wazuh alerts.
   See [`wazuh-security-analyzer/README.md`](wazuh-security-analyzer/README.md).
+* **AD Admin Toolkit** — Windows desktop console for Active Directory administrators (Python/PySide6/ldap3, EXE via
+  PyInstaller): LDAPS/StartTLS, users/computers/groups/OU, audit, bulk operations with Dry Run, reports.
+  See [`ADAdminToolkit/README.md`](ADAdminToolkit/README.md).

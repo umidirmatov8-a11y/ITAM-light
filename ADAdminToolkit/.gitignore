@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/*
+!build/README.md
+.pytest_cache/
+config/settings.json
+*.log

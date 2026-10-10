@@ -1,0 +1,107 @@
+name: AD Admin Toolkit (Windows)
+
+on:
+  push:
+    paths:
+      - 'ADAdminToolkit/**'
+      - '.github/workflows/adadmintoolkit.yml'
+  pull_request:
+    paths:
+      - 'ADAdminToolkit/**'
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: cmd
+        working-directory: ADAdminToolkit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build (venv, dependencies, tests, PyInstaller onedir, EXE self-test)
+        run: build_exe.bat
+
+      - name: Run EXE self-test without Python on PATH
+        shell: pwsh
+        run: |
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'Python|hostedtoolcache' }) -join ';'
+          $p = Start-Process -FilePath .\dist\ADAdminToolkit\ADAdminToolkit.exe -ArgumentList '--selftest','--selftest-out=selftest2.txt' -Wait -PassThru
+          Get-Content selftest2.txt
+          if ($p.ExitCode -ne 0) { throw "EXE self-test failed" }
+
+      - name: Build installer (Inno Setup)
+        run: |
+          if not exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" choco install innosetup -y --no-progress
+          build_installer.bat
+
+      - name: Installer end-to-end (custom folder + desktop shortcut, all users, uninstall)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem dist\ADAdminToolkit-Setup-*.exe | Select-Object -First 1
+          if (-not $setup) { throw "Setup EXE not found" }
+          "Installer: $($setup.Name) ($([math]::Round($setup.Length / 1MB, 1)) MB)"
+          $lnkName = 'AD Admin Toolkit.lnk'
+
+          function Wait-Gone($path) {
+            for ($i = 0; $i -lt 120 -and (Test-Path $path); $i++) { Start-Sleep -Milliseconds 500 }
+            if (Test-Path $path) { throw "Not removed by uninstaller: $path" }
+          }
+          function Test-Installed($dir) {
+            foreach ($f in 'ADAdminToolkit.exe', '_internal\shiboken6', '_internal\PySide6', 'docs\USER_GUIDE_RU.md', 'unins000.exe') {
+              if (-not (Test-Path (Join-Path $dir $f))) { throw "Missing after install: $dir\$f" }
+            }
+            $out = Join-Path $env:RUNNER_TEMP "selftest-$([guid]::NewGuid()).txt"
+            $p = Start-Process -FilePath (Join-Path $dir 'ADAdminToolkit.exe') -ArgumentList '--selftest', "--selftest-out=$out" -Wait -PassThru
+            Get-Content $out
+            if ($p.ExitCode -ne 0) { throw "Installed EXE self-test failed in $dir" }
+          }
+
+          # 1) current user, folder chosen by the user (with spaces), desktop shortcut on
+          $dir1 = Join-Path $env:RUNNER_TEMP 'My Tools\AD Admin Toolkit'
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=`"$dir1`"", '/TASKS=desktopicon', "/LOG=`"$env:RUNNER_TEMP\setup1.log`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content "$env:RUNNER_TEMP\setup1.log" -Tail 40; throw "Setup (current user) exit code $($p.ExitCode)" }
+          Test-Installed $dir1
+          $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) $lnkName
+          if (-not (Test-Path $lnk)) { throw "Desktop shortcut not created: $lnk" }
+          $target = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk).TargetPath
+          "Desktop shortcut -> $target"
+          if ($target -ne (Join-Path $dir1 'ADAdminToolkit.exe')) { throw "Shortcut points to $target" }
+          $p = Start-Process (Join-Path $dir1 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          Wait-Gone (Join-Path $dir1 'ADAdminToolkit.exe'); Wait-Gone $lnk
+          "Current-user install/uninstall OK"
+
+          # 2) all users, default folder (Program Files), no desktop shortcut
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/ALLUSERS', '/TASKS=""', "/LOG=`"$env:RUNNER_TEMP\setup2.log`"" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content "$env:RUNNER_TEMP\setup2.log" -Tail 40; throw "Setup (all users) exit code $($p.ExitCode)" }
+          $dir2 = Join-Path $env:ProgramFiles 'AD Admin Toolkit'
+          Test-Installed $dir2
+          $pubLnk = Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) $lnkName
+          if (Test-Path $pubLnk) { throw "Desktop shortcut created although the option was off" }
+          $startLnk = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) "AD Admin Toolkit\$lnkName"
+          if (-not (Test-Path $startLnk)) { throw "Start menu shortcut not created: $startLnk" }
+          $p = Start-Process (Join-Path $dir2 'unins000.exe') -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          Wait-Gone (Join-Path $dir2 'ADAdminToolkit.exe'); Wait-Gone $startLnk
+          "All-users install/uninstall OK"
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: ADAdminToolkit-Setup
+          path: ADAdminToolkit/dist/ADAdminToolkit-Setup-*.exe
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ADAdminToolkit-onedir
+          path: |
+            ADAdminToolkit/dist/ADAdminToolkit
+            ADAdminToolkit/build/test-results.xml
+            ADAdminToolkit/build/selftest.txt
