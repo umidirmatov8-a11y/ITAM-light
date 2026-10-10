@@ -56,7 +56,7 @@ describe("confirmation dialog", () => {
                  expires_at: Date.now() / 1000 + 60 };
 
   it("critical action needs the acknowledgement checkbox", async () => {
-    const { api } = installBridge((method, path) => (path === "/api/confirm" ? response({ status: "dry_run" }) : undefined));
+    const { api } = installBridge((_method, path) => (path === "/api/confirm" ? response({ status: "dry_run" }) : undefined));
     render(<ArcProvider><ConfirmDialog info={{ ...base, risk: "C", requires_acknowledge: true }} /></ArcProvider>);
     const approve = screen.getByTestId("confirm-approve") as HTMLButtonElement;
     expect(approve.disabled).toBe(true);
