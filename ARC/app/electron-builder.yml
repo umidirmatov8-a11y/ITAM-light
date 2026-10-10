@@ -1,0 +1,37 @@
+# Windows installer for A.R.C. The Python backend (PyInstaller onedir) is built first by
+# scripts/build.ps1 into ../backend/dist/arc-backend and shipped as resources/backend.
+appId: local.arc.assistant
+productName: ARC
+executableName: ARC
+copyright: A.R.C. project
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - dist-electron/**
+  - assets/**
+  - package.json
+extraResources:
+  - from: ../backend/dist/arc-backend
+    to: backend
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  artifactName: ARC-Setup-${version}.${ext}
+  signAndEditExecutable: true
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: A.R.C.
+  uninstallDisplayName: A.R.C. ${version}
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico

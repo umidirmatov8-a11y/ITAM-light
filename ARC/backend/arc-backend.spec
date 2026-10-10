@@ -8,7 +8,7 @@ except Exception:
     pass
 
 a = Analysis(
-    ["arc_backend/__main__.py"],
+    ["run_backend.py"],
     pathex=["."],
     hiddenimports=hidden,
     excludes=["tkinter", "pytest", "PIL", "numpy"],

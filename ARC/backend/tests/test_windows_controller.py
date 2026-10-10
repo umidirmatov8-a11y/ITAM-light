@@ -16,10 +16,11 @@ def win():
 
 
 def test_launch_exe_detached_and_terminate(win):
-    pid = win.launch_exe(sys.executable, ["-c", "import time; time.sleep(30)"], None)
+    exe = getattr(sys, "_base_executable", sys.executable)  # not the venv launcher
+    pid = win.launch_exe(exe, ["-c", "import time; time.sleep(30)"], None)
     try:
         assert psutil.pid_exists(pid)
-        name = os.path.basename(sys.executable)
+        name = os.path.basename(exe)
         assert pid in win.find_processes(name)
     finally:
         win.terminate_process(pid)
