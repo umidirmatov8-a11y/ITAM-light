@@ -117,6 +117,7 @@ public sealed class SettingsService : ISettingsService
         [typeof(BackupSettings)] = "backup",
         [typeof(SecuritySettings)] = "security",
         [typeof(QrSettings)] = "qr",
+        [typeof(Agents.AgentSettings)] = "agent",
     };
 
     private readonly IAppDbContext _db;

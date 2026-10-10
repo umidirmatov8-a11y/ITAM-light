@@ -29,6 +29,11 @@
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Windows inventory agent (scripts + GPO templates), served to administrators as a zip package. -->
+  <ItemGroup>
+    <None Include="..\..\Agent\**\*" Exclude="..\..\Agent\README.md" LinkBase="agent" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="ITAM.IntegrationTests" />
   </ItemGroup>

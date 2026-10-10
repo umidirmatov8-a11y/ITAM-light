@@ -18,6 +18,7 @@ Server одним файлом `ITAM-Setup.exe`, работает как слу�
 | Доступы | системы, уровни, выдача/отзыв, пересмотр, доступы уволенных |
 | Онбординг / оффбординг | шаблоны чек-листов, автоматические проверки (вся техника возвращена, доступы отозваны…) |
 | Инвентаризация | кампании, сканирование QR камерой телефона или сканером, акт инвентаризации |
+| Агент для Windows | автоматический сбор оборудования, ОС, пользователя и ПО с компьютеров; установка вручную или через GPO; создание и обновление активов |
 | Склад расходников | остатки по складам, движения, минимальные остатки |
 | Договоры | реестр договоров, связи с активами и лицензиями, предупреждения об окончании |
 | Отчёты | 14 отчётов (в т.ч. «состояние активов на дату», амортизация), экспорт XLSX / CSV / PDF |
@@ -59,6 +60,7 @@ ITAM/
 ├── Backend/            ASP.NET Core 10 (Clean Architecture): Domain, Application, Infrastructure, Api (ITAM.Server)
 │   └── Tests/          ITAM.UnitTests, ITAM.IntegrationTests (реальный PostgreSQL)
 ├── Frontend/           React 18 + TypeScript + Ant Design (сборка в Backend/ITAM.Api/wwwroot)
+├── Agent/              агент инвентаризации для Windows (PowerShell) и шаблоны GPO
 ├── Database/           migrations.sql — идемпотентный SQL-скрипт всех миграций
 ├── Installer/          Inno Setup (ITAM.iss) и build-installer.ps1
 ├── deploy/docker/      Dockerfile, docker-compose.yml
@@ -71,6 +73,7 @@ ITAM/
 |---|---|
 | [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) | архитектура, ERD, модель прав, временная модель данных, точки расширения |
 | [INSTALLATION.md](Documentation/INSTALLATION.md) | установка, обновление, тихая установка, удаление, Docker |
+| [AGENT.md](Documentation/AGENT.md) | агент инвентаризации для Windows: установка вручную и через GPO, настройки, диагностика |
 | [ADMIN_GUIDE.md](Documentation/ADMIN_GUIDE.md) | руководство администратора и пользователя, дополнительные функции |
 | [DATABASE.md](Documentation/DATABASE.md) | структура БД, миграции, обслуживание |
 | [API.md](Documentation/API.md) | REST API, аутентификация, примеры |

@@ -79,6 +79,7 @@ Authorization: Bearer itam_XXXXXXXX...
 | Уведомления | `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read`, `POST /notifications/run` |
 | Аудит | `GET /audit`, `GET /audit/actions`, `GET /audit/entity/{type}/{id}`, `GET /audit/export` |
 | Администрирование | `GET/POST /admin/users`, `GET/PUT/DELETE /admin/users/{id}`, `POST .../reset-password`, `.../unlock`, `GET /admin/users/sessions`, `DELETE /admin/users/sessions/{id}`; `GET/POST /admin/roles`, `GET /admin/roles/permissions`, `PUT/DELETE /admin/roles/{id}`; `GET /admin/settings`, `PUT /admin/settings/{group}`, `POST /admin/settings/test-channel`, `POST /admin/settings/logo`; `GET/POST /admin/backups`, `GET .../{id}/download`, `DELETE /admin/backups/{id}`, `POST .../{id}/restore`, `POST /admin/backups/upload-restore`; `GET /admin/system` |
+| Агенты | протокол агента `POST /agent/register`, `POST /agent/inventory`, `GET /agent/package`; администрирование `GET /agents`, `/agents/summary`, `/agents/{id}`, `/agents/{id}/software`, `/agents/by-asset/{assetId}`, `POST /agents/{id}/link|unlink|create-asset|ignore`, `DELETE /agents/{id}`, `GET /agents/software`, `GET|PUT /agents/settings`, `POST /agents/settings/regenerate-key`, `GET /agents/package` — подробно в [AGENT.md](AGENT.md) |
 | Мониторинг | `GET /health` (без авторизации) |
 
 ## Примеры

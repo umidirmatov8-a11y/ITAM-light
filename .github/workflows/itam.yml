@@ -133,13 +133,57 @@ jobs:
           if ($LASTEXITCODE) { throw "backup failed" }
           Get-ChildItem "$env:ProgramData\ITAM\backups" | Format-Table Name, Length
 
+      - name: Windows agent end-to-end
+        run: |
+          $base = 'http://localhost:8080'
+          $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          Invoke-RestMethod "$base/api/auth/login" -Method Post -WebSession $s -ContentType 'application/json' -Body '{"userName":"admin","password":"Admin12345!"}' | Out-Null
+          $xsrf = @{ 'X-XSRF-TOKEN' = $s.Cookies.GetCookies($base)['XSRF-TOKEN'].Value }
+          $region = (Invoke-RestMethod "$base/api/lookups/regions/options" -WebSession $s)[0].id
+          $cfg = Invoke-RestMethod "$base/api/agents/settings" -WebSession $s
+          $body = @{ autoCreateAssets = $true; defaultRegionId = $region; updateAssetFields = $true; inventoryIntervalHours = 4; staleAfterDays = 7 } | ConvertTo-Json
+          Invoke-RestMethod "$base/api/agents/settings" -Method Put -WebSession $s -Headers $xsrf -ContentType 'application/json' -Body $body | Out-Null
+
+          # What the agent collects on this machine (printed for diagnostics).
+          & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\ITAM\agent\ITAM-Agent.ps1" -Output "$env:TEMP\inventory.json"
+          $inv = Get-Content "$env:TEMP\inventory.json" -Raw
+          $inv.Substring(0, [Math]::Min(4000, $inv.Length))
+
+          # Install exactly what an administrator gets: the agent shipped with the server.
+          & "$env:ProgramFiles\ITAM\agent\install.cmd" -ServerUrl $base -EnrollmentKey $cfg.enrollmentKey
+          if ($LASTEXITCODE) { Get-Content "$env:ProgramData\ITAM Agent\*.log" -ErrorAction SilentlyContinue; throw "agent install failed ($LASTEXITCODE)" }
+          Get-Content "$env:ProgramData\ITAM Agent\agent.log"
+          if (-not (Get-ScheduledTask -TaskName 'ITAM Agent' -ErrorAction SilentlyContinue)) { throw 'scheduled task missing' }
+
+          $list = Invoke-RestMethod "$base/api/agents?search=$env:COMPUTERNAME" -WebSession $s
+          if ($list.total -lt 1) { throw "computer $env:COMPUTERNAME did not appear in ITAM" }
+          $d = Invoke-RestMethod "$base/api/agents/$($list.items[0].id)" -WebSession $s
+          $d | Select-Object hostname, status, assetNumber, manufacturer, model, serialNumber, formFactor, osName, osVersion, osBuild, cpu, ramMb, storageGb, ipAddress, currentUser, antivirus, softwareCount, comment | Format-List
+          if ($d.osName -notmatch 'Windows') { throw 'OS not reported' }
+          if (-not $d.ramMb -or -not $d.cpu) { throw 'hardware not reported' }
+          if ($d.softwareCount -lt 1) { throw 'software not reported' }
+          if ($d.status -ne 'Linked' -or -not $d.assetId) { throw "asset not created/linked: $($d.comment)" }
+          $asset = Invoke-RestMethod "$base/api/assets/$($d.assetId)" -WebSession $s
+          "Asset: $($asset.inventoryNumber) $($asset.name) host=$($asset.hostname)"
+          if ($asset.hostname -ne $d.hostname) { throw 'asset not synchronized' }
+
+          # Scheduled run as SYSTEM must work too (separate code path from the interactive first run).
+          Start-ScheduledTask -TaskName 'ITAM Agent'
+          for ($i = 0; $i -lt 30 -and (Get-ScheduledTask -TaskName 'ITAM Agent').State -eq 'Running'; $i++) { Start-Sleep 2 }
+          $info = Get-ScheduledTaskInfo -TaskName 'ITAM Agent'
+          "Scheduled run result: $($info.LastTaskResult)"
+          if ($info.LastTaskResult -ne 0) { Get-Content "$env:ProgramData\ITAM Agent\agent.log" -Tail 20; throw 'scheduled run failed' }
+
+          & "$env:ProgramFiles\ITAM Agent\Install-ITAMAgent.ps1" -Uninstall
+          if (Get-ScheduledTask -TaskName 'ITAM Agent' -ErrorAction SilentlyContinue) { throw 'uninstall left the task' }
+
       - name: Diagnostics
         if: always()
         continue-on-error: true
         run: |
           icacls "$env:ProgramData\ITAM\config" "$env:ProgramData\ITAM\config\itam.json"
           New-Item -ItemType Directory -Force ci-logs | Out-Null
-          Copy-Item install.log, "$env:ProgramData\ITAM\logs\*", "$env:ProgramData\ITAM\pgdata\log\*" ci-logs -ErrorAction SilentlyContinue
+          Copy-Item install.log, "$env:ProgramData\ITAM\logs\*", "$env:ProgramData\ITAM\pgdata\log\*", "$env:ProgramData\ITAM Agent\*.log" ci-logs -ErrorAction SilentlyContinue
           Get-Service ITAM*, postgresql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
           Get-ChildItem "$env:ProgramData\ITAM" -ErrorAction SilentlyContinue | Format-Table Name, Length
           Get-ChildItem "$env:ProgramData\ITAM\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }

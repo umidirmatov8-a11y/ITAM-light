@@ -344,7 +344,8 @@ Initial settings → Finish) is shown on first launch.
 | LDAP / AD auth | `IExternalAuthProvider` + `Users.AuthProvider/ExternalId` |
 | AD sync (users, departments, titles, managers) | `IDirectorySyncService`, `Employees.ExternalId`, import pipeline reuse |
 | SSO / OIDC | ASP.NET authentication handlers, `Authentication:Oidc` config section |
-| Discovery / Intune / Graph / ESET / Wazuh | `IAssetDiscoverySource` → upsert by serial/hostname, `AssetEvents` type `Discovered` |
+| Discovery | **implemented for Windows**: PowerShell agent → `/api/agent/*`, `AgentDevices`/`DiscoveredSoftware`, matching by serial/hostname, `AssetEvents` type `AgentInventory` (see [AGENT.md](AGENT.md)) |
+| Intune / Graph / ESET / Wazuh | same intake as the agent (`AgentService.SubmitInventoryAsync`) fed by a connector |
 | GLPI / Snipe‑IT import | `IImportSource` next to XLSX/CSV in the import pipeline |
 | HelpDesk / Ticketing | new module referencing `Assets`/`Employees`; `AssetEvents.Data.ticket` |
 | CMDB | asset relations (`ParentAssetId`) → generic `AssetRelations` table |
@@ -356,5 +357,5 @@ Initial settings → Finish) is shown on first launch.
 
 ## 15. Additional functions (beyond the specification)
 
-See [ADMIN_GUIDE.md → «Дополнительные функции»](ADMIN_GUIDE.md#дополнительные-функции) for the full list of 26 extra
+See [ADMIN_GUIDE.md → «Дополнительные функции»](ADMIN_GUIDE.md#дополнительные-функции) for the full list of 27 extra
 functions with purpose, usage, tables and integration.

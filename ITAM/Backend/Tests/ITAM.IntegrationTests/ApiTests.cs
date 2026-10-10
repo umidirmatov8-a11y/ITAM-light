@@ -67,6 +67,16 @@ public class AuthAndSecurityTests
     }
 
     [Fact]
+    public async Task Csrf_token_survives_session_reload()
+    {
+        using var c = await _f.LoginAsync();
+        // Drop cached sessions: the principal is rebuilt from the database, as happens every 30 s in production.
+        if (_f.Services.GetService(typeof(Microsoft.Extensions.Caching.Memory.IMemoryCache)) is Microsoft.Extensions.Caching.Memory.MemoryCache cache)
+            cache.Compact(1.0);
+        await TestData.CreateEmployee(c, "ПослеПерезагрузкиСессии");
+    }
+
+    [Fact]
     public async Task Security_headers_are_present()
     {
         using var c = _f.CreateApiClient();

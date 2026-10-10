@@ -40,7 +40,8 @@ public enum AssetEventType
     LicenseRevoked = 11,
     DocumentGenerated = 12,
     AttachmentAdded = 13,
-    OperationCancelled = 14
+    OperationCancelled = 14,
+    AgentInventory = 15
 }
 
 public enum OperationType { Issue = 0, Return = 1, Transfer = 2, StatusChange = 3, Repair = 4 }
@@ -109,3 +110,5 @@ public enum CustomFieldType { Text = 0, Number = 1, Date = 2, DateTime = 3, Bool
 public enum CustomFieldEntity { Employee = 0, Asset = 1, License = 2, Software = 3, Repair = 4, Access = 5, Department = 6, Location = 7 }
 
 public enum DepreciationMethod { None = 0, StraightLine = 1, DecliningBalance = 2 }
+
+public enum AgentDeviceStatus { New = 0, Linked = 1, Ignored = 2 }

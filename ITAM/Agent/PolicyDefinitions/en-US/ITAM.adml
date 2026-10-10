@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                           revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>ITAM agent</displayName>
+  <description>Settings of the ITAM inventory agent</description>
+  <resources>
+    <stringTable>
+      <string id="SUPPORTED_Win10">Windows 10, Windows Server 2016 and later</string>
+      <string id="Cat_ITAM">ITAM</string>
+      <string id="Cat_ITAMAgent">Inventory agent</string>
+      <string id="ServerUrl">ITAM server address</string>
+      <string id="ServerUrl_Help">Address of the ITAM web server the agent reports to, for example http://itam.company.local:8080.
+
+The agent is installed by the computer startup script install.cmd (see AGENT.md).</string>
+      <string id="EnrollmentKey">Enrollment key</string>
+      <string id="EnrollmentKey_Help">Agent enrollment key from ITAM "Agents → Installation". It is used once, when the computer registers; afterwards the agent uses its own token.
+
+After regenerating the key in ITAM, update this value — already registered computers keep working.</string>
+      <string id="IntervalHours">Reporting interval (hours)</string>
+      <string id="IntervalHours_Help">How often the agent sends its inventory (1–168 hours). When not configured, the interval from the ITAM server settings is used (4 hours by default). A report is also sent when the logged-on user changes.</string>
+      <string id="IgnoreCertificateErrors">Do not validate the server HTTPS certificate</string>
+      <string id="IgnoreCertificateErrors_Help">Allows connecting to an ITAM server with a self-signed certificate. Use only inside the corporate network when the server certificate is not issued by a trusted CA.</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="ServerUrl">
+        <textBox refId="ServerUrl"><label>Server address (http://server:8080):</label></textBox>
+      </presentation>
+      <presentation id="EnrollmentKey">
+        <textBox refId="EnrollmentKey"><label>Enrollment key:</label></textBox>
+      </presentation>
+      <presentation id="IntervalHours">
+        <decimalTextBox refId="IntervalHours" defaultValue="4">Interval, hours:</decimalTextBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

@@ -85,6 +85,8 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<StockBalance> StockBalances => Set<StockBalance>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<AgentDevice> AgentDevices => Set<AgentDevice>();
+    public DbSet<DiscoveredSoftware> DiscoveredSoftware => Set<DiscoveredSoftware>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -133,6 +135,8 @@ public class AppDbContext : DbContext, IAppDbContext
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken ct = default) => SaveChangesAsync(true, ct);
+
+    public void ResetChanges() => ChangeTracker.Clear();
 
     private void OnBeforeSave()
     {
