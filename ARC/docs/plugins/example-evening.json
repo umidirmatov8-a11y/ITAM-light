@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "id": "evening-mode",
+  "name": "Вечерний режим",
+  "version": "1.0.0",
+  "author": "Пример A.R.C.",
+  "description": "Пример модуля: пара голосовых команд для вечера.",
+  "permissions": ["volume", "windows", "apps"],
+  "commands": [
+    {
+      "phrases": ["вечерний режим", "пора отдыхать"],
+      "actions": [
+        {"action": "volume.set", "params": {"level": 20}},
+        {"action": "window.minimize_all"}
+      ],
+      "reply": "Хорошего вечера."
+    },
+    {
+      "phrases": ["открой мессенджер"],
+      "actions": [{"action": "app.launch", "app": "Telegram"}]
+    }
+  ]
+}

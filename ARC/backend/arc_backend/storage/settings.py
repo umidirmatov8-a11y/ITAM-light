@@ -1,0 +1,343 @@
+"""Typed user settings persisted in SQLite (one JSON document per section)."""
+from __future__ import annotations
+
+import json
+import threading
+from enum import Enum
+from typing import Any, Callable, Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from .db import Database
+
+
+class NetworkMode(str, Enum):
+    LOCAL = "LOCAL"
+    ONLINE = "ONLINE"
+
+
+class GeneralSettings(BaseModel):
+    language: str = "ru"
+    wake_word: str = "арк"
+    autostart: bool = False
+    start_minimized: bool = False
+    # Text typed into the UI is explicit, so the wake word is only required for voice.
+    require_wake_word_for_voice: bool = True
+    min_confidence: float = Field(0.5, ge=0.0, le=1.0)
+
+
+class NetworkSettings(BaseModel):
+    mode: NetworkMode = NetworkMode.LOCAL
+    online_allowed: bool = True  # master switch: False blocks ONLINE mode entirely
+    search_url: str = "https://duckduckgo.com/?q={query}"
+
+    @field_validator("search_url")
+    @classmethod
+    def _search_url(cls, value: str) -> str:
+        if not value.startswith("https://") or "{query}" not in value:
+            raise ValueError("search_url must be https:// and contain {query}")
+        return value
+
+
+PROVIDERS = ("wikipedia", "duckduckgo", "brave", "searxng")
+
+
+class OnlineSettings(BaseModel):
+    """Stage 5: search inside A.R.C. (only in ONLINE mode)."""
+    providers: list[str] = Field(default_factory=lambda: ["wikipedia", "duckduckgo"])  # in order of use
+    language: Literal["ru", "en"] = "ru"
+    max_results: int = Field(5, ge=1, le=10)
+    timeout_s: float = Field(10.0, ge=2.0, le=60.0)
+    requests_per_minute: int = Field(20, ge=1, le=120)
+    summarize: bool = True  # short answer from the found snippets by the local model
+    searxng_url: str = Field("", max_length=300)
+
+    @field_validator("providers")
+    @classmethod
+    def _providers(cls, value: list[str]) -> list[str]:
+        result: list[str] = []
+        for item in value:
+            if item not in PROVIDERS:
+                raise ValueError(f"unknown provider: {item}")
+            if item not in result:
+                result.append(item)
+        return result
+
+    @field_validator("searxng_url")
+    @classmethod
+    def _searxng(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        if value and not value.startswith(("https://", "http://127.0.0.1", "http://localhost")):
+            raise ValueError("searxng_url must be https:// (or http:// on this computer)")
+        return value
+
+
+class DocumentsSettings(BaseModel):
+    output_dir: str = Field("", max_length=1024)  # empty: <Documents>\ARC
+    use_ai: bool = True
+    open_when_ready: bool = False
+    max_sections: int = Field(8, ge=3, le=12)
+
+
+class TrustedKey(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{16}$")
+    name: str = Field(min_length=1, max_length=80)
+    public_key: str = Field(min_length=40, max_length=64)  # base64 of a raw 32-byte Ed25519 key
+
+
+class PluginGrant(BaseModel):
+    enabled: bool = False
+    modules: list[str] = Field(default_factory=list)
+
+
+class PluginsSettings(BaseModel):
+    """Stage 6: declarative modules (.arcplugin). Nothing here can be changed by a module itself."""
+    allow_unsigned: bool = False
+    trusted_keys: list[TrustedKey] = Field(default_factory=list)
+    grants: dict[str, PluginGrant] = Field(default_factory=dict)
+
+    @field_validator("trusted_keys")
+    @classmethod
+    def _keys(cls, value: list[TrustedKey]) -> list[TrustedKey]:
+        from ..plugins.signing import key_id, load_public_key  # late import: keeps settings light
+        result, seen = [], set()
+        for key in value:
+            load_public_key(key.public_key)  # raises ValueError for a malformed key
+            if key_id(key.public_key) != key.id:
+                raise ValueError("key id does not match the public key")
+            if key.id not in seen:
+                seen.add(key.id)
+                result.append(key)
+        return result
+
+    @field_validator("grants")
+    @classmethod
+    def _grants(cls, value: dict[str, PluginGrant]) -> dict[str, PluginGrant]:
+        for grant in value.values():
+            grant.modules = sorted({m for m in grant.modules if m in MODULES})
+        return value
+
+
+class DevicesSettings(BaseModel):
+    microphone_enabled: bool = True
+    camera_enabled: bool = False
+    local_ai_enabled: bool = True
+
+
+class AISettings(BaseModel):
+    ollama_url: str = "http://127.0.0.1:11434"
+    model: str = "qwen2.5-coder:7b"
+    temperature: float = Field(0.2, ge=0.0, le=2.0)
+    timeout_s: float = Field(60.0, gt=0, le=600)
+    # Stage 4: phrases the built-in router does not understand are handed to the local model.
+    understand_commands: bool = True
+    answer_questions: bool = True
+    confirm_actions: bool = False   # also ask before safe (A) actions proposed by the model
+    num_ctx: int = Field(4096, ge=1024, le=32768)
+
+    @field_validator("ollama_url")
+    @classmethod
+    def _url(cls, value: str) -> str:
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("ollama_url must start with http:// or https://")
+        return value.rstrip("/")
+
+
+MODULES = ("apps", "volume", "windows", "system_info", "files", "processes",
+           "power", "browser", "web_search", "scenarios", "modes", "documents")
+
+
+class SafetySettings(BaseModel):
+    # Category B/C actions are simulated (logged, not executed) while this is on.
+    dry_run: bool = True
+    allowed_dirs: list[str] = Field(default_factory=list)
+    confirmation_ttl_s: int = Field(60, ge=10, le=600)
+    modules: dict[str, bool] = Field(default_factory=lambda: {m: True for m in MODULES})
+    action_timeout_s: float = Field(15.0, gt=0, le=300)
+
+    @field_validator("modules")
+    @classmethod
+    def _modules(cls, value: dict[str, bool]) -> dict[str, bool]:
+        merged = {m: True for m in MODULES}
+        merged.update({k: bool(v) for k, v in value.items() if k in MODULES})
+        return merged
+
+
+class UISettings(BaseModel):
+    theme: str = "amber"
+    scale: float = Field(1.0, ge=0.75, le=1.5)
+    animations: bool = True
+    scanlines: bool = True
+
+    @field_validator("theme")
+    @classmethod
+    def _theme(cls, value: str) -> str:
+        if value not in ("amber", "phosphor", "ice"):
+            raise ValueError("unknown theme")
+        return value
+
+
+class VoiceSettings(BaseModel):
+    mode: Literal["ptt", "continuous"] = "ptt"
+    stt_model: str = Field("whisper-small", pattern=r"^whisper-(tiny|base|small|medium)$")
+    stt_device: Literal["auto", "cpu", "cuda"] = "auto"
+    input_device: Optional[str] = Field(None, max_length=200)
+    tts_engine: Literal["sapi", "piper", "off"] = "sapi"
+    tts_voice: str = Field("", max_length=200)
+    tts_rate: float = Field(1.0, ge=0.5, le=2.0)
+    tts_volume: int = Field(80, ge=0, le=100)
+    vad_sensitivity: float = Field(0.5, ge=0.0, le=1.0)
+    silence_ms: int = Field(800, ge=300, le=3000)
+    max_utterance_s: float = Field(12.0, ge=3.0, le=30.0)
+
+
+GESTURES = ("open_palm", "fist", "thumbs_up", "index_up", "ok", "victory", "palm_zone")
+
+
+class GestureBinding(BaseModel):
+    enabled: bool = True
+    action: str = Field(max_length=64)
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+def default_bindings() -> dict[str, GestureBinding]:
+    return {
+        "open_palm": GestureBinding(action="gestures.pause_toggle"),
+        "fist": GestureBinding(action="gestures.cancel"),
+        "thumbs_up": GestureBinding(enabled=False, action="assistant.repeat"),
+        "index_up": GestureBinding(action="ui.toggle_compact"),
+        "ok": GestureBinding(action="profile.silent_toggle"),
+        "victory": GestureBinding(enabled=False, action="volume.mute", params={"muted": True}),
+        "palm_zone": GestureBinding(action="window.minimize_all"),
+    }
+
+
+class VisionCalibration(BaseModel):
+    palm_scale: float = Field(gt=0, le=1)
+    brightness: float = Field(ge=0, le=255)
+    ts: float
+
+
+class VisionSettings(BaseModel):
+    camera_index: int = Field(0, ge=0, le=9)
+    mirror: bool = True
+    fps: int = Field(15, ge=5, le=30)
+    confidence: float = Field(0.7, ge=0.3, le=0.99)
+    hold_ms: int = Field(600, ge=150, le=3000)
+    cooldown_ms: int = Field(1500, ge=300, le=10000)
+    min_interval_ms: int = Field(800, ge=200, le=10000)
+    zone: list[float] = Field(default_factory=lambda: [0.65, 0.0, 1.0, 0.4])
+    zone_hold_ms: int = Field(1500, ge=500, le=5000)
+    bindings: dict[str, GestureBinding] = Field(default_factory=default_bindings)
+    calibration: Optional[VisionCalibration] = None
+
+    @field_validator("zone")
+    @classmethod
+    def _zone(cls, value: list[float]) -> list[float]:
+        if len(value) != 4 or not all(0.0 <= v <= 1.0 for v in value) or value[0] >= value[2] or value[1] >= value[3]:
+            raise ValueError("zone must be [x0, y0, x1, y1] within 0..1")
+        return value
+
+    @field_validator("bindings")
+    @classmethod
+    def _bindings(cls, value: dict[str, GestureBinding]) -> dict[str, GestureBinding]:
+        from ..vision.actions import validate_binding  # late import: avoids a cycle with the catalog
+        merged = default_bindings()
+        for gesture, binding in value.items():
+            if gesture not in GESTURES:
+                raise ValueError(f"unknown gesture: {gesture}")
+            merged[gesture] = validate_binding(binding)
+        return merged
+
+
+class ProfileSettings(BaseModel):
+    silent: bool = False
+
+
+class Settings(BaseModel):
+    general: GeneralSettings = Field(default_factory=GeneralSettings)
+    network: NetworkSettings = Field(default_factory=NetworkSettings)
+    online: OnlineSettings = Field(default_factory=OnlineSettings)
+    documents: DocumentsSettings = Field(default_factory=DocumentsSettings)
+    plugins: PluginsSettings = Field(default_factory=PluginsSettings)
+    devices: DevicesSettings = Field(default_factory=DevicesSettings)
+    ai: AISettings = Field(default_factory=AISettings)
+    safety: SafetySettings = Field(default_factory=SafetySettings)
+    ui: UISettings = Field(default_factory=UISettings)
+    profile: ProfileSettings = Field(default_factory=ProfileSettings)
+    voice: VoiceSettings = Field(default_factory=VoiceSettings)
+    vision: VisionSettings = Field(default_factory=VisionSettings)
+
+    @model_validator(mode="after")
+    def _online_switch(self) -> "Settings":
+        # Turning the online master switch off always brings A.R.C. back to LOCAL.
+        if not self.network.online_allowed and self.network.mode == NetworkMode.ONLINE:
+            self.network.mode = NetworkMode.LOCAL
+        return self
+
+
+SECTIONS = tuple(Settings.model_fields)
+
+
+class SettingsStore:
+    """Loads settings once, validates every update, persists per section."""
+
+    def __init__(self, db: Database, default_allowed_dirs: Callable[[], list[str]] | None = None):
+        self._db = db
+        self._lock = threading.RLock()
+        self._settings = self._load(default_allowed_dirs)
+
+    def _load(self, default_allowed_dirs: Callable[[], list[str]] | None) -> Settings:
+        rows = self._db.query("SELECT key, value FROM settings")
+        stored: dict[str, Any] = {}
+        for row in rows:
+            if row["key"] in SECTIONS:
+                try:
+                    stored[row["key"]] = json.loads(row["value"])
+                except json.JSONDecodeError:
+                    continue
+        first_run = not stored
+        settings = Settings()
+        for section, value in stored.items():
+            try:
+                model = type(getattr(settings, section))
+                setattr(settings, section, model.model_validate(value))
+            except ValueError:
+                pass  # damaged section falls back to defaults
+        if first_run and default_allowed_dirs:
+            settings.safety.allowed_dirs = default_allowed_dirs()
+        if first_run:
+            for section in SECTIONS:
+                self._save_section(settings, section)
+        return settings
+
+    def _save_section(self, settings: Settings, section: str) -> None:
+        value = getattr(settings, section).model_dump(mode="json")
+        self._db.execute(
+            "INSERT INTO settings(key, value) VALUES(?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (section, json.dumps(value, ensure_ascii=False)),
+        )
+
+    def get(self) -> Settings:
+        with self._lock:
+            return self._settings.model_copy(deep=True)
+
+    def update(self, patch: dict[str, Any]) -> Settings:
+        """Apply a partial update {section: {field: value}}; raises ValueError on invalid data."""
+        with self._lock:
+            current = self._settings.model_dump(mode="json")
+            for section, values in patch.items():
+                if section not in SECTIONS:
+                    raise ValueError(f"unknown settings section: {section}")
+                if not isinstance(values, dict):
+                    raise ValueError(f"section {section} must be an object")
+                unknown = set(values) - set(current[section])
+                if unknown:
+                    raise ValueError(f"unknown fields in {section}: {', '.join(sorted(unknown))}")
+                current[section].update(values)
+            new = Settings.model_validate(current)
+            for section in patch:
+                self._save_section(new, section)
+            self._settings = new
+            return new.model_copy(deep=True)

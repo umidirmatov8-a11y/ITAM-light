@@ -1,0 +1,356 @@
+name: A.R.C. (Windows)
+
+on:
+  push:
+    branches: ['**']
+    # a tag arc-vX.Y.Z publishes a GitHub Release (job "release"); path filters do not apply to tags
+    tags: ['arc-v*']
+    paths:
+      - 'ARC/**'
+      - '.github/workflows/arc.yml'
+  pull_request:
+    paths:
+      - 'ARC/**'
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ARC/app/package-lock.json
+
+      - name: Environment check (informational)
+        run: powershell -ExecutionPolicy Bypass -File ARC\scripts\check_env.ps1 -Dev; exit 0
+
+      - name: Build (backend tests, PyInstaller, self-test, UI tests, electron-builder)
+        run: powershell -ExecutionPolicy Bypass -File ARC\scripts\build.ps1
+
+      - name: Cache speech and hand models for the end-to-end tests
+        uses: actions/cache@v4
+        with:
+          path: ARC/ci-models
+          key: arc-models-v2-whisper-small-piper-irina-mediapipe-hand
+
+      - name: Voice end-to-end (Piper speaks -> VAD -> Whisper -> Assistant -> action)
+        working-directory: ARC/backend
+        env:
+          ARC_TEST_MODELS: ${{ github.workspace }}\ARC\ci-models
+          ARC_TEST_STT: whisper-small
+        run: |
+          .venv\Scripts\python -m pytest tests\test_voice_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'voice end-to-end failed' }
+
+      - name: Gestures end-to-end (MediaPipe on real hand photos -> gesture -> action)
+        working-directory: ARC/backend
+        env:
+          ARC_TEST_MODELS: ${{ github.workspace }}\ARC\ci-models
+        run: |
+          .venv\Scripts\python -m pytest tests\test_vision_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'gestures end-to-end failed' }
+
+      - name: Online research against the real internet (Wikipedia required, DuckDuckGo reported)
+        working-directory: ARC/backend
+        env:
+          ARC_TEST_ONLINE: '1'
+        run: |
+          .venv\Scripts\python -m pytest tests\test_online_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'online end-to-end failed' }
+
+      - name: Frozen backend recognizes Russian speech (arc-backend.exe --transcribe)
+        working-directory: ARC/backend
+        run: |
+          [Console]::OutputEncoding = [Text.Encoding]::UTF8
+          $models = Join-Path $env:GITHUB_WORKSPACE 'ARC\ci-models'
+          $out = & dist\arc-backend\arc-backend.exe --transcribe (Join-Path $models 'check-command.wav') --model-dir (Join-Path $models 'whisper-small')
+          $out
+          $json = $out | ConvertFrom-Json
+          if ($json.text -notmatch '(?i)блокнот') { throw "unexpected transcript: $($json.text)" }
+
+      - name: Smoke test of the unpacked app (Electron + backend + IPC)
+        working-directory: ARC/app
+        run: |
+          $out = Join-Path $PWD 'release\smoke-unpacked.json'
+          $p = Start-Process -FilePath release\win-unpacked\ARC.exe -ArgumentList "--smoke-test=$out" -Wait -PassThru
+          Get-Content $out -Encoding UTF8
+          if ($p.ExitCode -ne 0) { throw "Smoke test failed ($($p.ExitCode))" }
+          Start-Sleep 2
+          if (Get-Process arc-backend -ErrorAction SilentlyContinue) { throw 'arc-backend.exe still running after exit' }
+
+      - name: Installer end-to-end (silent install, Start menu shortcut, installed smoke test, uninstall)
+        working-directory: ARC/app
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem release\ARC-Setup-*.exe | Select-Object -First 1
+          "Installer: $($setup.Name) ($([math]::Round($setup.Length / 1MB, 1)) MB)"
+          $dir = Join-Path $env:RUNNER_TEMP 'My Apps\ARC'
+          $p = Start-Process $setup.FullName -ArgumentList '/S', "/D=$dir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Setup exit code $($p.ExitCode)" }
+          foreach ($f in 'ARC.exe', 'resources\app.asar', 'resources\backend\arc-backend.exe', 'Uninstall ARC.exe') {
+            if (-not (Test-Path (Join-Path $dir $f))) { throw "Missing after install: $f" }
+          }
+          $lnk = Join-Path ([Environment]::GetFolderPath('Programs')) 'A.R.C..lnk'
+          if (-not (Test-Path $lnk)) { throw "Start menu shortcut not found: $lnk" }
+          $target = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk).TargetPath
+          "Start menu shortcut -> $target"
+
+          $out = Join-Path $PWD 'release\smoke-installed.json'
+          $p = Start-Process -FilePath (Join-Path $dir 'ARC.exe') -ArgumentList "--smoke-test=$out" -Wait -PassThru
+          Get-Content $out -Encoding UTF8
+          if ($p.ExitCode -ne 0) { throw "Installed smoke test failed ($($p.ExitCode))" }
+          if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'ARC\arc.db'))) { throw 'Backend database was not created' }
+
+          Start-Sleep 2
+          $p = Start-Process (Join-Path $dir 'Uninstall ARC.exe') -ArgumentList '/S' -Wait -PassThru
+          for ($i = 0; $i -lt 120 -and (Test-Path (Join-Path $dir 'ARC.exe')); $i++) { Start-Sleep -Milliseconds 500 }
+          if (Test-Path (Join-Path $dir 'ARC.exe')) { throw 'ARC.exe not removed by the uninstaller' }
+          if (Test-Path $lnk) { throw 'Start menu shortcut not removed' }
+          'Install / uninstall OK'
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: ARC-Setup
+          path: |
+            ARC/app/release/ARC-Setup-*.exe
+            ARC/app/release/ARC-Setup-*.exe.sha256
+
+      - name: Collect logs
+        if: always()
+        run: |
+          New-Item -ItemType Directory -Force ARC\ci-logs | Out-Null
+          foreach ($d in "$env:APPDATA\ARC\logs", "$env:LOCALAPPDATA\ARC\logs") {
+            if (Test-Path $d) { Copy-Item "$d\*.log" ARC\ci-logs -ErrorAction SilentlyContinue }
+          }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ARC-test-results
+          path: |
+            ARC/backend/build/test-results.xml
+            ARC/backend/build/selftest.json
+            ARC/app/release/smoke-*.json
+            ARC/ci-logs/
+
+  signing:
+    # Code-signing pipeline. With repository secrets ARC_SIGN_PFX_BASE64 / ARC_SIGN_PASSWORD the real
+    # certificate is used and a signed installer is published; otherwise a temporary self-signed
+    # certificate proves that every executable gets signed (that build is not published).
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: '1'
+      REAL_PFX: ${{ secrets.ARC_SIGN_PFX_BASE64 }}
+      REAL_PASSWORD: ${{ secrets.ARC_SIGN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ARC/backend/requirements*.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ARC/app/package-lock.json
+
+      - name: Certificate
+        id: cert
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'arc-sign.pfx'
+          if ($env:REAL_PFX) {
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:REAL_PFX))
+            "ARC_SIGN_PASSWORD=$env:REAL_PASSWORD" >> $env:GITHUB_ENV
+            "real=true" >> $env:GITHUB_OUTPUT
+            'Using the release certificate from repository secrets'
+          } else {
+            $password = [Guid]::NewGuid().ToString('N')
+            $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=A.R.C. CI test signing' `
+              -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddDays(2)
+            Export-PfxCertificate -Cert $cert -FilePath $pfx -Password (ConvertTo-SecureString $password -AsPlainText -Force) | Out-Null
+            # trust the temporary certificate on this runner only, so Windows reports the signatures as Valid
+            $cer = Join-Path $env:RUNNER_TEMP 'arc-sign.cer'
+            Export-Certificate -Cert $cert -FilePath $cer | Out-Null
+            Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+            Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
+            "::add-mask::$password"
+            "ARC_SIGN_PASSWORD=$password" >> $env:GITHUB_ENV
+            "real=false" >> $env:GITHUB_OUTPUT
+            'No release certificate configured: testing the pipeline with a temporary self-signed certificate'
+          }
+          "ARC_SIGN_PFX=$pfx" >> $env:GITHUB_ENV
+
+      - name: Signed build
+        run: powershell -ExecutionPolicy Bypass -File ARC\scripts\build.ps1 -SkipTests
+
+      - name: Verify signatures and checksum
+        working-directory: ARC/app/release
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem ARC-Setup-*.exe | Select-Object -First 1
+          foreach ($f in @($setup.FullName, 'win-unpacked\ARC.exe', 'win-unpacked\resources\backend\arc-backend.exe')) {
+            $sig = Get-AuthenticodeSignature $f
+            "{0}: {1} — {2}" -f (Split-Path $f -Leaf), $sig.Status, $sig.SignerCertificate.Subject
+            if ($sig.Status -ne 'Valid') { throw "Signature of $f is $($sig.Status)" }
+          }
+          $line = (Get-Content "$($setup.FullName).sha256").Split(' ')[0]
+          $actual = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
+          if ($line -ne $actual) { throw 'SHA-256 file does not match the installer' }
+          "SHA-256 OK: $actual"
+
+      - name: Remove the signing material
+        if: always()
+        run: |
+          if ($env:ARC_SIGN_PFX) { Remove-Item $env:ARC_SIGN_PFX -Force -ErrorAction SilentlyContinue }
+
+      - uses: actions/upload-artifact@v4
+        if: success() && steps.cert.outputs.real == 'true'
+        with:
+          name: ARC-Setup-signed
+          path: |
+            ARC/app/release/ARC-Setup-*.exe
+            ARC/app/release/ARC-Setup-*.exe.sha256
+
+  local-ai:
+    # Local AI planner against a real Ollama model on Windows (separate job: large download, cached).
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      OLLAMA_MODELS: ${{ github.workspace }}\ollama-models
+      ARC_TEST_OLLAMA: qwen2.5:3b
+      ARC_TEST_ONLINE: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ARC/backend/requirements*.txt
+
+      - name: Cache Ollama model
+        uses: actions/cache@v4
+        with:
+          path: ollama-models
+          key: ollama-qwen2.5-3b-v1
+
+      - name: Install and start Ollama
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:RUNNER_TEMP 'ollama.zip'
+          for ($i = 1; $i -le 3; $i++) {
+            try { Invoke-WebRequest 'https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip' -OutFile $zip; break }
+            catch { if ($i -eq 3) { throw }; Start-Sleep 10 }
+          }
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'ollama')
+          $exe = Join-Path $env:RUNNER_TEMP 'ollama\ollama.exe'
+          Start-Process $exe -ArgumentList 'serve' -WindowStyle Hidden
+          for ($i = 0; $i -lt 60; $i++) {
+            try { Invoke-RestMethod 'http://127.0.0.1:11434/api/tags' | Out-Null; break } catch { Start-Sleep 1 }
+          }
+          & $exe pull $env:ARC_TEST_OLLAMA
+          if ($LASTEXITCODE -ne 0) { throw 'ollama pull failed' }
+          & $exe list
+
+      - name: Backend dependencies
+        working-directory: ARC/backend
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python -m pip install -q -r requirements-dev.txt
+          if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }
+
+      - name: Local AI end-to-end (real model - safety, accuracy, documents, web summary)
+        working-directory: ARC/backend
+        run: |
+          .venv\Scripts\python -m pytest tests\test_ai_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'local AI end-to-end failed' }
+
+
+  release:
+    # Runs only for a pushed tag arc-vX.Y.Z, after every check above passed on that commit.
+    if: startsWith(github.ref, 'refs/tags/arc-v')
+    needs: [build-test, signing, local-ai]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Versions and release notes
+        run: python ARC/scripts/release_notes.py --tag "$GITHUB_REF_NAME" --out "$RUNNER_TEMP/notes.md"
+
+      - name: Signed installer (when a release certificate is configured)
+        id: signed
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ARC-Setup-signed
+          path: dist-signed
+
+      - name: Installer from the build job
+        if: steps.signed.outcome != 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: ARC-Setup
+          path: dist-unsigned
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.signed.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          dir=dist-unsigned; [ "$SIGNED" = "true" ] && dir=dist-signed
+          cd "$dir"
+          ls -l
+          setup=$(ls ARC-Setup-*.exe | head -n1)
+          # the checksum file must match the installer that is published
+          tr -d '\r' < "$setup.sha256" | sha256sum -c -  # the file is written on Windows (CRLF)
+          notes="$RUNNER_TEMP/notes.md"
+          if [ "$SIGNED" != "true" ]; then
+            printf '\n> Установщик без цифровой подписи (нет сертификата): SmartScreen → «Подробнее» → «Выполнить в любом случае». Проверьте SHA-256.\n' >> "$notes"
+          fi
+          version="${GITHUB_REF_NAME#arc-v}"
+          prerelease=""; case "$version" in *-*) prerelease="--prerelease";; esac
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists: uploading files again"
+            gh release upload "$GITHUB_REF_NAME" "$setup" "$setup.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$setup" "$setup.sha256" \
+              --title "A.R.C. $version" --notes-file "$notes" --verify-tag $prerelease \
+              --latest=false  # the repository hosts other projects: do not take over their "Latest" badge
+          fi
+          echo "Published: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME"

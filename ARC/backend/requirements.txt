@@ -1,0 +1,27 @@
+# Runtime dependencies of the A.R.C. backend (bundled by PyInstaller; end users do not install Python).
+fastapi==0.143.0
+starlette==1.7.0
+uvicorn==0.54.0
+pydantic==2.14.0
+psutil==7.2.2
+httpx==0.28.1
+# Voice (stage 2): capture, local speech recognition. Models are downloaded only on user request.
+numpy==2.5.3
+sounddevice==0.5.6               # PortAudio (bundled in the Windows wheel), MIT
+faster-whisper==1.2.1            # MIT; CTranslate2 backend, CPU int8 or CUDA float16
+ctranslate2==4.8.2
+# Gestures (stage 3): camera + hand landmarks, fully local. The hand model is downloaded on user request.
+mediapipe==1.1.0                 # Apache 2.0
+opencv-contrib-python==5.0.0.93  # required by mediapipe; also used for capture (BSD/Apache 2.0)
+# Documents (stage 5): created locally, verified by reading them back.
+python-pptx==1.0.2               # MIT (pulls lxml, Pillow, XlsxWriter)
+python-docx==1.2.0               # MIT
+openpyxl==3.1.5                  # MIT
+reportlab==5.0.1                 # BSD; PDF with a system TrueType font (Arial / Segoe UI)
+pypdf==6.20.0                    # BSD; reads PDFs back for verification
+lxml==6.1.3
+pillow==12.3.0
+# Modules (stage 6): Ed25519 signatures of .arcplugin manifests.
+cryptography==50.0.2             # Apache 2.0 / BSD
+comtypes>=1.4.10,<2; sys_platform == "win32"     # COM: Shell.Application, Core Audio
+pycaw>=20240316; sys_platform == "win32"          # exact master volume (IAudioEndpointVolume)

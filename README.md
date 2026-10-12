@@ -11,3 +11,6 @@ This repository contains:
 * **AD Admin Toolkit** — Windows desktop console for Active Directory administrators (Python/PySide6/ldap3, EXE via
   PyInstaller): LDAPS/StartTLS, users/computers/groups/OU, audit, bulk operations with Dry Run, reports.
   See [`ADAdminToolkit/README.md`](ADAdminToolkit/README.md).
+* **A.R.C.** — Adaptive Responsive Computer: локальный ретрофутуристический помощник для Windows
+  (Electron/React + Python): русские команды, запуск программ и игр, менеджер разрешений A/B/C, офлайн-режим,
+  установщик `ARC-Setup.exe`. See [`ARC/README.md`](ARC/README.md).
