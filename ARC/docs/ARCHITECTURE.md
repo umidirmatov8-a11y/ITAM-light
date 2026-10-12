@@ -49,7 +49,8 @@ A.R.C. (Adaptive Responsive Computer) — настольный голосово�
 | Voice Engine | этап 2 | `VoiceEngine.transcribe() -> Utterance(text, confidence)` → `Assistant.handle_text` |
 | Vision Engine | этап 3 | `GestureEvent(gesture, confidence)` → только действия из списка жестов, риск A |
 | Local AI Engine | `backend/arc_backend/ai` | этап 1: проверка Ollama; этап 4: LLM возвращает **только** JSON-план из каталога |
-| Online Research / Document | этап 5 | отдельные модули, работают только в режиме ONLINE / локально соответственно |
+| Online Research | `backend/arc_backend/online` | `OnlineClient.request()` — единственный выход в интернет: проверка ONLINE в момент запроса, https, лимит в минуту, тайм-аут, ≤ 2 МБ, журнал; провайдеры Wikipedia / DuckDuckGo / Brave / SearXNG; `ResearchEngine.search() -> ResearchReport`, сводка локальной моделью |
+| Document Engine | `backend/arc_backend/documents` | `DocumentContent` (pydantic, лимиты) → рендер PPTX/DOCX/XLSX/PDF/TXT → проверка чтением → атомарное сохранение; фоновые задания `DocJob` |
 
 ### Поток команды
 
@@ -87,8 +88,22 @@ Router, LLM, веб-страницы и документы не могут их 
 ## 5. Режимы LOCAL / ONLINE
 
 `settings.network.mode` = `LOCAL` | `ONLINE`, плюс главный выключатель `online_allowed`.
-Действия с `requires_online=True` (поиск в интернете) в LOCAL отклоняются с предложением
-переключиться. Адрес Ollama вне loopback считается внешним сервисом и требует ONLINE.
+Действия с `requires_online=True` (`web.search`, `web.research`) в LOCAL отклоняются Permission Manager,
+а `OnlineClient` повторно проверяет режим перед каждым запросом (защита в глубину: документ «с данными из
+интернета» в LOCAL тоже не уйдёт в сеть). Адрес Ollama вне loopback считается внешним сервисом и требует ONLINE.
+Интерфейс в ONLINE показывает баннер с кнопкой «Вернуться в LOCAL» и индикатор активного запроса.
+
+### Документы (этап 5)
+
+```
+«сделай презентацию про X [с данными из интернета]» ─► documents.create (категория B) ─► подтверждение
+   ─► DocJob в фоне: [поиск: ResearchEngine, только ONLINE] ─► текст: Ollama, JSON-схема DocumentContent
+      (источники переданы как данные; без них — без конкретных цифр) │ модель недоступна ─► шаблон с пометкой
+   ─► рендер во временный файл в целевой папке ─► проверка (слайды/разделы/строки/текст PDF, нет формул)
+   ─► os.replace в «Имя.pptx» / «Имя (2).pptx» ─► история + журнал + голосом, если команда была голосовой
+```
+
+Папка — `Документы\ARC` или своя, всегда внутри разрешённых каталогов. Аварийная остановка отменяет задания.
 
 ## 6. Структура каталогов
 
@@ -106,7 +121,9 @@ ARC/
       automation/         SystemController (Windows/Mock), executor, файлы, sysinfo
       apps/               реестр, сопоставление имён, discovery, .lnk/.vdf парсеры
       storage/            SQLite, настройки
-      ai/                 Ollama (статус; этап 4 — планировщик)
+      ai/                 Ollama: статус, вызов /api/chat, планировщик (этап 4)
+      online/             клиент сети, провайдеры поиска, ResearchEngine, хранилище ключей
+      documents/          модель содержимого, генерация текста, рендеры и проверка, фоновые задания
     tests/                pytest
   scripts/                check_env.ps1, dev.ps1, build.ps1
   docs/                   документация

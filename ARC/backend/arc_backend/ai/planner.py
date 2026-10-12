@@ -22,7 +22,7 @@ from ..models import ActionRequest, Source
 from ..permissions.catalog import CATALOG, ActionSpec
 from ..storage.scenarios import Scenario
 from ..storage.settings import AISettings, NetworkMode, Settings
-from .ollama import is_loopback_url
+from .ollama import OllamaError, chat, is_loopback_url
 
 log = logging.getLogger(__name__)
 
@@ -94,6 +94,8 @@ def build_system_prompt(apps: list[AppEntry], scenarios: list[Scenario], folders
         "- Программу подбирай по назначению: посчитать — калькулятор; записать текст, заметки — блокнот;",
         "  настройки Windows — параметры Windows; файлы и папки — проводник.",
         "- Вопросы о памяти, процессоре, дисках, времени → system.info.",
+        "- Подготовить презентацию, документ, таблицу, PDF, заметку → documents.create (kind и topic — тема своими словами).",
+        "- Узнать свежие сведения, новости, курсы, погоду → web.research (сработает только в режиме ONLINE).",
         "",
         "Примеры (не копируй дословно, это только формат):",
         '«можно погромче?» → {"actions": [{"action": "volume.change", "params": {"delta": 10}}], "reply": "Делаю громче."}',
@@ -216,25 +218,12 @@ class LocalPlanner:
                 messages.append({"role": "assistant", "content": json.dumps({"actions": [], "reply": answer[:300]},
                                                                              ensure_ascii=False)})
         messages.append({"role": "user", "content": text[:1000]})
-        body = {"model": ai.model, "messages": messages, "stream": False, "format": response_schema(),
-                "keep_alive": "15m", "options": {"temperature": ai.temperature, "num_ctx": ai.num_ctx}}
         started = time.monotonic()
         try:
-            with httpx.Client(timeout=httpx.Timeout(ai.timeout_s, connect=3.0), trust_env=False,
-                              transport=self._transport) as client:
-                response = client.post(f"{ai.ollama_url}/api/chat", json=body)
-        except httpx.TimeoutException:
-            raise PlannerError(f"Локальная модель не ответила за {ai.timeout_s:g} с")
-        except httpx.HTTPError as exc:
-            raise PlannerError(f"Ollama недоступна ({type(exc).__name__})")
-        if response.status_code == 404:
-            raise PlannerError(f"Модель {ai.model} не загружена в Ollama (ollama pull {ai.model})")
-        if response.status_code != 200:
-            raise PlannerError(f"Ollama вернула ошибку {response.status_code}")
-        try:
-            content = response.json()["message"]["content"]
-        except (ValueError, KeyError, TypeError):
-            raise PlannerError("Ollama вернула ответ неверного формата")
+            content = chat(ai.ollama_url, ai.model, messages, timeout_s=ai.timeout_s, temperature=ai.temperature,
+                           num_ctx=ai.num_ctx, schema=response_schema(), transport=self._transport)
+        except OllamaError as exc:
+            raise PlannerError(str(exc))
         plan = validate_plan(content, apps, scenarios)
         plan.model = ai.model
         plan.elapsed_s = round(time.monotonic() - started, 2)

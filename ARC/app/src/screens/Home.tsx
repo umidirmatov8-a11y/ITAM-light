@@ -17,7 +17,8 @@ import { HandView } from "../components/HandView";
 import { Oscilloscope } from "../components/Oscilloscope";
 import { formatTime, Panel, RiskBadge, STATUS_LABEL, statusTone } from "../components/ui";
 import { useArc } from "../lib/store";
-import type { CommandResponse } from "../lib/types";
+import { post } from "../lib/api";
+import type { CommandResponse, ResearchReport } from "../lib/types";
 
 const AI_LABEL: Record<string, string> = {
   ready: "готова",
@@ -141,7 +142,7 @@ function StatusPanel() {
                 title={vision?.message ?? state.camera.message} data-testid="toggle-camera">{cam ? "Откл." : "Вкл."}</button>
       </StatusRow>
       <StatusRow icon={<IconNet size={16} />} name="Сеть" tone={state.mode === "ONLINE" ? "accent" : "ok"}
-                 value={state.mode === "ONLINE" ? "ONLINE" : "LOCAL"}>
+                 value={state.mode === "ONLINE" ? (state.online_active > 0 ? "ONLINE · запрос" : "ONLINE") : "LOCAL"}>
         <button className="btn btn--sm" data-testid="toggle-mode" disabled={!state.online_allowed && state.mode === "LOCAL"}
                 title={state.online_allowed ? "Переключить режим" : "Онлайн-функции выключены в настройках"}
                 onClick={() => updateSettings({ network: { mode: state.mode === "ONLINE" ? "LOCAL" : "ONLINE" } })}>
@@ -203,10 +204,48 @@ function QuickApps() {
   );
 }
 
+function ResearchResults({ report }: { report: ResearchReport }) {
+  const { notify } = useArc();
+  const open = async (url: string) => {
+    try {
+      const r = await post<CommandResponse>("/api/open-url", { url });
+      if (r.status !== "done") notify("error", r.message);
+    } catch (err) {
+      notify("error", err instanceof Error ? err.message : String(err));
+    }
+  };
+  const host = (url: string) => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  };
+  return (
+    <>
+      <ol className="research" data-testid="research-results">
+        {report.results.map((r) => (
+          <li key={r.url}>
+            <button className="research__link" onClick={() => void open(r.url)} title={r.url}>{r.title}</button>
+            <span className="research__host">{host(r.url)}</span>
+            {r.snippet && <div className="research__snippet selectable">{r.snippet}</div>}
+          </li>
+        ))}
+      </ol>
+      {(report.errors.length > 0 || report.summary_note) && (
+        <div className="faint exchange__rejected">
+          {[...report.errors, report.summary_note && `Сводка: ${report.summary_note}`].filter(Boolean).join("; ")}
+        </div>
+      )}
+    </>
+  );
+}
+
 function ResponseBlock({ response, latest }: { response: CommandResponse; latest: boolean }) {
   const { sendCommand } = useArc();
   const tone = statusTone(response.status);
   const files: Array<{ path: string; name: string; is_dir: boolean }> = response.data?.files ?? [];
+  const research: ResearchReport | undefined = response.data?.research;
   return (
     <div className={`exchange ${latest ? "exchange--latest" : ""}`}>
       {response.input && <div className="exchange__in"><span className="prompt">&gt;</span> {response.input}</div>}
@@ -228,6 +267,7 @@ function ResponseBlock({ response, latest }: { response: CommandResponse; latest
       {response.data?.rejected?.length > 0 && (
         <div className="faint exchange__rejected">Отклонено: {(response.data.rejected as string[]).join("; ")}</div>
       )}
+      {research && research.results.length > 0 && <ResearchResults report={research} />}
       {files.length > 0 && (
         <ul className="files">
           {files.slice(0, 8).map((f) => (

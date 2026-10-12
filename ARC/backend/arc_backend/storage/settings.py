@@ -39,6 +39,46 @@ class NetworkSettings(BaseModel):
         return value
 
 
+PROVIDERS = ("wikipedia", "duckduckgo", "brave", "searxng")
+
+
+class OnlineSettings(BaseModel):
+    """Stage 5: search inside A.R.C. (only in ONLINE mode)."""
+    providers: list[str] = Field(default_factory=lambda: ["wikipedia", "duckduckgo"])  # in order of use
+    language: Literal["ru", "en"] = "ru"
+    max_results: int = Field(5, ge=1, le=10)
+    timeout_s: float = Field(10.0, ge=2.0, le=60.0)
+    requests_per_minute: int = Field(20, ge=1, le=120)
+    summarize: bool = True  # short answer from the found snippets by the local model
+    searxng_url: str = Field("", max_length=300)
+
+    @field_validator("providers")
+    @classmethod
+    def _providers(cls, value: list[str]) -> list[str]:
+        result: list[str] = []
+        for item in value:
+            if item not in PROVIDERS:
+                raise ValueError(f"unknown provider: {item}")
+            if item not in result:
+                result.append(item)
+        return result
+
+    @field_validator("searxng_url")
+    @classmethod
+    def _searxng(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        if value and not value.startswith(("https://", "http://127.0.0.1", "http://localhost")):
+            raise ValueError("searxng_url must be https:// (or http:// on this computer)")
+        return value
+
+
+class DocumentsSettings(BaseModel):
+    output_dir: str = Field("", max_length=1024)  # empty: <Documents>\ARC
+    use_ai: bool = True
+    open_when_ready: bool = False
+    max_sections: int = Field(8, ge=3, le=12)
+
+
 class DevicesSettings(BaseModel):
     microphone_enabled: bool = True
     camera_enabled: bool = False
@@ -65,7 +105,7 @@ class AISettings(BaseModel):
 
 
 MODULES = ("apps", "volume", "windows", "system_info", "files", "processes",
-           "power", "browser", "web_search", "scenarios", "modes")
+           "power", "browser", "web_search", "scenarios", "modes", "documents")
 
 
 class SafetySettings(BaseModel):
@@ -178,6 +218,8 @@ class ProfileSettings(BaseModel):
 class Settings(BaseModel):
     general: GeneralSettings = Field(default_factory=GeneralSettings)
     network: NetworkSettings = Field(default_factory=NetworkSettings)
+    online: OnlineSettings = Field(default_factory=OnlineSettings)
+    documents: DocumentsSettings = Field(default_factory=DocumentsSettings)
     devices: DevicesSettings = Field(default_factory=DevicesSettings)
     ai: AISettings = Field(default_factory=AISettings)
     safety: SafetySettings = Field(default_factory=SafetySettings)

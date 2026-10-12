@@ -198,6 +198,7 @@ class ModelManager:
         tmp = self.models_dir / f".{spec.id}.partial"
         shutil.rmtree(tmp, ignore_errors=True)
         tmp.mkdir(parents=True)
+        state, message = "error", "Ошибка загрузки: внутренняя ошибка"
         try:
             with httpx.Client(follow_redirects=True, timeout=httpx.Timeout(self._timeout, connect=15.0)) as client:
                 sizes = []
@@ -217,17 +218,18 @@ class ModelManager:
             final = self.path(spec.id)
             shutil.rmtree(final, ignore_errors=True)
             os.replace(tmp, final)
-            job.state, job.message = "done", "Установлено"
+            state, message = "done", "Установлено"
             log.info("model %s installed (%d bytes)", spec.id, job.done_bytes)
         except _Cancelled:
-            job.state, job.message = "cancelled", "Загрузка отменена"
+            state, message = "cancelled", "Загрузка отменена"
         except (httpx.HTTPError, OSError, DownloadError, zipfile.BadZipFile) as exc:
-            job.state = "error"
-            job.message = f"Ошибка загрузки: {exc}"
+            state, message = "error", f"Ошибка загрузки: {exc}"
             log.warning("model %s download failed: %s", spec.id, exc)
         finally:
             if tmp.exists():
                 shutil.rmtree(tmp, ignore_errors=True)
+        # the final state is published only after the temporary files are gone
+        job.state, job.message = state, message
 
     def _fetch(self, client: httpx.Client, url: str, dest: Path, job: DownloadState) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)

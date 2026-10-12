@@ -169,7 +169,13 @@ def test_create_folder_asks_for_name(ctx):
 
 def test_web_search_and_sites(ctx):
     action = single(router.route("Найди актуальную информацию по теме квантовые компьютеры", ctx))
-    assert action.action == "web.search" and action.params == {"query": "квантовые компьютеры"}
+    assert action.action == "web.research" and action.params == {"query": "квантовые компьютеры"}
+    action = single(router.route("найди в интернете курс валют", ctx))
+    assert action.action == "web.research" and action.params == {"query": "курс валют"}
+    action = single(router.route("загугли рецепт борща", ctx))
+    assert action.action == "web.search" and action.params == {"query": "рецепт борща"}
+    action = single(router.route("поищи в браузере погоду в Москве", ctx))
+    assert action.action == "web.search" and action.params == {"query": "погоду в москве"}
     action = single(router.route("открой браузер и перейди на github.com", ctx))
     assert action.params == {"url": "https://github.com"}
     action = single(router.route("открой ютуб", ctx))
@@ -181,10 +187,32 @@ def test_open_browser_uses_registry_alias(ctx, apps):
     assert action.action == "app.launch" and action.params["app_id"] == apps["Google Chrome"]
 
 
-def test_document_requests_are_honestly_unavailable(ctx):
-    plan = router.route("Подготовь презентацию на тему информационной безопасности", ctx)
-    assert plan.kind == "unavailable"
-    assert not plan.actions
+@pytest.mark.parametrize("phrase,kind,topic,web", [
+    ("Подготовь презентацию на тему информационной безопасности", "pptx", "информационной безопасности", False),
+    ("сделай презентацию про солнечную систему с данными из интернета", "pptx", "солнечную систему", True),
+    ("создай документ про историю Рима в формате PDF", "pdf", "историю Рима", False),
+    ("сделай таблицу курсов валют с данными из интернета", "xlsx", "таблицу курсов валют", True),
+    ("напиши заметку о встрече", "txt", "встрече", False),
+    ("составь отчет по продажам", "docx", "отчет по продажам", False),
+    ("напиши в ворде реферат про Петра Первого", "docx", "Петра Первого", False),
+])
+def test_document_requests(ctx, phrase, kind, topic, web):
+    action = single(router.route(phrase, ctx))
+    assert action.action == "documents.create"
+    assert action.params == {"kind": kind, "topic": topic, "use_web": web}
+
+
+def test_document_without_topic_asks(ctx):
+    plan = router.route("создай таблицу", ctx)
+    assert plan.kind == "reply" and not plan.actions and "тему" in plan.message
+
+
+def test_open_last_document(ctx):
+    assert router.route("открой последний документ", ctx).kind != "actions" or \
+        single(router.route("открой последний документ", ctx)).action != "files.open"
+    ctx.last_document = r"C:\Users\u\Documents\ARC\Кошки.pptx"
+    action = single(router.route("открой последнюю презентацию", ctx))
+    assert action.action == "files.open" and action.params == {"path": ctx.last_document}
 
 
 # ----------------------------------------------------------------------------- scenarios / meta

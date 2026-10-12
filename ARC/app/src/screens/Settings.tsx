@@ -4,6 +4,7 @@ import { Field, Panel, Toggle } from "../components/ui";
 import { useArc } from "../lib/store";
 import type { Settings as SettingsT } from "../lib/types";
 import { GestureSettingsPanel } from "./GestureSettings";
+import { DocumentsSettingsPanel, OnlineSettingsPanel } from "./OnlineSettings";
 import { VoiceSettingsPanel } from "./VoiceSettings";
 
 /** Text input that saves on blur / Enter instead of on every keystroke. */
@@ -85,7 +86,7 @@ export function Settings() {
           <Toggle checked={s.network.mode === "ONLINE"} disabled={!s.network.online_allowed}
                   onChange={(v) => save("network", { mode: v ? "ONLINE" : "LOCAL" })}
                   label="Режим ONLINE" hint="В режиме LOCAL A.R.C. не обращается к интернету" />
-          <Field label="Поисковая система" hint="https-адрес с {query}">
+          <Field label="Поиск в браузере («загугли…»)" hint="https-адрес с {query}">
             <LazyInput value={s.network.search_url} onCommit={(v) => save("network", { search_url: v })} />
           </Field>
         </Panel>
@@ -97,6 +98,10 @@ export function Settings() {
           <Toggle checked={s.devices.local_ai_enabled} onChange={(v) => save("devices", { local_ai_enabled: v })}
                   label="Локальный ИИ (Ollama)" />
         </Panel>
+      </div>
+      <div className="grid-2">
+        <OnlineSettingsPanel />
+        <DocumentsSettingsPanel />
       </div>
       <VoiceSettingsPanel />
       <GestureSettingsPanel />

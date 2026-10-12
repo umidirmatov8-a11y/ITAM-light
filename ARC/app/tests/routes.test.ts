@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isAllowedRoute } from "../electron/routes";
+import { isAllowedRoute, routeTimeoutMs } from "../electron/routes";
 
 describe("IPC route allowlist", () => {
   it("allows the routes the UI needs", () => {
@@ -13,6 +13,15 @@ describe("IPC route allowlist", () => {
     expect(isAllowedRoute("DELETE", "/api/voice/models/whisper-small")).toBe(true);
     expect(isAllowedRoute("POST", "/api/vision/calibrate")).toBe(true);
     expect(isAllowedRoute("GET", "/api/vision/preview")).toBe(true);
+    expect(isAllowedRoute("PUT", "/api/online/keys/brave")).toBe(true);
+    expect(isAllowedRoute("POST", "/api/documents/abc123/open")).toBe(true);
+  });
+
+  it("gives commands enough time for the local model and online search", () => {
+    expect(routeTimeoutMs("POST", "/api/command")).toBe(180_000);
+    expect(routeTimeoutMs("POST", "/api/confirm")).toBe(180_000);
+    expect(routeTimeoutMs("GET", "/api/state")).toBe(30_000);
+    expect(routeTimeoutMs("GET", "/api/command")).toBe(30_000);
   });
 
   it("rejects everything else", () => {
@@ -21,6 +30,8 @@ describe("IPC route allowlist", () => {
     expect(isAllowedRoute("POST", "/api/vision/preview")).toBe(false);
     expect(isAllowedRoute("GET", "/api/command")).toBe(false);
     expect(isAllowedRoute("DELETE", "/api/settings")).toBe(false);
+    expect(isAllowedRoute("GET", "/api/online/keys/brave")).toBe(false);
+    expect(isAllowedRoute("POST", "/api/documents/../settings/open")).toBe(false);
     expect(isAllowedRoute("PUT", "/api/apps/../settings")).toBe(false);
     expect(isAllowedRoute("GET", "/api/audit/export?format=exe")).toBe(false);
     expect(isAllowedRoute("GET", "/api/history?limit=1;drop")).toBe(false);

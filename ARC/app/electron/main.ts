@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { BackendManager, resolveBackendCommand } from "./backend";
-import { isAllowedRoute } from "./routes";
+import { isAllowedRoute, routeTimeoutMs } from "./routes";
 import { runSmokeTest } from "./smoke";
 
 const DEV_URL = process.env.ARC_DEV_URL || "";
@@ -267,7 +267,7 @@ function registerIpc(): void {
     if (!arg || !isAllowedRoute(arg.method, arg.path)) {
       return { status: 403, body: { error: "route_not_allowed" } };
     }
-    return backend.request(arg.method, arg.path, arg.body);
+    return backend.request(arg.method, arg.path, arg.body, routeTimeoutMs(arg.method, arg.path));
   });
   handle("arc:backend-status", () => backend.getStatus());
   handle("arc:backend-restart", async () => {

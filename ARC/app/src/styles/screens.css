@@ -183,3 +183,75 @@ code {
   width: 100%;
   border: 1px solid var(--line-strong);
 }
+
+/* ------------------------------------------------------------------ documents (stage 5) */
+.doc-jobs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.doc-job {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.doc-job__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.doc-job__head svg {
+  color: var(--accent);
+}
+.doc-job__msg {
+  color: var(--text-dim);
+}
+.net-activity {
+  color: var(--accent);
+}
+
+/* search results in the terminal */
+.research {
+  list-style: none;
+  margin: 6px 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.research li {
+  border-left: 2px solid var(--accent-dim);
+  padding-left: 8px;
+}
+.research__link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline dotted;
+}
+.research__link:hover {
+  color: var(--accent-2);
+}
+.research__host {
+  color: var(--text-faint);
+  font-size: 0.85em;
+  margin-left: 6px;
+}
+.research__snippet {
+  color: var(--text-dim);
+  font-size: 0.9em;
+}
+.doc-job__head > .toggle {
+  flex: 1;
+  min-width: 0;
+}

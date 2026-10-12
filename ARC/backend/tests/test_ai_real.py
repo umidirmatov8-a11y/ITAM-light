@@ -79,3 +79,42 @@ def test_accuracy_report(env):
         print(f"   {'OK ' if ok else 'MISS'} {text}")
     print(f"\nACCURACY {MODEL}: {hits}/{len(CASES)}")
     assert hits >= 1, "the model did not handle any of the free-form commands"
+
+
+def test_presentation_written_by_the_model(env, tmp_path):
+    """Stage 5: the model writes the content, A.R.C. renders, verifies and saves the file."""
+    from arc_backend.models import Source
+    svc, controller = env
+    svc.settings.update({"documents": {"output_dir": str(tmp_path / "docs")}})
+    started = time.monotonic()
+    response = svc.assistant.handle_text("сделай презентацию про солнечную систему")
+    assert response.status == Status.NEEDS_CONFIRMATION, response.message
+    done = svc.assistant.confirm(response.confirmation.id, True, Source.UI)
+    job = svc.documents.wait(done.data["job_id"], timeout=600)
+    print(f"\n{job.message} ({time.monotonic() - started:.0f}s) warnings={job.warnings}")
+    assert job.status == "done", job.message
+    from pptx import Presentation
+    titles = []
+    for slide in Presentation(job.path).slides:
+        texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame]
+        titles.append(texts[0] if texts else "")
+    print("slides:", titles)
+    print(f"MODEL WROTE THE TEXT: {job.ai_used}")
+    assert len(titles) >= 3
+
+
+@pytest.mark.skipif(not os.environ.get("ARC_TEST_ONLINE"), reason="ARC_TEST_ONLINE not set")
+def test_research_summary_and_document_with_sources(env, tmp_path):
+    from arc_backend.models import Source
+    svc, controller = env
+    svc.settings.update({"network": {"mode": "ONLINE"}, "online": {"providers": ["wikipedia"]},
+                         "documents": {"output_dir": str(tmp_path / "docs")}})
+    response = ask(svc, "найди в интернете что такое кубит")
+    research = response.data.get("research") or {}
+    print("SUMMARY:", research.get("summary") or research.get("summary_note"))
+    assert response.status == Status.DONE and research.get("results")
+    response = svc.assistant.handle_text("сделай документ про кубиты с данными из интернета")
+    done = svc.assistant.confirm(response.confirmation.id, True, Source.UI)
+    job = svc.documents.wait(done.data["job_id"], timeout=600)
+    print(f"\n{job.message} warnings={job.warnings}")
+    assert job.status == "done" and job.sources >= 1, job.message

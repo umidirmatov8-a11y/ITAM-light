@@ -7,6 +7,7 @@ import type {
   ArcState,
   BackendStatus,
   CommandResponse,
+  DocumentsListing,
   HistoryItem,
   Settings,
   SystemStats,
@@ -183,6 +184,38 @@ export function ArcProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, refreshState, refreshApps, refreshHistory, refreshAi]);
 
+  // ---------------------------------------------------------------- documents: announce finished jobs
+  const docsActive = state?.documents_active ?? 0;
+  const prevDocsActive = useRef(0);
+  const announcedJobs = useRef(new Set<string>());
+  const watchedJobs = useRef(new Set<string>());
+  useEffect(() => {
+    const before = prevDocsActive.current;
+    prevDocsActive.current = docsActive;
+    // jobs started from this window are watched by id; voice-started ones are noticed when the counter drops
+    if (!ready || (docsActive >= before && watchedJobs.current.size === 0)) return;
+    get<DocumentsListing>("/api/documents")
+      .then((listing) => {
+        let announced = false;
+        for (const job of listing.jobs) {
+          if (!job.finished || announcedJobs.current.has(job.id)) continue;
+          announcedJobs.current.add(job.id);
+          watchedJobs.current.delete(job.id);
+          if (Date.now() / 1000 - job.finished > 120) continue;
+          announced = true;
+          notify(job.status === "done" ? "ok" : "error", job.message);
+          setConversation((all) => [...all.slice(-29), {
+            id: `doc-${job.id}`, ts: job.finished, input: `документ: ${job.topic}`, source: "documents",
+            status: job.status === "done" ? "done" : job.status === "cancelled" ? "cancelled" : "error",
+            message: job.message, intent: "documents.finished", action: "documents.create", risk: null,
+            data: { job }, confirmation: null, clarify: null, dry_run: false,
+          }]);
+        }
+        if (announced) void refreshHistory();
+      })
+      .catch(() => undefined);
+  }, [ready, state, docsActive, notify, refreshHistory]);
+
   // ---------------------------------------------------------------- voice
   const voiceActive = Boolean(voice && (voice.capturing || voice.state === "processing" || voice.state === "speaking"));
   useEffect(() => {
@@ -301,6 +334,7 @@ export function ArcProvider({ children }: { children: ReactNode }) {
   const record = useCallback(
     (response: CommandResponse | null) => {
       if (!response) return;
+      if (response.action === "documents.create" && response.data?.job_id) watchedJobs.current.add(response.data.job_id);
       setConversation((items) => [...items.slice(-29), response]);
       void refreshState();
       void refreshHistory();

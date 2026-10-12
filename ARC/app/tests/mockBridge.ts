@@ -5,6 +5,9 @@ import type { ArcBridge, ArcState, CommandResponse, Settings, VisionStatus, Voic
 export const settings: Settings = {
   general: { language: "ru", wake_word: "арк", autostart: false, start_minimized: false, require_wake_word_for_voice: true, min_confidence: 0.6 },
   network: { mode: "LOCAL", online_allowed: true, search_url: "https://duckduckgo.com/?q={query}" },
+  online: { providers: ["wikipedia", "duckduckgo"], language: "ru", max_results: 5, timeout_s: 10,
+            requests_per_minute: 20, summarize: true, searxng_url: "" },
+  documents: { output_dir: "", use_ai: true, open_when_ready: false, max_sections: 8 },
   devices: { microphone_enabled: true, camera_enabled: false, local_ai_enabled: true },
   ai: { ollama_url: "http://127.0.0.1:11434", model: "qwen2.5-coder:7b", temperature: 0.2, timeout_s: 60,
         understand_commands: true, answer_questions: true, confirm_actions: false, num_ctx: 4096 },
@@ -46,6 +49,8 @@ export const state: ArcState = {
   simulated: false,
   voice: { state: "idle", message: "Готов", ptt: false, continuous: false },
   camera: { state: "idle", message: "Жесты выключены", running: false, paused: false },
+  online_active: 0,
+  documents_active: 0,
 };
 
 export function response(partial: Partial<CommandResponse>): CommandResponse {
@@ -88,6 +93,11 @@ export function installBridge(handler: Handler = () => undefined) {
     if (path === "/api/voice/models") return { status: 200, body: { free_mb: 50000, dir: "C:/models", models: [
       { id: "whisper-small", title: "Whisper small", kind: "stt", size_mb: 484, description: "", license: "MIT", supported: true, installed: false, download: null },
     ] } };
+    if (path === "/api/documents") return { status: 200, body: { jobs: [], recent: [], folder: "C:\\Users\\u\\Documents\\ARC", folder_error: "" } };
+    if (path === "/api/online/status") return { status: 200, body: { active: 0, recent: [], used_last_minute: 0, mode: "LOCAL",
+      online_allowed: true, secrets_backend: "windows-credential-manager", secrets_persistent: true, providers: [
+        { id: "wikipedia", title: "Википедия", needs_key: false, has_key: null, enabled: true, order: 0 },
+        { id: "brave", title: "Brave Search API", needs_key: true, has_key: false, enabled: false, order: null }] } };
     if (path === "/api/system/stats") return { status: 200, body: { cpu: 10, ram: { percent: 50, used_gb: 8, total_gb: 16 }, gpu: null, ts: 1 } };
     return { status: 404, body: { detail: "not mocked" } };
   });

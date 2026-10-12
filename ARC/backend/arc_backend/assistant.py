@@ -13,6 +13,7 @@ from typing import Callable, Optional
 from .apps.registry import AppRegistry
 from .ai.planner import LocalPlanner, PlannerError
 from .automation.executor import Executor
+from .documents.model import KIND_SHORT
 from .models import ActionRequest, ActionResult, ClarifyInfo, CommandResponse, Risk, Source, Status
 from .permissions.catalog import ActionSpec, Params
 from .permissions.manager import ConfirmationError, PermissionManager
@@ -26,7 +27,8 @@ log = logging.getLogger(__name__)
 HELP_TEXT = ("Примеры команд: «открой Telegram», «запусти игру», «увеличь громкость на 20 процентов», "
              "«выключи звук», «сверни все окна», «открой проводник», «найди файл отчёт на рабочем столе», "
              "«какие программы запущены», «сколько свободного места на диске», «создай папку Проект», "
-             "«переключись в онлайн-режим», «режим тишины», «повтори», «отмени».")
+             "«сделай презентацию про солнечную систему», «открой последний документ», "
+             "«переключись в онлайн-режим», «найди в интернете курс валют», «режим тишины», «повтори», «отмени».")
 
 
 @dataclass
@@ -85,6 +87,7 @@ class Assistant:
                 dialog=self._dialog,
                 has_pending_confirmation=self.permissions.latest_pending() is not None,
                 now=self.clock(),
+                last_document=self.executor.documents.latest_path() if self.executor.documents else None,
             )
             plan = self.router.route(text, ctx)
             return self._execute_plan(plan, text, source)
@@ -325,7 +328,8 @@ class Assistant:
         if spec.name == "scenario.run":
             result = self._run_scenario(params, request.source)
         else:
-            result = self._execute_with_timeout(spec, params, request.source, settings.safety.action_timeout_s)
+            timeout = max(settings.safety.action_timeout_s, spec.timeout_s or 0)
+            result = self._execute_with_timeout(spec, params, request.source, timeout)
         self.journal.audit(action=request.action, params=request.params, risk=spec.risk.value,
                            source=request.source.value, decision=decision, status=result.status.value,
                            message=result.message)
@@ -402,6 +406,15 @@ class Assistant:
             return f"установить громкость {p['level']}%"
         if spec.name == "scenario.run":
             return f"сценарий «{labels.get(p['scenario_id'], p['scenario_id'])}»"
+        if spec.name == "documents.create":
+            web = " с поиском в интернете" if p["use_web"] else ""
+            where = ""
+            if self.executor.documents is not None:
+                try:
+                    where = f" в папке {self.executor.documents.output_dir()}"
+                except ValueError:
+                    pass
+            return f"создать {KIND_SHORT[p['kind']]} «{p['topic']}»{web}{where}"
         return spec.title.lower()
 
     @staticmethod

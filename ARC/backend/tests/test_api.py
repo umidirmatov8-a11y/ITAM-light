@@ -141,3 +141,39 @@ def test_diagnostics_and_misc(client):
     assert client.get("/api/system/stats").json()["ram"]["total_gb"] > 0
     assert any(a["name"] == "power.shutdown" and a["risk"] == "C" for a in client.get("/api/actions").json())
     assert "desktop" in client.get("/api/folders").json()["known"]
+
+
+def test_online_status_and_keys_are_never_returned(client, services):
+    status = client.get("/api/online/status").json()
+    assert status["mode"] == "LOCAL" and status["active"] == 0
+    brave = next(p for p in status["providers"] if p["id"] == "brave")
+    assert brave["needs_key"] and brave["has_key"] is False
+    assert client.put("/api/online/keys/brave", json={"key": "short"}).status_code == 400
+    assert client.put("/api/online/keys/wikipedia", json={"key": "secret-key-123"}).status_code == 404
+    reply = client.put("/api/online/keys/brave", json={"key": "secret-key-123"})
+    assert reply.status_code == 200 and "secret-key-123" not in reply.text
+    status = client.get("/api/online/status")
+    assert "secret-key-123" not in status.text
+    assert next(p for p in status.json()["providers"] if p["id"] == "brave")["has_key"] is True
+    assert "secret-key-123" not in client.get("/api/settings").text
+    assert "secret-key-123" not in client.get("/api/audit").text
+    assert client.delete("/api/online/keys/brave").json()["removed"] is True
+
+
+def test_documents_endpoints(client, services, folders):
+    listing = client.get("/api/documents").json()
+    assert listing["jobs"] == [] and listing["folder"].endswith("ARC") and listing["folder_error"] == ""
+    response = client.post("/api/documents", json={"kind": "pptx", "topic": "кошки"}).json()
+    assert response["status"] == "needs_confirmation" and response["risk"] == "B"
+    assert client.post("/api/documents", json={"kind": "exe", "topic": "кошки"}).status_code == 422
+    assert client.post("/api/documents/nope/open").status_code == 404
+    assert client.post("/api/documents/recent/open", json={"path": "C:\\Windows\\system32\\cmd.exe"}).json()["status"] \
+        == "denied"
+    assert client.get("/api/state").json()["documents_active"] == 0
+
+
+def test_open_url_goes_through_the_catalog(client, controller):
+    assert client.post("/api/open-url", json={"url": "https://ru.wikipedia.org/wiki/Кубит"}).json()["status"] == "done"
+    assert controller.called("shell_open")[-1] == ("https://ru.wikipedia.org/wiki/Кубит",)
+    assert client.post("/api/open-url", json={"url": "file:///C:/Windows/system32/cmd.exe"}).json()["status"] == "denied"
+    assert client.post("/api/open-url", json={"url": "javascript:alert(1)"}).json()["status"] == "denied"

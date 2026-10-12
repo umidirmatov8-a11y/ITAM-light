@@ -6,6 +6,7 @@ import {
   IconClose,
   IconCompact,
   IconDiag,
+  IconDoc,
   IconHome,
   IconLog,
   IconMaximize,
@@ -15,12 +16,13 @@ import {
   IconShield,
 } from "./Icons";
 
-export type Screen = "home" | "apps" | "scenarios" | "log" | "permissions" | "settings" | "diagnostics";
+export type Screen = "home" | "apps" | "scenarios" | "documents" | "log" | "permissions" | "settings" | "diagnostics";
 
 const NAV: Array<{ id: Screen; label: string; icon: ReactNode }> = [
   { id: "home", label: "Пульт", icon: <IconHome /> },
   { id: "apps", label: "Прилож.", icon: <IconApps /> },
   { id: "scenarios", label: "Сценарии", icon: <IconScenario /> },
+  { id: "documents", label: "Докум.", icon: <IconDoc /> },
   { id: "log", label: "Журнал", icon: <IconLog /> },
   { id: "permissions", label: "Доступ", icon: <IconShield /> },
   { id: "settings", label: "Настр.", icon: <IconSettings /> },
@@ -55,9 +57,19 @@ export function TitleBar() {
         {state?.emergency_stop && <span className="tag tag--danger">E-STOP</span>}
         {state?.dry_run && <span className="tag tag--warn" title="Операции B/C имитируются">Тестовый режим</span>}
         {state?.simulated && <span className="tag tag--warn" title="Системные действия не выполняются">Имитация</span>}
+        {state && state.documents_active > 0 && (
+          <span className="tag tag--accent" title="Создаётся документ" data-testid="docs-indicator">
+            <span className="led led--busy" /> документ
+          </span>
+        )}
         {state && (
-          <span className={`tag ${state.mode === "ONLINE" ? "tag--accent" : "tag--ok"}`} data-testid="mode-indicator">
+          <span className={`tag ${state.mode === "ONLINE" ? "tag--accent" : "tag--ok"}`} data-testid="mode-indicator"
+                title={state.mode === "ONLINE" ? "Разрешены запросы в интернет по вашим командам" : "Без доступа к интернету"}>
+            {state.mode === "ONLINE" && (
+              <span className={`led ${state.online_active > 0 ? "led--busy" : "led--accent"}`} data-testid="net-led" />
+            )}{" "}
             {state.mode}
+            {state.online_active > 0 && <span className="net-activity"> · сеть</span>}
           </span>
         )}
         <span className="tag" title={backend.message}>

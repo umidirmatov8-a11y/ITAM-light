@@ -47,6 +47,7 @@ class RouterContext:
     has_pending_confirmation: bool = False
     now: float = field(default_factory=time.time)
     raw: str = ""
+    last_document: Optional[str] = None  # path of the latest document A.R.C. created
 
 
 @dataclass
@@ -80,6 +81,31 @@ _SITES = {
     "википедия": "https://ru.wikipedia.org", "википедию": "https://ru.wikipedia.org",
     "почту": "https://mail.google.com", "гмейл": "https://mail.google.com",
 }
+_DOC_VERB = r"(?:подготовь|подготовить|создай|создать|сделай|сделать|напиши|написать|сгенерируй|составь|составить|оформи)"
+_DOC_KIND = (r"(презентаци\w*|документ\w*|доклад\w*|отчет\w*|таблиц\w*|реферат\w*|справк\w*|pdf|пдф|ворд\w*|word|"
+             r"эксел\w*|excel|текстов\w* файл\w*|заметк\w*|конспект\w*)\b")
+_DOC_WEB = re.compile(r"\b(?:с (?:поиском|информацией|данными|фактами|сведениями)\s+(?:в|из)\s+(?:интернет\w*|сети)|"
+                      r"(?:по данным |с данными )?из интернета|из сети|с актуальн\w* (?:данными|информацией|фактами|сведениями)|"
+                      r"с поиском|поищи в интернете и|найди в интернете и)\b")
+_DOC_FORMAT = re.compile(r"\b(?:в (?:формате )?(?:pdf|пдф|ворд\w*|word|эксел\w*|excel|txt)|в текстовом (?:формате|файле)|"
+                         r"формата (?:pdf|пдф))\b")
+
+
+KIND_ASK = {"pptx": "презентацию", "docx": "документ", "xlsx": "таблицу", "pdf": "PDF", "txt": "заметку"}
+
+
+def _doc_kind(word: str, text: str) -> str:
+    if re.search(r"\b(?:pdf|пдф)\b", text):
+        return "pdf"
+    if word.startswith("презентац"):
+        return "pptx"
+    if re.match(r"(?:таблиц|эксел|excel)", word) or re.search(r"\bв (?:формате )?(?:эксел\w*|excel)\b", text):
+        return "xlsx"
+    if re.match(r"(?:текстов|заметк|конспект)", word) or re.search(r"\bв текстовом|txt\b", text):
+        return "txt"
+    return "docx"
+
+
 _DOMAIN = re.compile(r"\b((?:https?://)?(?:[a-z0-9а-я\-]+\.)+(?:ru|com|org|net|io|рф|su|dev|info|me|tv|ai|edu|gov|uk|de|by|kz|ua)(?:/[^\s]*)?)\b")
 
 
@@ -303,25 +329,55 @@ class CommandRouter:
 
     # ------------------------------------------------------------------ documents (stage 5)
     def _documents(self, text: str, ctx: RouterContext) -> Optional[Plan]:
-        if re.search(r"(?:подготовь|создай|сделай|напиши|сгенерируй)\s+(?:\w+\s+)?(?:презентаци\w*|документ|доклад|отчет|"
-                     r"таблиц\w*|pdf|ворд)", text) and not re.search(r"папк", text):
-            return Plan("unavailable", "documents.create",
-                        "Создание документов и презентаций появится в модуле документов (этап 5). "
-                        "Сейчас я могу открыть Word или PowerPoint, если они есть в реестре.")
-        return None
+        if ctx.last_document and re.fullmatch(
+                r"(?:открой|покажи|открыть)\s+(?:последн\w*|созданн\w*|готов\w*|эт\w*|ее|его)?\s*"
+                r"(?:документ|презентаци\w*|таблиц\w*|файл|pdf|пдф|отчет)", text):
+            return Plan("actions", "files.open", actions=[ActionRequest(action="files.open",
+                                                                         params={"path": ctx.last_document})])
+        if re.search(r"\bпапк", text):
+            return None
+        stripped = " ".join(_DOC_FORMAT.sub(" ", text).split())
+        match = re.search(_DOC_VERB + r"\s+(?:(?:мне|пожалуйста|быстро)\s+)*(?:\w+\s+){0,2}?" + _DOC_KIND + r"(.*)",
+                          stripped)
+        if not match:
+            return None
+        word, rest = match.group(1), match.group(2)
+        kind = _doc_kind(word, text)
+        use_web = bool(_DOC_WEB.search(rest))
+        rest = " ".join(_DOC_WEB.sub(" ", rest).split()).strip(" ,.")
+        about = re.match(r"(?:на тему|по теме|о|об|обо|про|насчет)\s+(.+)", rest)
+        if about:
+            topic = about.group(1)
+        elif rest and not re.fullmatch(r"(?:pdf|пдф|word|excel)", word):
+            topic = f"{word} {rest}"  # "отчет по продажам", "таблицу курсов валют"
+        else:
+            topic = rest
+        if len(topic.strip()) < 2:
+            return Plan("reply", "documents.create",
+                        f"На какую тему подготовить {KIND_ASK[kind]}? Например: «сделай презентацию про солнечную систему».")
+        topic = _original_case(ctx.raw, topic.strip(" ,."))
+        return Plan("actions", "documents.create", actions=[ActionRequest(
+            action="documents.create", params={"kind": kind, "topic": topic, "use_web": use_web})])
 
     # ------------------------------------------------------------------ web / browser
     def _web(self, text: str, ctx: RouterContext) -> Optional[Plan]:
-        match = re.search(r"(?:найди|поищи|ищи|загугли|погугли|узнай|посмотри)\s+(?:мне\s+)?(?:в интернете|в сети|в гугле|"
-                          r"в яндексе|актуальн\w* информаци\w*|информаци\w*|новости)\s*(?:(?:на тему|по теме|об|о|про|по)\s+)?(.*)",
-                          text)
-        if not match:
-            match = re.search(r"(?:загугли|погугли)\s+(.*)", text)
-        if match:
-            query = match.group(1).strip()
+        browser = re.search(r"(?:найди|поищи|ищи|посмотри)\s+(?:мне\s+)?(?:в гугле|в яндексе|в браузере)\s*"
+                            r"(?:(?:на тему|по теме|об|о|про|по)\s+)?(.*)", text) \
+            or re.search(r"(?:загугли|погугли)\s+(.*)", text)
+        if browser:
+            query = browser.group(1).strip()
             if not query:
                 return Plan("reply", "web.search", "Что найти в интернете?")
             return Plan("actions", "web.search", actions=[ActionRequest(action="web.search", params={"query": query})])
+        match = re.search(r"(?:найди|поищи|ищи|узнай|посмотри|выясни)\s+(?:мне\s+)?(?:в интернете|в сети|онлайн|"
+                          r"актуальн\w* информаци\w*|информаци\w*|сведени\w*|новости)\s*"
+                          r"(?:(?:на тему|по теме|об|о|про|по)\s+)?(.*)", text)
+        if match:
+            query = match.group(1).strip()
+            if len(query) < 2:
+                return Plan("reply", "web.research", "Что найти в интернете?")
+            return Plan("actions", "web.research",
+                        actions=[ActionRequest(action="web.research", params={"query": query})])
         nav = re.search(r"(?:перейди|зайди|открой|откройте)\s+(?:браузер\s+и\s+(?:перейди|зайди|открой)\s+)?"
                         r"(?:на\s+)?(?:сайт|страницу|адрес)?\s*(.+)", text)
         if nav:

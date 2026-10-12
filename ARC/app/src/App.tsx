@@ -7,6 +7,7 @@ import { ArcProvider, useArc } from "./lib/store";
 import { Apps } from "./screens/Apps";
 import { Compact } from "./screens/Compact";
 import { Diagnostics } from "./screens/Diagnostics";
+import { Documents } from "./screens/Documents";
 import { Home } from "./screens/Home";
 import { Log } from "./screens/Log";
 import { Permissions } from "./screens/Permissions";
@@ -28,6 +29,23 @@ function BackendBanner() {
   );
 }
 
+function OnlineBanner() {
+  const { state, settings, updateSettings } = useArc();
+  if (state?.mode !== "ONLINE") return null;
+  const providers = settings?.online.providers.join(", ") || "—";
+  return (
+    <div className="banner banner--online" role="status" data-testid="online-banner">
+      <span className={`led ${state.online_active > 0 ? "led--busy" : "led--accent"}`} />
+      <span>
+        <b>ONLINE</b>: A.R.C. может обращаться к интернету по вашим командам (поиск: {providers}).
+        {state.online_active > 0 && " Идёт запрос…"}
+      </span>
+      <button className="btn btn--sm" onClick={() => void updateSettings({ network: { mode: "LOCAL" } })}
+              data-testid="back-to-local">Вернуться в LOCAL</button>
+    </div>
+  );
+}
+
 function Shell() {
   const { backend, state } = useArc();
   const [screen, setScreen] = useState<Screen>("home");
@@ -39,9 +57,11 @@ function Shell() {
         <NavRail screen={screen} onChange={setScreen} />
         <main className="content">
           <BackendBanner />
+          <OnlineBanner />
           {screen === "home" && <Home />}
           {screen === "apps" && <Apps />}
           {screen === "scenarios" && <Scenarios />}
+          {screen === "documents" && <Documents />}
           {screen === "log" && <Log />}
           {screen === "permissions" && <Permissions />}
           {screen === "settings" && <Settings />}

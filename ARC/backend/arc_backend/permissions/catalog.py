@@ -80,6 +80,16 @@ class QueryParams(Params):
     query: str = Field(min_length=1, max_length=300)
 
 
+class ResearchParams(Params):
+    query: str = Field(min_length=2, max_length=300)
+
+
+class DocumentParams(Params):
+    kind: Literal["pptx", "docx", "xlsx", "pdf", "txt"]
+    topic: str = Field(min_length=2, max_length=300)
+    use_web: bool = False
+
+
 class PowerParams(Params):
     delay_s: int = Field(60, ge=0, le=3600)
 
@@ -96,6 +106,9 @@ class ScenarioParams(Params):
     scenario_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_\-]+$")
 
 
+RESEARCH_TIMEOUT_S = 45.0
+
+
 @dataclass(frozen=True)
 class ActionSpec:
     name: str
@@ -105,6 +118,7 @@ class ActionSpec:
     params: Type[Params]
     gesture_allowed: bool = False
     requires_online: bool = False
+    timeout_s: Optional[float] = None  # overrides safety.action_timeout_s when longer
 
 
 CATALOG: dict[str, ActionSpec] = {spec.name: spec for spec in [
@@ -124,7 +138,10 @@ CATALOG: dict[str, ActionSpec] = {spec.name: spec for spec in [
     ActionSpec("files.remove_empty_folder", "Удаление пустой папки", "files", Risk.B, FileOpenParams),
     ActionSpec("explorer.open", "Открыть проводник", "files", Risk.A, ExplorerParams, gesture_allowed=True),
     ActionSpec("browser.open_url", "Открыть сайт", "browser", Risk.A, UrlParams),
-    ActionSpec("web.search", "Поиск в интернете", "web_search", Risk.A, QueryParams, requires_online=True),
+    ActionSpec("web.search", "Поиск в интернете (в браузере)", "web_search", Risk.A, QueryParams, requires_online=True),
+    ActionSpec("web.research", "Поиск сведений в интернете", "web_search", Risk.A, ResearchParams,
+               requires_online=True, timeout_s=RESEARCH_TIMEOUT_S),
+    ActionSpec("documents.create", "Создание документа", "documents", Risk.B, DocumentParams),
     ActionSpec("power.shutdown", "Выключение компьютера", "power", Risk.C, PowerParams),
     ActionSpec("power.restart", "Перезагрузка компьютера", "power", Risk.C, PowerParams),
     ActionSpec("power.abort", "Отмена выключения", "power", Risk.A, NoParams),

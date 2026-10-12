@@ -169,16 +169,17 @@ def test_repeat_without_history(services):
 
 
 def test_mode_switch_enables_web_search(services, controller, no_network):
-    denied = services.assistant.handle_text("найди в интернете курс валют")
+    denied = services.assistant.handle_text("загугли курс валют")
     assert denied.status == Status.DENIED
+    assert services.assistant.handle_text("найди в интернете курс валют").status == Status.DENIED
     assert controller.called("shell_open") == []
     assert services.assistant.handle_text("переключись в онлайн режим").status == Status.DONE
     assert services.settings.get().network.mode.value == "ONLINE"
-    result = services.assistant.handle_text("найди в интернете курс валют")
+    result = services.assistant.handle_text("загугли курс валют")
     assert result.status == Status.DONE
     assert controller.called("shell_open") == [("https://duckduckgo.com/?q=%D0%BA%D1%83%D1%80%D1%81+%D0%B2%D0%B0%D0%BB%D1%8E%D1%82",)]
     assert services.assistant.handle_text("перейди в локальный режим").status == Status.DONE
-    assert services.assistant.handle_text("найди в интернете курс валют").status == Status.DENIED
+    assert services.assistant.handle_text("загугли курс валют").status == Status.DENIED
 
 
 def test_online_master_switch(services):

@@ -62,6 +62,8 @@ export interface ArcState {
   simulated: boolean;
   voice: { state: VoiceStateName; message: string; ptt: boolean; continuous: boolean };
   camera: { state: string; message: string; running: boolean; paused: boolean };
+  online_active: number;
+  documents_active: number;
 }
 
 export interface Settings {
@@ -74,6 +76,8 @@ export interface Settings {
     min_confidence: number;
   };
   network: { mode: "LOCAL" | "ONLINE"; online_allowed: boolean; search_url: string };
+  online: OnlineSettings;
+  documents: DocumentsSettings;
   devices: { microphone_enabled: boolean; camera_enabled: boolean; local_ai_enabled: boolean };
   ai: {
     ollama_url: string;
@@ -325,4 +329,107 @@ declare global {
   interface Window {
     arc: ArcBridge;
   }
+}
+
+// ---------------------------------------------------------------- stage 5: online and documents
+export type ProviderId = "wikipedia" | "duckduckgo" | "brave" | "searxng";
+
+export interface OnlineSettings {
+  providers: ProviderId[];
+  language: "ru" | "en";
+  max_results: number;
+  timeout_s: number;
+  requests_per_minute: number;
+  summarize: boolean;
+  searxng_url: string;
+}
+
+export interface DocumentsSettings {
+  output_dir: string;
+  use_ai: boolean;
+  open_when_ready: boolean;
+  max_sections: number;
+}
+
+export interface ProviderInfo {
+  id: ProviderId;
+  title: string;
+  needs_key: boolean;
+  has_key: boolean | null;
+  enabled: boolean;
+  order: number | null;
+}
+
+export interface OnlineActivity {
+  ts: number;
+  provider: string;
+  host: string;
+  status: "ok" | "error" | "refused";
+  ms: number;
+  detail: string;
+}
+
+export interface OnlineStatus {
+  active: number;
+  recent: OnlineActivity[];
+  used_last_minute: number;
+  mode: "LOCAL" | "ONLINE";
+  online_allowed: boolean;
+  providers: ProviderInfo[];
+  secrets_backend: string;
+  secrets_persistent: boolean;
+}
+
+export interface SearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  provider: string;
+}
+
+export interface ResearchReport {
+  query: string;
+  results: SearchResult[];
+  summary: string;
+  summary_note: string;
+  errors: string[];
+  providers: string[];
+  elapsed_s: number;
+}
+
+export type DocKind = "pptx" | "docx" | "xlsx" | "pdf" | "txt";
+
+export interface DocJob {
+  id: string;
+  kind: DocKind;
+  topic: string;
+  use_web: boolean;
+  source: string;
+  created: number;
+  status: "queued" | "research" | "writing" | "rendering" | "verifying" | "done" | "error" | "cancelled";
+  stage: string;
+  title: string;
+  path: string;
+  name: string;
+  message: string;
+  warnings: string[];
+  details: string[];
+  ai_used: boolean;
+  sources: number;
+  pages: number;
+  finished: number;
+}
+
+export interface RecentFile {
+  name: string;
+  path: string;
+  size: number;
+  modified: number;
+}
+
+export interface DocumentsListing {
+  jobs: DocJob[];
+  recent: RecentFile[];
+  folder: string;
+  folder_error: string;
 }

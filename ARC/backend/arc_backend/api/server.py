@@ -19,7 +19,9 @@ from ..ai.ollama import check_ollama
 from ..apps.discovery import discover_all, import_discovered
 from ..apps.registry import AppInput, LaunchType
 from ..automation import sysinfo
+from ..documents.render import find_fonts
 from ..models import ActionRequest, Source
+from ..online.secrets import SecretError
 from ..permissions.catalog import catalog_view
 from ..services import Services
 from ..storage.scenarios import SCENARIO_ACTIONS, ScenarioInput
@@ -109,6 +111,24 @@ class ModelBody(BaseModel):
     confirm: bool = False
 
 
+class KeyBody(BaseModel):
+    key: str = Field(min_length=1, max_length=600)
+
+
+class DocumentBody(BaseModel):
+    kind: Literal["pptx", "docx", "xlsx", "pdf", "txt"]
+    topic: str = Field(min_length=2, max_length=300)
+    use_web: bool = False
+
+
+class UrlBody(BaseModel):
+    url: str = Field(min_length=8, max_length=2048)
+
+
+class PathBody(BaseModel):
+    path: str = Field(min_length=1, max_length=1024)
+
+
 class AppCreateBody(AppInput):
     confirm_untrusted: bool = False
 
@@ -176,7 +196,8 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
                 "silent": settings.profile.silent, "dry_run": settings.safety.dry_run,
                 "simulated": s.controller.simulated,
                 "voice": {k: v for k, v in s.voice.status().items() if k in ("state", "message", "ptt", "continuous")},
-                "camera": {k: v for k, v in s.vision.status().items() if k in ("state", "message", "running", "paused")}}
+                "camera": {k: v for k, v in s.vision.status().items() if k in ("state", "message", "running", "paused")},
+                "online_active": s.online.status()["active"], "documents_active": s.documents.active()}
 
     @app.post("/api/command")
     def command(body: CommandBody) -> dict[str, Any]:
@@ -384,9 +405,90 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
             + ("; камера включена" if settings.devices.camera_enabled else "; камера выключена в настройках")
             + (f"; {vision_status['fps']} кадр/с" if vision_status["running"] else ""))
         add("Сеть", "ok", f"Режим {settings.network.mode.value}; онлайн-функции "
-                          f"{'разрешены' if settings.network.online_allowed else 'выключены'}")
+                          f"{'разрешены' if settings.network.online_allowed else 'выключены'}; поиск: "
+                          f"{', '.join(settings.online.providers) or 'не выбран'}; ключи: {s.secrets.backend}")
+        try:
+            out_dir = s.documents.output_dir()
+            add("Документы", "ok", f"Папка: {out_dir}; текст: "
+                                   f"{'локальная модель' if settings.documents.use_ai else 'только шаблоны'}")
+        except ValueError as exc:
+            add("Документы", "warn", str(exc))
+        fonts = find_fonts()
+        add("Шрифт для PDF", "ok" if fonts else "warn",
+            os.path.basename(fonts[0]) if fonts else "Не найден шрифт с кириллицей: PDF создать не получится")
         add("Приложения", "ok", f"В реестре: {len(s.registry.list())}")
         return {"checks": checks, "data_dir": str(s.data_dir), "ts": time.time()}
+
+    # ------------------------------------------------------------------ online (stage 5)
+    @app.get("/api/online/status")
+    def online_status() -> dict[str, Any]:
+        settings = s.settings.get()
+        return {**s.online.status(), "mode": settings.network.mode.value,
+                "online_allowed": settings.network.online_allowed, "providers": s.research.provider_view(),
+                "secrets_backend": s.secrets.backend, "secrets_persistent": s.secrets.persistent}
+
+    @app.put("/api/online/keys/{name}")
+    def set_key(name: str, body: KeyBody) -> dict[str, Any]:
+        if name not in {p["id"] for p in s.research.provider_view() if p["needs_key"]}:
+            raise KeyError(f"Сервис {name} не использует ключ")
+        try:
+            s.secrets.set(name, body.key)
+        except SecretError as exc:
+            raise ValueError(str(exc))
+        s.journal.audit(action="online.key_set", params={"provider": name}, risk="-", source="ui", decision="allow",
+                        status="done", message=f"Ключ {name} сохранён ({s.secrets.backend})")
+        return {"ok": True, "provider": name, "has_key": True}
+
+    @app.delete("/api/online/keys/{name}")
+    def delete_key(name: str) -> dict[str, Any]:
+        try:
+            removed = s.secrets.delete(name)
+        except SecretError as exc:
+            raise ValueError(str(exc))
+        s.journal.audit(action="online.key_delete", params={"provider": name}, risk="-", source="ui",
+                        decision="allow", status="done", message=f"Ключ {name} удалён")
+        return {"ok": True, "removed": removed}
+
+    # ------------------------------------------------------------------ documents (stage 5)
+    @app.get("/api/documents")
+    def documents() -> dict[str, Any]:
+        try:
+            folder, folder_error = s.documents.output_dir(), ""
+        except ValueError as exc:
+            folder, folder_error = "", str(exc)
+        return {"jobs": s.documents.jobs(), "recent": s.documents.recent_files(), "folder": folder,
+                "folder_error": folder_error}
+
+    @app.post("/api/documents")
+    def create_document(body: DocumentBody) -> dict[str, Any]:
+        request = ActionRequest(action="documents.create", params=body.model_dump(), source=Source.UI)
+        return s.assistant.run_action(request, input_text=f"документ: {body.topic}").model_dump(mode="json")
+
+    @app.post("/api/documents/recent/open")
+    def open_recent(body: PathBody) -> dict[str, Any]:
+        request = ActionRequest(action="files.open", params={"path": body.path}, source=Source.UI)
+        return s.assistant.run_action(request, input_text="открыть документ").model_dump(mode="json")
+
+    def job_path(job_id: str) -> str:
+        job = s.documents.get(job_id)
+        if job is None or job.status != "done" or not job.path:
+            raise KeyError("Документ не найден")
+        return job.path
+
+    @app.post("/api/documents/{job_id}/cancel")
+    def cancel_document(job_id: str) -> dict[str, Any]:
+        return {"ok": s.documents.cancel(job_id)}
+
+    @app.post("/api/documents/{job_id}/open")
+    def open_document(job_id: str) -> dict[str, Any]:
+        request = ActionRequest(action="files.open", params={"path": job_path(job_id)}, source=Source.UI)
+        return s.assistant.run_action(request, input_text="открыть документ").model_dump(mode="json")
+
+    @app.post("/api/open-url")
+    def open_url(body: UrlBody) -> dict[str, Any]:
+        """Links shown in search results open in the user's browser (same checks as «открой сайт»)."""
+        request = ActionRequest(action="browser.open_url", params={"url": body.url}, source=Source.UI)
+        return s.assistant.run_action(request, input_text="открыть ссылку").model_dump(mode="json")
 
     # ------------------------------------------------------------------ voice
     def voice_call(fn):

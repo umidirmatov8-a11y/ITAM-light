@@ -8,18 +8,25 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import os
+import time
 import urllib.parse
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 import psutil
 
 from ..apps.registry import AppEntry, AppRegistry, LaunchType
+from ..documents.model import KIND_SHORT
 from ..models import ActionRequest, ActionResult, Source, Status
 from ..permissions import catalog as c
+from ..online.client import OnlineError
 from ..storage.settings import SettingsStore
 from . import sysinfo
 from .controller import ControllerError, SystemController
 from .files import PathError, PathGuard, is_executable, search_files, validate_folder_name
+
+if TYPE_CHECKING:
+    from ..documents.engine import DocumentEngine
+    from ..online.research import ResearchEngine
 
 log = logging.getLogger(__name__)
 
@@ -44,8 +51,11 @@ def fail(status: Status, message: str, data: Optional[dict] = None) -> ActionRes
 
 class Executor:
     def __init__(self, controller: SystemController, registry: AppRegistry, settings: SettingsStore,
-                 folders: Callable[[], dict[str, str]], gpu: sysinfo.GpuProbe):
+                 folders: Callable[[], dict[str, str]], gpu: sysinfo.GpuProbe,
+                 research: Optional["ResearchEngine"] = None, documents: Optional["DocumentEngine"] = None):
         self.controller = controller
+        self.research = research
+        self.documents = documents
         self.registry = registry
         self.settings = settings
         self.folders = folders
@@ -68,6 +78,8 @@ class Executor:
             "explorer.open": self._explorer_open,
             "browser.open_url": self._open_url,
             "web.search": self._web_search,
+            "web.research": self._web_research,
+            "documents.create": self._documents_create,
             "power.shutdown": lambda p, s: self._power("shutdown", p),
             "power.restart": lambda p, s: self._power("restart", p),
             "power.abort": self._power_abort,
@@ -321,6 +333,46 @@ class Executor:
         url = template.replace("{query}", urllib.parse.quote_plus(p.query))
         self.controller.shell_open(url)
         return ok(f"Ищу в интернете: «{p.query}». Результаты открыты в браузере.", {"url": url})
+
+    def _web_research(self, p: c.ResearchParams, source: Source) -> ActionResult:
+        if self.research is None:
+            return fail(Status.UNAVAILABLE, "Модуль поиска в интернете недоступен")
+        started = time.monotonic()
+        try:
+            report = self.research.search(p.query)
+        except OnlineError as exc:
+            return fail(Status.ERROR, str(exc))
+        budget = c.RESEARCH_TIMEOUT_S - (time.monotonic() - started) - 3.0
+        self.research.summarize(report, budget)
+        data = {"research": report.as_dict()}
+        if not report.results:
+            return ok(f"По запросу «{p.query}» ничего не нашлось.", data, repeatable=False)
+        hosts = []
+        for result in report.results:
+            host = urllib.parse.urlparse(result.url).netloc.removeprefix("www.")
+            if host not in hosts:
+                hosts.append(host)
+        if report.summary:
+            message = f"{report.summary} Источники: {', '.join(hosts[:3])}."
+        else:
+            first = report.results[0]
+            snippet = first.snippet[:400] if first.snippet else ""
+            message = f"Нашёл {len(report.results)}. «{first.title}» ({hosts[0]}): {snippet}".rstrip(": ")
+        return ok(message, data, repeatable=False)
+
+    # ------------------------------------------------------------------ documents
+    def _documents_create(self, p: c.DocumentParams, source: Source) -> ActionResult:
+        if self.documents is None:
+            return fail(Status.UNAVAILABLE, "Модуль документов недоступен")
+        settings = self.settings.get()
+        if p.use_web and settings.network.mode.value != "ONLINE":
+            return fail(Status.DENIED, "Чтобы собрать факты в интернете, нужен режим ONLINE. Скажите «переключись "
+                                       "в онлайн-режим» или попросите создать документ без поиска.")
+        folder = self.documents.output_dir()
+        job = self.documents.submit(p.kind, p.topic, p.use_web, source.value)
+        web = " с поиском в интернете" if p.use_web else ""
+        return ok(f"Готовлю {KIND_SHORT[p.kind]} «{p.topic}»{web}. Сообщу, когда файл будет готов.",
+                  {"job_id": job.id, "folder": folder}, repeatable=False)
 
     # ------------------------------------------------------------------ power
     def _power(self, kind: str, p: c.PowerParams) -> ActionResult:

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { App } from "../src/App";
 import { ConfirmDialog } from "../src/components/ConfirmDialog";
 import { ArcProvider } from "../src/lib/store";
-import { installBridge, response, visionStatus, voiceStatus } from "./mockBridge";
+import { installBridge, response, state, visionStatus, voiceStatus } from "./mockBridge";
 
 describe("home screen", () => {
   it("sends a typed command through the bridge and shows the answer", async () => {
@@ -162,3 +162,78 @@ describe("local AI", () => {
   });
 });
 
+
+describe("stage 5: online and documents", () => {
+  it("shows search results as links that open through the backend", async () => {
+    const research = {
+      query: "кубит", summary: "", summary_note: "", errors: [], providers: ["wikipedia"], elapsed_s: 0.4,
+      results: [{ title: "Кубит", url: "https://ru.wikipedia.org/wiki/Кубит", snippet: "Единица информации", provider: "wikipedia" }],
+    };
+    const { api } = installBridge((method, path) => {
+      if (method === "POST" && path === "/api/command")
+        return response({ input: "найди в интернете кубит", message: "Нашёл 1.", action: "web.research", data: { research } });
+      if (method === "POST" && path === "/api/open-url") return response({ message: "Открываю" });
+      return undefined;
+    });
+    render(<App />);
+    const input = (await screen.findByTestId("command-input")) as HTMLInputElement;
+    await waitFor(() => expect(input.disabled).toBe(false));
+    fireEvent.change(input, { target: { value: "найди в интернете кубит" } });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("command-send"));
+    });
+    const results = await screen.findByTestId("research-results");
+    expect(results.textContent).toContain("ru.wikipedia.org");
+    await act(async () => {
+      fireEvent.click(screen.getByText("Кубит"));
+    });
+    expect(api).toHaveBeenCalledWith("POST", "/api/open-url", { url: "https://ru.wikipedia.org/wiki/Кубит" });
+  });
+
+  it("marks ONLINE mode with a banner and returns to LOCAL in one click", async () => {
+    const { api } = installBridge((_m, path) =>
+      path === "/api/state" ? { ...state, mode: "ONLINE", online_active: 1 } : undefined,
+    );
+    render(<App />);
+    const banner = await screen.findByTestId("online-banner");
+    expect(banner.textContent).toContain("Идёт запрос");
+    expect(screen.getByTestId("mode-indicator").textContent).toContain("сеть");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("back-to-local"));
+    });
+    expect(api).toHaveBeenCalledWith("PUT", "/api/settings", { network: { mode: "LOCAL" } });
+  });
+
+  it("creates a document from the documents screen; web facts need ONLINE", async () => {
+    const { api } = installBridge((method, path) =>
+      method === "POST" && path === "/api/documents" ? response({ status: "needs_confirmation", risk: "B" }) : undefined,
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("nav-documents"));
+    await waitFor(() => expect(screen.getByTestId("doc-folder").textContent).toContain("Documents"));
+    const web = screen.getByTestId("doc-web") as HTMLInputElement;
+    expect(web.disabled).toBe(true);
+    fireEvent.change(screen.getByTestId("doc-kind"), { target: { value: "xlsx" } });
+    fireEvent.change(screen.getByTestId("doc-topic"), { target: { value: "Курсы валют" } });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("doc-create"));
+    });
+    expect(api).toHaveBeenCalledWith("POST", "/api/documents", { kind: "xlsx", topic: "Курсы валют", use_web: false });
+  });
+
+  it("stores an API key without ever showing it again", async () => {
+    const { api } = installBridge((method, path) =>
+      method === "PUT" && path === "/api/online/keys/brave" ? { ok: true, provider: "brave", has_key: true } : undefined,
+    );
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("nav-settings"));
+    const key = (await screen.findByTestId("key-brave")) as HTMLInputElement;
+    expect(key.type).toBe("password");
+    fireEvent.change(key, { target: { value: "secret-key-123" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Сохранить"));
+    });
+    expect(api).toHaveBeenCalledWith("PUT", "/api/online/keys/brave", { key: "secret-key-123" });
+    await waitFor(() => expect(key.value).toBe(""));
+  });
+});

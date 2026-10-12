@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+import httpx
+
 from . import paths
 from .ai.planner import LocalPlanner
 from .apps.registry import AppRegistry
@@ -14,7 +16,11 @@ from .assistant import Assistant
 from .automation.controller import SystemController, create_controller
 from .automation.executor import Executor
 from .automation.sysinfo import GpuProbe
+from .documents.engine import DocJob, DocumentEngine
 from .models import ActionRequest, Source
+from .online.client import OnlineClient
+from .online.research import ResearchEngine
+from .online.secrets import SecretStore, create_secret_store
 from .permissions.manager import PermissionManager
 from .storage.db import Database
 from .storage.journal import Journal
@@ -57,14 +63,21 @@ class Services:
     models: ModelManager
     voice: VoiceEngine
     vision: VisionEngine
+    secrets: SecretStore
+    online: OnlineClient
+    research: ResearchEngine
+    documents: DocumentEngine
 
     @classmethod
     def create(cls, data_dir: Optional[Path] = None, controller: Optional[SystemController] = None,
                folders: Optional[Callable[[], dict[str, str]]] = None, db_name: str = "arc.db",
                voice_options: Optional[dict[str, Any]] = None, models_dir: Optional[Path] = None,
                vision_options: Optional[dict[str, Any]] = None,
-               planner: Optional[LocalPlanner] = None) -> "Services":
-        """`voice_options` are passed to VoiceEngine (tests inject fake audio/recognizer/synthesizer)."""
+               planner: Optional[LocalPlanner] = None, online_transport: Optional[httpx.BaseTransport] = None,
+               ai_transport: Optional[httpx.BaseTransport] = None,
+               secrets: Optional[SecretStore] = None) -> "Services":
+        """`voice_options` are passed to VoiceEngine (tests inject fake audio/recognizer/synthesizer);
+        `online_transport` / `ai_transport` replace the network for the online and document modules in tests."""
         data_dir = data_dir or paths.data_dir()
         data_dir.mkdir(parents=True, exist_ok=True)
         db = Database(data_dir / db_name)
@@ -88,7 +101,24 @@ class Services:
         permissions = PermissionManager(settings.get)
         controller = controller or create_controller()
         gpu = GpuProbe()
-        executor = Executor(controller, registry, settings, folder_map, gpu)
+        secrets = secrets or create_secret_store()
+        online = OnlineClient(settings.get, journal, transport=online_transport)
+        research = ResearchEngine(online, settings.get, secrets, ai_transport=ai_transport)
+        voice_ref: list[VoiceEngine] = []
+
+        def document_finished(job: DocJob) -> None:
+            status = {"done": "done", "cancelled": "cancelled"}.get(job.status, "error")
+            journal.add_history(source="documents", input=f"документ: {job.topic}", intent="documents.finished",
+                                action="documents.create", status=status, message=job.message)
+            journal.audit(action="documents.write", params={"kind": job.kind, "path": job.path, "job": job.id},
+                          risk="B", source=job.source, decision="allow", status=status, message=job.message)
+            if job.source == Source.VOICE.value and voice_ref:
+                voice_ref[0].speak(job.message)
+
+        documents = DocumentEngine(settings.get, folder_map, research, on_finished=document_finished,
+                                   opener=controller.shell_open, emergency=lambda: permissions.emergency_stop,
+                                   ai_transport=ai_transport)
+        executor = Executor(controller, registry, settings, folder_map, gpu, research=research, documents=documents)
         assistant = Assistant(settings=settings, registry=registry, scenarios=scenarios, journal=journal,
                               permissions=permissions, executor=executor, folders=folder_map,
                               planner=planner or LocalPlanner())
@@ -103,6 +133,7 @@ class Services:
             return assistant.handle_text(text, Source.VOICE, confidence, explicit=explicit)
 
         voice = VoiceEngine(settings, models, on_utterance, hints=hints, **(voice_options or {}))
+        voice_ref.append(voice)
 
         def on_gesture(gesture: str, binding: GestureBinding) -> dict:
             label = f"жест: {GESTURE_TITLES.get(gesture, gesture)}"
@@ -124,9 +155,10 @@ class Services:
         vision = VisionEngine(settings, models, on_gesture, **(vision_options or {}))
         log.info("services ready: data=%s controller=%s first_run=%s", data_dir, controller.name, first_run)
         return cls(data_dir, db, settings, registry, scenarios, journal, permissions, controller, executor, gpu,
-                   assistant, folder_map, models, voice, vision)
+                   assistant, folder_map, models, voice, vision, secrets, online, research, documents)
 
     def close(self) -> None:
+        self.documents.shutdown()
         self.vision.shutdown()
         self.voice.shutdown()
         self.assistant.close()

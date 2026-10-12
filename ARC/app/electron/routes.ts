@@ -49,7 +49,26 @@ export const ALLOWED_ROUTES: ReadonlyArray<readonly [HttpMethod, RegExp]> = [
   ["GET", /^\/api\/vision\/status$/],
   ["POST", /^\/api\/vision\/(start|stop|pause|setup|calibrate)$/],
   ["GET", /^\/api\/vision\/(preview|cameras|actions)$/],
+  ["GET", /^\/api\/online\/status$/],
+  ["PUT", /^\/api\/online\/keys\/[a-z0-9_-]{1,32}$/],
+  ["DELETE", /^\/api\/online\/keys\/[a-z0-9_-]{1,32}$/],
+  ["GET", /^\/api\/documents$/],
+  ["POST", /^\/api\/documents$/],
+  ["POST", new RegExp(`^/api/documents/${ID}/(cancel|open)$`)],
+  ["POST", /^\/api\/open-url$/],
+  ["POST", /^\/api\/documents\/recent\/open$/],
 ];
+
+/** Commands can wait for the local model or the internet; everything else answers quickly. */
+const LONG_ROUTES: ReadonlyArray<RegExp> = [
+  /^\/api\/(command|confirm|undo|repeat)$/,
+  new RegExp(`^/api/scenarios/${ID}/run$`),
+  /^\/api\/apps\/discover$/,
+];
+
+export function routeTimeoutMs(method: string, path: string): number {
+  return method === "POST" && LONG_ROUTES.some((re) => re.test(path)) ? 180_000 : 30_000;
+}
 
 export function isAllowedRoute(method: string, path: string): boolean {
   if (typeof method !== "string" || typeof path !== "string" || path.length > 300) return false;

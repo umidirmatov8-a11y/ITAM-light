@@ -72,6 +72,31 @@ def _voice_libs() -> dict:
     return result
 
 
+def _documents_check(folder: str) -> dict:
+    """Every document format is rendered and read back (proves templates and fonts are bundled)."""
+    from .documents.model import DocumentContent
+    from .documents.render import RENDERERS, find_fonts
+
+    content = DocumentContent.model_validate({
+        "title": "Проверка A.R.C.", "subtitle": "Самопроверка модуля документов",
+        "sections": [{"heading": "Раздел один", "paragraphs": ["Текст абзаца."], "bullets": ["пункт", "ещё пункт"]}],
+        "table": {"columns": ["Название", "Значение"], "rows": [["один", "1"], ["два", "2"]]}})
+    result: dict = {}
+    for kind, (render, verify) in RENDERERS.items():
+        if kind == "pdf" and find_fonts() is None and sys.platform != "win32":
+            result[kind] = "skipped: no Cyrillic font"
+            continue
+        path = os.path.join(folder, f"selftest.{kind}")
+        try:
+            render(content, path)
+            check = verify(content, path)
+            result[kind] = "ok" if check.ok else "error: " + "; ".join(check.details)
+        except Exception as exc:
+            result[kind] = f"error: {type(exc).__name__}: {exc}"
+    result["ok"] = all(not str(v).startswith("error") for v in result.values())
+    return result
+
+
 def selftest(out: str | None) -> int:
     """Runs core scenarios against a temporary database with the mock controller."""
     from .automation.controller import MockController
@@ -89,6 +114,7 @@ def selftest(out: str | None) -> int:
                 ("выключи компьютер", Status.NEEDS_CONFIRMATION),
                 ("абракадабра", Status.UNKNOWN),
                 ("найди в интернете погоду", Status.DENIED),
+                ("сделай презентацию про солнечную систему", Status.NEEDS_CONFIRMATION),
             ]
             for text, expected in checks:
                 response = services.assistant.handle_text(text)
@@ -96,9 +122,11 @@ def selftest(out: str | None) -> int:
                                 "ok": response.status == expected, "message": response.message})
         finally:
             services.close()
+        documents = _documents_check(tmp)
     libs = _voice_libs()
-    passed = all(r["ok"] for r in results) and libs["ok"]
-    report = json.dumps({"passed": passed, "results": results, "voice_libs": libs}, ensure_ascii=False, indent=2)
+    passed = all(r["ok"] for r in results) and libs["ok"] and documents["ok"]
+    report = json.dumps({"passed": passed, "results": results, "voice_libs": libs, "documents": documents},
+                        ensure_ascii=False, indent=2)
     if out:
         Path(out).write_text(report, encoding="utf-8")
     else:
