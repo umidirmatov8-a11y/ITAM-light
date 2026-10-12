@@ -31,8 +31,12 @@
 * сверяет SHA-256 и публикует релиз `A.R.C. X.Y.Z` с файлами `ARC-Setup-X.Y.Z.exe` и `.sha256`;
 * версии с суффиксом (`arc-v1.1.0-beta.1`) публикуются как pre-release.
 
-Постоянная ссылка на последнюю версию:
-`https://github.com/umidirmatov8-a11y/ITAM-light/releases/latest`.
+В репозитории есть релизы других проектов (например, Wazuh Security Analyzer), поэтому общая ссылка
+`/releases/latest` ведёт не на A.R.C., а релизы A.R.C. публикуются без отметки «Latest». Ссылки на A.R.C.:
+
+* все версии: <https://github.com/umidirmatov8-a11y/ITAM-light/releases?q=arc-v&expanded=true>;
+* конкретная версия: `https://github.com/umidirmatov8-a11y/ITAM-light/releases/tag/arc-v1.0.0`;
+* прямое скачивание: `https://github.com/umidirmatov8-a11y/ITAM-light/releases/download/arc-v1.0.0/ARC-Setup-1.0.0.exe`.
 
 Если задание упало (например, версии не совпали), исправьте, удалите тег (`git push --delete origin arc-vX.Y.Z`,
 `git tag -d arc-vX.Y.Z`) и поставьте его заново на исправленный коммит.

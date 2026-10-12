@@ -14,7 +14,7 @@ powershell -ExecutionPolicy Bypass -File scripts\check_env.ps1
 
 ## Установка
 
-Установщик — на странице релизов: <https://github.com/umidirmatov8-a11y/ITAM-light/releases/latest>
+Установщик — в релизах A.R.C. (теги `arc-v…`): <https://github.com/umidirmatov8-a11y/ITAM-light/releases?q=arc-v&expanded=true>
 (файлы `ARC-Setup-<версия>.exe` и `.sha256`).
 
 1. Проверьте файл (по желанию): `Get-FileHash ARC-Setup-<версия>.exe` должен совпасть с `.sha256` рядом

@@ -350,6 +350,7 @@ jobs:
             gh release upload "$GITHUB_REF_NAME" "$setup" "$setup.sha256" --clobber
           else
             gh release create "$GITHUB_REF_NAME" "$setup" "$setup.sha256" \
-              --title "A.R.C. $version" --notes-file "$notes" --verify-tag $prerelease
+              --title "A.R.C. $version" --notes-file "$notes" --verify-tag $prerelease \
+              --latest=false  # the repository hosts other projects: do not take over their "Latest" badge
           fi
           echo "Published: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME"

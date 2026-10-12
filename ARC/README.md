@@ -44,7 +44,7 @@
 
 ## Быстрый старт (пользователь)
 
-1. Скачайте `ARC-Setup-<версия>.exe` со страницы [релизов](https://github.com/umidirmatov8-a11y/ITAM-light/releases/latest)
+1. Скачайте `ARC-Setup-<версия>.exe` из [релизов A.R.C.](https://github.com/umidirmatov8-a11y/ITAM-light/releases?q=arc-v&expanded=true)
    (или артефакт CI «ARC-Setup», или соберите сами) и запустите.
 2. Откройте A.R.C. из меню «Пуск» → «Приложения» → **Найти установленные**.
 3. «Настройки → Локальные модели» → загрузите `Whisper small` (484 МБ, один раз).
