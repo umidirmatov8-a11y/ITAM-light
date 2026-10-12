@@ -363,7 +363,9 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         add("Тестовый режим", "warn" if settings.safety.dry_run else "ok",
             "Операции категорий B/C имитируются" if settings.safety.dry_run else "Операции B/C выполняются после подтверждения")
         ai_state = ai_status(force=True)
-        add("Локальный ИИ (Ollama)", "ok" if ai_state["state"] == "ready" else "warn", ai_state.get("message", ""))
+        add("Локальный ИИ (Ollama)", "ok" if ai_state["state"] == "ready" else "warn",
+            ai_state.get("message", "") + ("; разбор непонятных фраз включён" if settings.ai.understand_commands
+                                           and ai_state["state"] == "ready" else ""))
         add("GPU", "ok" if s.gpu.available else "warn",
             "nvidia-smi найден" if s.gpu.available else "nvidia-smi не найден: метрики GPU недоступны, ИИ будет на CPU")
         mics = s.voice.devices()

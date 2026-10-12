@@ -50,6 +50,11 @@ class AISettings(BaseModel):
     model: str = "qwen2.5-coder:7b"
     temperature: float = Field(0.2, ge=0.0, le=2.0)
     timeout_s: float = Field(60.0, gt=0, le=600)
+    # Stage 4: phrases the built-in router does not understand are handed to the local model.
+    understand_commands: bool = True
+    answer_questions: bool = True
+    confirm_actions: bool = False   # also ask before safe (A) actions proposed by the model
+    num_ctx: int = Field(4096, ge=1024, le=32768)
 
     @field_validator("ollama_url")
     @classmethod

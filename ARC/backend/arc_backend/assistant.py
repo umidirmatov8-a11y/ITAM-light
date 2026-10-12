@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from .apps.registry import AppRegistry
+from .ai.planner import LocalPlanner, PlannerError
 from .automation.executor import Executor
 from .models import ActionRequest, ActionResult, ClarifyInfo, CommandResponse, Risk, Source, Status
 from .permissions.catalog import ActionSpec, Params
@@ -39,7 +40,7 @@ class Assistant:
     def __init__(self, *, settings: SettingsStore, registry: AppRegistry, scenarios: ScenarioStore,
                  journal: Journal, permissions: PermissionManager, executor: Executor,
                  folders: Callable[[], dict[str, str]], router: Optional[CommandRouter] = None,
-                 clock: Callable[[], float] = time.time):
+                 planner: Optional[LocalPlanner] = None, clock: Callable[[], float] = time.time):
         self.settings = settings
         self.registry = registry
         self.scenarios = scenarios
@@ -48,6 +49,7 @@ class Assistant:
         self.executor = executor
         self.folders = folders
         self.router = router or CommandRouter()
+        self.planner = planner
         self.clock = clock
         self._lock = threading.RLock()
         self._dialog: Optional[DialogState] = None
@@ -161,6 +163,14 @@ class Assistant:
             return self._finish(CommandResponse(input=text, source=source, status=Status.CLARIFY, message=plan.message,
                                                 intent=plan.intent,
                                                 clarify=ClarifyInfo(question=plan.message, options=plan.options)))
+        # Phrases the router could not map (or a program it could not find) go to the local model.
+        if self.planner is not None and (plan.kind == "unknown" or plan.intent == "app.not_found"):
+            ai_response = self._ai_plan(text, source)
+            useful = ai_response is not None and (
+                plan.kind == "unknown" or ai_response.intent in ("ai.plan", "ai.clarify", "ai.reply"))
+            if useful:
+                assert ai_response is not None
+                return self._finish(ai_response)
         if plan.kind in ("reply", "unknown", "unavailable"):
             status = {"reply": Status.REPLY, "unknown": Status.UNKNOWN, "unavailable": Status.UNAVAILABLE}[plan.kind]
             if plan.intent == "app.not_found":
@@ -181,6 +191,48 @@ class Assistant:
         response.input = text
         response.intent = plan.intent
         return self._finish(response)
+
+    def _ai_plan(self, text: str, source: Source) -> Optional[CommandResponse]:
+        """Unknown phrase → local model proposes catalog actions → same permission checks (Source.AI)."""
+        assert self.planner is not None
+        settings = self.settings.get()
+        usable, _reason = self.planner.usable(settings)
+        if not usable:
+            return None
+        recent = [(h["input"], h["message"]) for h in reversed(self.journal.history(6))
+                  if h["source"] in ("text", "voice") and h["input"]]
+        try:
+            plan = self.planner.plan(text, settings, self.registry.list(include_disabled=False), self.scenarios.list(),
+                                     list(self.folders()), recent)
+        except PlannerError as exc:
+            return CommandResponse(input=text, source=source, status=Status.UNKNOWN, intent="ai.error",
+                                   message=f"Не понял команду. {exc}.", data={"ai": True})
+        data = {"ai": True, "model": plan.model, "elapsed_s": plan.elapsed_s, "rejected": plan.rejected}
+        if plan.actions:
+            responses = []
+            for request in plan.actions:
+                responses.append(self._run_request(request, {}))
+                if responses[-1].status not in (Status.DONE, Status.DRY_RUN):
+                    break
+            response = responses[-1] if len(responses) == 1 else self._merge(responses)
+            response.input, response.intent = text, "ai.plan"
+            response.data = {**response.data, **data,
+                             "actions": [{"action": r.action, "params": r.params} for r in plan.actions]}
+            if plan.reply and response.status == Status.DONE:
+                response.message = f"{plan.reply} {response.message}".strip()
+            return response
+        if plan.question:
+            return CommandResponse(input=text, source=source, status=Status.CLARIFY, intent="ai.clarify",
+                                   message=plan.question, clarify=ClarifyInfo(question=plan.question), data=data)
+        if plan.reply:
+            note = " (часть предложенных действий отклонена)" if plan.rejected else ""
+            return CommandResponse(input=text, source=source, status=Status.REPLY, intent="ai.reply",
+                                   message=plan.reply + note, data=data)
+        if plan.rejected:
+            return CommandResponse(input=text, source=source, status=Status.DENIED, intent="ai.rejected",
+                                   message="Локальная модель предложила недопустимые действия — они отклонены.",
+                                   data=data)
+        return None
 
     def _meta(self, plan: Plan, source: Source) -> CommandResponse:
         if plan.meta == "help":

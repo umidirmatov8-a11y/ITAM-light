@@ -95,6 +95,8 @@ class PermissionManager:
         if spec.name == "mode.set" and request.source == Source.AI:
             return Decision("deny", "Языковая модель не может менять режим работы", spec, params)
         if spec.risk == Risk.A:
+            if request.source == Source.AI and settings.ai.confirm_actions:
+                return Decision("confirm", "Действие предложено языковой моделью", spec, params)
             return Decision("allow", "", spec, params)
         return Decision("confirm", "Требуется подтверждение", spec, params)
 

@@ -121,9 +121,20 @@ export function Settings() {
           <button className="btn" onClick={() => void refreshAi(true)} data-testid="ai-check">Проверить подключение</button>
           <span className={ai?.state === "ready" ? "ok-text" : "dim"}>{ai?.message}</span>
         </div>
+        <div className="modules" style={{ marginTop: 10 }}>
+          <Toggle checked={s.ai.understand_commands} onChange={(v) => save("ai", { understand_commands: v })}
+                  testId="ai-understand" label="Разбирать непонятные фразы моделью"
+                  hint="Если встроенный разбор не понял команду, модель предложит действия из каталога" />
+          <Toggle checked={s.ai.answer_questions} onChange={(v) => save("ai", { answer_questions: v })}
+                  label="Отвечать на общие вопросы" hint="«Какая столица Франции?» — ответ локальной модели" />
+          <Toggle checked={s.ai.confirm_actions} onChange={(v) => save("ai", { confirm_actions: v })}
+                  testId="ai-confirm" label="Подтверждать каждое действие, предложенное моделью"
+                  hint="Опасные действия (B, C) подтверждаются всегда" />
+        </div>
         <p className="faint">
-          На этапе 1 A.R.C. только проверяет доступность модели; разбор сложных фраз моделью добавляется на этапе 4.
-          Модели не загружаются автоматически.
+          Модель только предлагает действия из каталога: каждое проверяется (существует ли приложение, верны ли параметры)
+          и проходит менеджер разрешений. Сменить режим LOCAL/ONLINE, разрешения, запустить что-то от администратора или
+          выполнить код модель не может. Модели не загружаются автоматически: <code>ollama pull {s.ai.model}</code>.
         </p>
       </Panel>
       {info && (

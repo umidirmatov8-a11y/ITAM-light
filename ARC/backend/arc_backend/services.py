@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from . import paths
+from .ai.planner import LocalPlanner
 from .apps.registry import AppRegistry
 from .assistant import Assistant
 from .automation.controller import SystemController, create_controller
@@ -61,7 +62,8 @@ class Services:
     def create(cls, data_dir: Optional[Path] = None, controller: Optional[SystemController] = None,
                folders: Optional[Callable[[], dict[str, str]]] = None, db_name: str = "arc.db",
                voice_options: Optional[dict[str, Any]] = None, models_dir: Optional[Path] = None,
-               vision_options: Optional[dict[str, Any]] = None) -> "Services":
+               vision_options: Optional[dict[str, Any]] = None,
+               planner: Optional[LocalPlanner] = None) -> "Services":
         """`voice_options` are passed to VoiceEngine (tests inject fake audio/recognizer/synthesizer)."""
         data_dir = data_dir or paths.data_dir()
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -88,7 +90,8 @@ class Services:
         gpu = GpuProbe()
         executor = Executor(controller, registry, settings, folder_map, gpu)
         assistant = Assistant(settings=settings, registry=registry, scenarios=scenarios, journal=journal,
-                              permissions=permissions, executor=executor, folders=folder_map)
+                              permissions=permissions, executor=executor, folders=folder_map,
+                              planner=planner or LocalPlanner())
         models = ModelManager(models_dir or data_dir / "models")
 
         def hints() -> list[str]:

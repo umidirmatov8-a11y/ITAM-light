@@ -213,6 +213,7 @@ function ResponseBlock({ response, latest }: { response: CommandResponse; latest
       <div className="exchange__out">
         <span className={`tag ${tone ? `tag--${tone}` : ""}`}>{STATUS_LABEL[response.status] ?? response.status}</span>
         {response.risk && <RiskBadge risk={response.risk} />}
+        {response.data?.ai && <span className="tag tag--accent" title={`Локальная модель ${response.data.model ?? ""}`}>ИИ</span>}
         <span className="exchange__msg selectable">{response.message}</span>
       </div>
       {latest && response.clarify && response.clarify.options.length > 0 && (
@@ -223,6 +224,9 @@ function ResponseBlock({ response, latest }: { response: CommandResponse; latest
             </button>
           ))}
         </div>
+      )}
+      {response.data?.rejected?.length > 0 && (
+        <div className="faint exchange__rejected">Отклонено: {(response.data.rejected as string[]).join("; ")}</div>
       )}
       {files.length > 0 && (
         <ul className="files">

@@ -140,3 +140,25 @@ describe("gestures", () => {
       fist: { enabled: true, action: "window.minimize_all", params: {} } }) } });
   });
 });
+
+describe("local AI", () => {
+  it("marks answers proposed by the local model and shows rejected proposals", async () => {
+    installBridge((method, path) =>
+      method === "POST" && path === "/api/command"
+        ? response({ input: "хочу записать мысль", message: "Запускаю «Блокнот».", intent: "ai.plan",
+                     data: { ai: true, model: "qwen2.5:7b", rejected: ["system.run: нет в списке разрешённых"] } })
+        : undefined,
+    );
+    render(<App />);
+    const input = (await screen.findByTestId("command-input")) as HTMLInputElement;
+    await waitFor(() => expect(input.disabled).toBe(false));
+    fireEvent.change(input, { target: { value: "хочу записать мысль" } });
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("command-send"));
+    });
+    const terminal = await screen.findByTestId("terminal");
+    await waitFor(() => expect(terminal.textContent).toContain("ИИ"));
+    expect(terminal.textContent).toContain("Отклонено: system.run");
+  });
+});
+

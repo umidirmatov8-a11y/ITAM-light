@@ -75,7 +75,16 @@ export interface Settings {
   };
   network: { mode: "LOCAL" | "ONLINE"; online_allowed: boolean; search_url: string };
   devices: { microphone_enabled: boolean; camera_enabled: boolean; local_ai_enabled: boolean };
-  ai: { ollama_url: string; model: string; temperature: number; timeout_s: number };
+  ai: {
+    ollama_url: string;
+    model: string;
+    temperature: number;
+    timeout_s: number;
+    understand_commands: boolean;
+    answer_questions: boolean;
+    confirm_actions: boolean;
+    num_ctx: number;
+  };
   safety: {
     dry_run: boolean;
     allowed_dirs: string[];

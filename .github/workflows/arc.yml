@@ -135,3 +135,61 @@ jobs:
             ARC/backend/build/selftest.json
             ARC/app/release/smoke-*.json
             ARC/ci-logs/
+
+  local-ai:
+    # Local AI planner against a real Ollama model on Windows (separate job: large download, cached).
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      OLLAMA_MODELS: ${{ github.workspace }}\ollama-models
+      ARC_TEST_OLLAMA: qwen2.5:3b
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ARC/backend/requirements*.txt
+
+      - name: Cache Ollama model
+        uses: actions/cache@v4
+        with:
+          path: ollama-models
+          key: ollama-qwen2.5-3b-v1
+
+      - name: Install and start Ollama
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:RUNNER_TEMP 'ollama.zip'
+          for ($i = 1; $i -le 3; $i++) {
+            try { Invoke-WebRequest 'https://github.com/ollama/ollama/releases/latest/download/ollama-windows-amd64.zip' -OutFile $zip; break }
+            catch { if ($i -eq 3) { throw }; Start-Sleep 10 }
+          }
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'ollama')
+          $exe = Join-Path $env:RUNNER_TEMP 'ollama\ollama.exe'
+          Start-Process $exe -ArgumentList 'serve' -WindowStyle Hidden
+          for ($i = 0; $i -lt 60; $i++) {
+            try { Invoke-RestMethod 'http://127.0.0.1:11434/api/tags' | Out-Null; break } catch { Start-Sleep 1 }
+          }
+          & $exe pull $env:ARC_TEST_OLLAMA
+          if ($LASTEXITCODE -ne 0) { throw 'ollama pull failed' }
+          & $exe list
+
+      - name: Backend dependencies
+        working-directory: ARC/backend
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python -m pip install -q -r requirements-dev.txt
+          if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }
+
+      - name: Local AI end-to-end (real model, strict safety checks, accuracy report)
+        working-directory: ARC/backend
+        run: |
+          .venv\Scripts\python -m pytest tests\test_ai_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'local AI end-to-end failed' }
+

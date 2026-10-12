@@ -3,8 +3,10 @@ from __future__ import annotations
 import socket
 from pathlib import Path
 
+import httpx
 import pytest
 
+from arc_backend.ai.planner import LocalPlanner
 from arc_backend.apps.registry import AppInput, AppKind, LaunchType
 from arc_backend.automation.controller import MockController
 from arc_backend.services import Services
@@ -25,9 +27,16 @@ def controller() -> MockController:
     return MockController()
 
 
+def offline_planner() -> LocalPlanner:
+    """Behaves as if Ollama is not running, regardless of the developer's machine."""
+    def refuse(request):
+        raise httpx.ConnectError("connection refused", request=request)
+    return LocalPlanner(transport=httpx.MockTransport(refuse))
+
+
 @pytest.fixture
 def services(tmp_path: Path, folders, controller) -> Services:
-    svc = Services.create(tmp_path / "data", controller=controller, folders=lambda: folders)
+    svc = Services.create(tmp_path / "data", controller=controller, folders=lambda: folders, planner=offline_planner())
     yield svc
     svc.close()
 
