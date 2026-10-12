@@ -8,7 +8,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from .apps.registry import AppRegistry
 from .ai.planner import LocalPlanner, PlannerError
@@ -17,10 +17,14 @@ from .documents.model import KIND_SHORT
 from .models import ActionRequest, ActionResult, ClarifyInfo, CommandResponse, Risk, Source, Status
 from .permissions.catalog import ActionSpec, Params
 from .permissions.manager import ConfirmationError, PermissionManager
-from .router.router import CommandRouter, DialogState, Plan, RouterContext
+from .router.router import CommandRouter, DialogState, Plan, RouterContext, strip_wake_word
+from .router.text import normalize
 from .storage.journal import Journal
 from .storage.scenarios import ScenarioStore
 from .storage.settings import SettingsStore
+
+if TYPE_CHECKING:
+    from .plugins.manager import PluginManager
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +46,8 @@ class Assistant:
     def __init__(self, *, settings: SettingsStore, registry: AppRegistry, scenarios: ScenarioStore,
                  journal: Journal, permissions: PermissionManager, executor: Executor,
                  folders: Callable[[], dict[str, str]], router: Optional[CommandRouter] = None,
-                 planner: Optional[LocalPlanner] = None, clock: Callable[[], float] = time.time):
+                 planner: Optional[LocalPlanner] = None, plugins: Optional["PluginManager"] = None,
+                 clock: Callable[[], float] = time.time):
         self.settings = settings
         self.registry = registry
         self.scenarios = scenarios
@@ -52,6 +57,7 @@ class Assistant:
         self.folders = folders
         self.router = router or CommandRouter()
         self.planner = planner
+        self.plugins = plugins
         self.clock = clock
         self._lock = threading.RLock()
         self._dialog: Optional[DialogState] = None
@@ -166,7 +172,11 @@ class Assistant:
             return self._finish(CommandResponse(input=text, source=source, status=Status.CLARIFY, message=plan.message,
                                                 intent=plan.intent,
                                                 clarify=ClarifyInfo(question=plan.message, options=plan.options)))
-        # Phrases the router could not map (or a program it could not find) go to the local model.
+        # Phrases the router could not map: first installed modules, then the local model.
+        if self.plugins is not None and (plan.kind == "unknown" or plan.intent == "app.not_found"):
+            plugin_response = self._plugin_command(text, source)
+            if plugin_response is not None:
+                return self._finish(plugin_response)
         if self.planner is not None and (plan.kind == "unknown" or plan.intent == "app.not_found"):
             ai_response = self._ai_plan(text, source)
             useful = ai_response is not None and (
@@ -194,6 +204,27 @@ class Assistant:
         response.input = text
         response.intent = plan.intent
         return self._finish(response)
+
+    def _plugin_command(self, text: str, source: Source) -> Optional[CommandResponse]:
+        _, stripped = strip_wake_word(normalize(text), self.settings.get().general.wake_word)
+        found = self.plugins.match(stripped or text, source) if self.plugins else None
+        if found is None:
+            return None
+        data = {"plugin": found.plugin.id, "plugin_name": found.plugin.manifest.name}
+        if found.error:
+            return CommandResponse(input=text, source=source, status=Status.DENIED, intent="plugin.denied",
+                                   message=found.error, data=data)
+        responses = []
+        for request in found.requests:
+            responses.append(self._run_request(request, found.labels))
+            if responses[-1].status not in (Status.DONE, Status.DRY_RUN):
+                break
+        response = responses[-1] if len(responses) == 1 else self._merge(responses)
+        response.input, response.intent = text, "plugin.command"
+        response.data = {**response.data, **data}
+        if found.command.reply and response.status == Status.DONE:
+            response.message = f"{found.command.reply} {response.message}".strip()
+        return response
 
     def _ai_plan(self, text: str, source: Source) -> Optional[CommandResponse]:
         """Unknown phrase → local model proposes catalog actions → same permission checks (Source.AI)."""

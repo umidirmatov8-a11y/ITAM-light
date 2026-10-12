@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { App } from "../src/App";
 import { ConfirmDialog } from "../src/components/ConfirmDialog";
@@ -235,5 +235,47 @@ describe("stage 5: online and documents", () => {
     });
     expect(api).toHaveBeenCalledWith("PUT", "/api/online/keys/brave", { key: "secret-key-123" });
     await waitFor(() => expect(key.value).toBe(""));
+  });
+});
+
+describe("stage 6: modules", () => {
+  const plugin = {
+    id: "quiet-hours", name: "Тихие часы", version: "1.0.0", author: "Автор", description: "Вечер", homepage: "",
+    permissions: ["volume", "windows"], granted: [], enabled: false, trust: "trusted" as const, signer: "Автор",
+    key_id: "0123456789abcdef", blocked: "", commands: [{ phrases: ["вечерний режим"], actions: ["volume.set"], reply: "" }],
+  };
+  const view = { plugins: [plugin], trusted_keys: [], allow_unsigned: false, errors: [], requestable: ["volume"] };
+
+  it("installs a module from a picked file and grants permissions one by one", async () => {
+    const { api, bridge } = installBridge((_method, path, body) => {
+      if (path === "/api/plugins") return { ...view, plugins: [] };
+      if (path === "/api/plugins/import") return { ...view, installed: "quiet-hours" };
+      if (path === "/api/plugins/quiet-hours/grants") return { ...view, plugins: [{ ...plugin, granted: body.modules }] };
+      return undefined;
+    });
+    bridge.pickFile = vi.fn(async () => "C:\\Users\\u\\Downloads\\quiet.arcplugin");
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("nav-plugins"));
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("plugin-install"));
+    });
+    expect(bridge.pickFile).toHaveBeenCalledWith("plugin");
+    expect(api).toHaveBeenCalledWith("POST", "/api/plugins/import", { path: "C:\\Users\\u\\Downloads\\quiet.arcplugin" });
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("grant-quiet-hours-volume"));
+    });
+    expect(api).toHaveBeenCalledWith("PUT", "/api/plugins/quiet-hours/grants", { modules: ["volume"] });
+  });
+
+  it("asks before allowing unsigned modules", async () => {
+    const { api } = installBridge((_m, path) => (path === "/api/plugins" ? view : undefined));
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("nav-plugins"));
+    fireEvent.click(await screen.findByTestId("allow-unsigned"));
+    expect(api).not.toHaveBeenCalledWith("PUT", "/api/settings", expect.anything());
+    await act(async () => {
+      fireEvent.click(await screen.findByTestId("allow-unsigned-confirm"));
+    });
+    expect(api).toHaveBeenCalledWith("PUT", "/api/settings", { plugins: { allow_unsigned: true } });
   });
 });

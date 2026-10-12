@@ -8,6 +8,7 @@ import { Apps } from "./screens/Apps";
 import { Compact } from "./screens/Compact";
 import { Diagnostics } from "./screens/Diagnostics";
 import { Documents } from "./screens/Documents";
+import { Plugins } from "./screens/Plugins";
 import { Home } from "./screens/Home";
 import { Log } from "./screens/Log";
 import { Permissions } from "./screens/Permissions";
@@ -62,6 +63,7 @@ function Shell() {
           {screen === "apps" && <Apps />}
           {screen === "scenarios" && <Scenarios />}
           {screen === "documents" && <Documents />}
+          {screen === "plugins" && <Plugins />}
           {screen === "log" && <Log />}
           {screen === "permissions" && <Permissions />}
           {screen === "settings" && <Settings />}

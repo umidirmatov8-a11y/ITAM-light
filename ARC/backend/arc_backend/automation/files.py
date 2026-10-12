@@ -15,7 +15,13 @@ _BAD_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _SKIP_DIRS = {"node_modules", "$recycle.bin", "appdata", "system volume information", ".git", "__pycache__",
               "windows", "program files", "program files (x86)", "programdata"}
 _EXECUTABLE = {".exe", ".bat", ".cmd", ".com", ".ps1", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".msi",
-               ".msp", ".scr", ".pif", ".hta", ".cpl", ".reg", ".lnk", ".url", ".jar", ".psm1", ".dll", ".sys"}
+               ".msp", ".scr", ".pif", ".hta", ".cpl", ".reg", ".lnk", ".url", ".jar", ".psm1", ".dll", ".sys",
+               # security review (stage 6): other types Windows runs or that carry active content
+               ".ps1xml", ".psd1", ".psc1", ".msh", ".mshxml", ".scf", ".chm", ".msc", ".appref-ms", ".application",
+               ".gadget", ".inf", ".ins", ".isp", ".job", ".library-ms", ".search-ms", ".searchconnector-ms",
+               ".settingcontent-ms", ".theme", ".themepack", ".diagcab", ".iso", ".img", ".vhd", ".vhdx", ".xll",
+               ".docm", ".dotm", ".xlsm", ".xltm", ".xlam", ".pptm", ".potm", ".ppam", ".ppsm", ".sldm", ".one",
+               ".website", ".wsc", ".sct", ".com", ".cmd", ".mde", ".ade", ".adp", ".accde", ".mdb"}
 
 
 class PathError(ValueError):

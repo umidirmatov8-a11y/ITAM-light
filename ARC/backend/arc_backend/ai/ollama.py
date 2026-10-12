@@ -51,13 +51,15 @@ class OllamaError(RuntimeError):
 
 
 def chat(url: str, model: str, messages: list[dict[str, str]], *, timeout_s: float, temperature: float = 0.2,
-         num_ctx: int = 4096, schema: Optional[dict[str, Any]] = None,
+         num_ctx: int = 4096, schema: Optional[dict[str, Any]] = None, max_tokens: Optional[int] = None,
          transport: Optional[httpx.BaseTransport] = None) -> str:
     """One non-streaming chat call. Returns the message content (JSON text when `schema` is given)."""
     body: dict[str, Any] = {"model": model, "messages": messages, "stream": False, "keep_alive": "15m",
                             "options": {"temperature": temperature, "num_ctx": num_ctx}}
     if schema is not None:
         body["format"] = schema
+    if max_tokens is not None:
+        body["options"]["num_predict"] = max_tokens
     try:
         with httpx.Client(timeout=httpx.Timeout(timeout_s, connect=3.0), trust_env=False,
                           transport=transport) as client:

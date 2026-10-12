@@ -50,6 +50,7 @@ A.R.C. (Adaptive Responsive Computer) — настольный голосово�
 | Vision Engine | этап 3 | `GestureEvent(gesture, confidence)` → только действия из списка жестов, риск A |
 | Local AI Engine | `backend/arc_backend/ai` | этап 1: проверка Ollama; этап 4: LLM возвращает **только** JSON-план из каталога |
 | Online Research | `backend/arc_backend/online` | `OnlineClient.request()` — единственный выход в интернет: проверка ONLINE в момент запроса, https, лимит в минуту, тайм-аут, ≤ 2 МБ, журнал; провайдеры Wikipedia / DuckDuckGo / Brave / SearXNG; `ResearchEngine.search() -> ResearchReport`, сводка локальной моделью |
+| Plugin Manager | `backend/arc_backend/plugins` | `.arcplugin` = JSON-описание + подпись Ed25519; `PluginManager.match(text) -> PluginMatch` (только для фраз, не понятых роутером, до локальной модели); действия идут в Permission Manager с источником `plugin` |
 | Document Engine | `backend/arc_backend/documents` | `DocumentContent` (pydantic, лимиты) → рендер PPTX/DOCX/XLSX/PDF/TXT → проверка чтением → атомарное сохранение; фоновые задания `DocJob` |
 
 ### Поток команды
@@ -124,6 +125,7 @@ ARC/
       ai/                 Ollama: статус, вызов /api/chat, планировщик (этап 4)
       online/             клиент сети, провайдеры поиска, ResearchEngine, хранилище ключей
       documents/          модель содержимого, генерация текста, рендеры и проверка, фоновые задания
+      plugins/            описание модуля, подпись Ed25519, менеджер модулей, утилита автора
     tests/                pytest
   scripts/                check_env.ps1, dev.ps1, build.ps1
   docs/                   документация

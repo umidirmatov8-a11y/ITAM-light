@@ -78,6 +78,7 @@ export interface Settings {
   network: { mode: "LOCAL" | "ONLINE"; online_allowed: boolean; search_url: string };
   online: OnlineSettings;
   documents: DocumentsSettings;
+  plugins: { allow_unsigned: boolean; trusted_keys: TrustedKey[]; grants: Record<string, { enabled: boolean; modules: string[] }> };
   devices: { microphone_enabled: boolean; camera_enabled: boolean; local_ai_enabled: boolean };
   ai: {
     ollama_url: string;
@@ -318,7 +319,7 @@ export interface ArcBridge {
   setZoom(factor: number): Promise<number>;
   setAutostart(enabled: boolean): Promise<boolean>;
   setStartMinimized(enabled: boolean): Promise<void>;
-  pickFile(kind: "exe" | "folder"): Promise<string | null>;
+  pickFile(kind: "exe" | "folder" | "plugin"): Promise<string | null>;
   saveFile(filename: string, content: string): Promise<string | null>;
   showInFolder(path: string): Promise<void>;
   onBackendStatus(listener: (status: BackendStatus) => void): () => void;
@@ -432,4 +433,37 @@ export interface DocumentsListing {
   recent: RecentFile[];
   folder: string;
   folder_error: string;
+}
+
+// ---------------------------------------------------------------- stage 6: modules
+export interface TrustedKey {
+  id: string;
+  name: string;
+  public_key: string;
+}
+
+export interface PluginInfo {
+  id: string;
+  name: string;
+  version: string;
+  author: string;
+  description: string;
+  homepage: string;
+  permissions: string[];
+  granted: string[];
+  enabled: boolean;
+  trust: "trusted" | "unsigned" | "untrusted_key" | "invalid";
+  signer: string;
+  key_id: string | null;
+  blocked: string;
+  commands: Array<{ phrases: string[]; actions: string[]; reply: string }>;
+}
+
+export interface PluginsView {
+  plugins: PluginInfo[];
+  trusted_keys: TrustedKey[];
+  allow_unsigned: boolean;
+  errors: string[];
+  requestable: string[];
+  installed?: string;
 }

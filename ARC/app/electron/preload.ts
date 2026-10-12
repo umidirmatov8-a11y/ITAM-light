@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld("arc", {
   setZoom: (factor: number) => ipcRenderer.invoke("arc:set-zoom", factor),
   setAutostart: (enabled: boolean) => ipcRenderer.invoke("arc:set-autostart", enabled),
   setStartMinimized: (enabled: boolean) => ipcRenderer.invoke("arc:set-start-minimized", enabled),
-  pickFile: (kind: "exe" | "folder") => ipcRenderer.invoke("arc:pick-file", kind),
+  pickFile: (kind: "exe" | "folder" | "plugin") => ipcRenderer.invoke("arc:pick-file", kind),
   saveFile: (filename: string, content: string) => ipcRenderer.invoke("arc:save-file", { filename, content }),
   showInFolder: (path: string) => ipcRenderer.invoke("arc:show-in-folder", path),
   onBackendStatus: (listener: Listener) => subscribe("arc:backend-status", listener),

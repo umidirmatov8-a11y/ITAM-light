@@ -319,16 +319,19 @@ function registerIpc(): void {
     return app.getLoginItemSettings().openAtLogin;
   });
   handle("arc:set-start-minimized", (_e, enabled: boolean) => savePrefs({ startMinimized: Boolean(enabled) }));
-  handle("arc:pick-file", async (event, kind: "exe" | "folder") => {
+  handle("arc:pick-file", async (event, kind: "exe" | "folder" | "plugin") => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
     const options: Electron.OpenDialogOptions =
       kind === "folder"
         ? { title: "Выберите каталог", properties: ["openDirectory"] }
-        : {
-            title: "Выберите программу",
-            properties: ["openFile"],
-            filters: [{ name: "Программы и ярлыки", extensions: ["exe", "lnk"] }],
-          };
+        : kind === "plugin"
+          ? { title: "Выберите модуль A.R.C.", properties: ["openFile"],
+              filters: [{ name: "Модуль A.R.C.", extensions: ["arcplugin"] }] }
+          : {
+              title: "Выберите программу",
+              properties: ["openFile"],
+              filters: [{ name: "Программы и ярлыки", extensions: ["exe", "lnk"] }],
+            };
     const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
     return result.canceled ? null : result.filePaths[0];
   });

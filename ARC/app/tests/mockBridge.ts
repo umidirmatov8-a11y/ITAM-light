@@ -8,6 +8,7 @@ export const settings: Settings = {
   online: { providers: ["wikipedia", "duckduckgo"], language: "ru", max_results: 5, timeout_s: 10,
             requests_per_minute: 20, summarize: true, searxng_url: "" },
   documents: { output_dir: "", use_ai: true, open_when_ready: false, max_sections: 8 },
+  plugins: { allow_unsigned: false, trusted_keys: [], grants: {} },
   devices: { microphone_enabled: true, camera_enabled: false, local_ai_enabled: true },
   ai: { ollama_url: "http://127.0.0.1:11434", model: "qwen2.5-coder:7b", temperature: 0.2, timeout_s: 60,
         understand_commands: true, answer_questions: true, confirm_actions: false, num_ctx: 4096 },

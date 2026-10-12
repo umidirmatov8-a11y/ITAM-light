@@ -18,6 +18,7 @@ export const MODULE_LABEL: Record<string, string> = {
   web_search: "Поиск в интернете",
   scenarios: "Сценарии",
   modes: "Режимы (LOCAL/ONLINE, тишина)",
+  documents: "Создание документов",
 };
 
 export function Permissions() {

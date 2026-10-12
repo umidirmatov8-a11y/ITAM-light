@@ -56,6 +56,13 @@ export const ALLOWED_ROUTES: ReadonlyArray<readonly [HttpMethod, RegExp]> = [
   ["POST", /^\/api\/documents$/],
   ["POST", new RegExp(`^/api/documents/${ID}/(cancel|open)$`)],
   ["POST", /^\/api\/open-url$/],
+  ["GET", /^\/api\/plugins$/],
+  ["POST", /^\/api\/plugins\/import$/],
+  ["POST", /^\/api\/plugins\/keys$/],
+  ["DELETE", /^\/api\/plugins\/keys\/[0-9a-f]{16}$/],
+  ["POST", /^\/api\/plugins\/[a-z0-9-]{2,41}\/enable$/],
+  ["PUT", /^\/api\/plugins\/[a-z0-9-]{2,41}\/grants$/],
+  ["DELETE", /^\/api\/plugins\/[a-z0-9-]{2,41}$/],
   ["POST", /^\/api\/documents\/recent\/open$/],
 ];
 

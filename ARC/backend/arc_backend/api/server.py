@@ -22,6 +22,9 @@ from ..automation import sysinfo
 from ..documents.render import find_fonts
 from ..models import ActionRequest, Source
 from ..online.secrets import SecretError
+from ..plugins.manager import PluginError
+from ..plugins.manifest import REQUESTABLE_MODULES
+from ..plugins.signing import key_id
 from ..permissions.catalog import catalog_view
 from ..services import Services
 from ..storage.scenarios import SCENARIO_ACTIONS, ScenarioInput
@@ -123,6 +126,19 @@ class DocumentBody(BaseModel):
 
 class UrlBody(BaseModel):
     url: str = Field(min_length=8, max_length=2048)
+
+
+class EnabledBody(BaseModel):
+    enabled: bool
+
+
+class GrantBody(BaseModel):
+    modules: list[str] = Field(max_length=20)
+
+
+class TrustKeyBody(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    public_key: str = Field(min_length=40, max_length=64)
 
 
 class PathBody(BaseModel):
@@ -232,6 +248,8 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
     @app.put("/api/settings")
     def put_settings(patch: dict[str, Any] = Body(...)) -> dict[str, Any]:
         updated = s.settings.update(patch)
+        if "plugins" in patch:
+            s.plugins.refresh_trust()
         if not updated.devices.microphone_enabled:
             s.voice.stop_all()
         if not updated.devices.camera_enabled and s.vision.running:
@@ -417,6 +435,11 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         add("Шрифт для PDF", "ok" if fonts else "warn",
             os.path.basename(fonts[0]) if fonts else "Не найден шрифт с кириллицей: PDF создать не получится")
         add("Приложения", "ok", f"В реестре: {len(s.registry.list())}")
+        plugin_views = [s.plugins.view(p, settings) for p in s.plugins.list()]
+        add("Модули", "warn" if s.plugins.load_errors or settings.plugins.allow_unsigned else "ok",
+            f"Установлено: {len(plugin_views)}, включено: {sum(v['enabled'] for v in plugin_views)}"
+            + ("; неподписанные разрешены" if settings.plugins.allow_unsigned else "")
+            + (f"; ошибки: {'; '.join(s.plugins.load_errors)}" if s.plugins.load_errors else ""))
         return {"checks": checks, "data_dir": str(s.data_dir), "ts": time.time()}
 
     # ------------------------------------------------------------------ online (stage 5)
@@ -489,6 +512,82 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         """Links shown in search results open in the user's browser (same checks as «открой сайт»)."""
         request = ActionRequest(action="browser.open_url", params={"url": body.url}, source=Source.UI)
         return s.assistant.run_action(request, input_text="открыть ссылку").model_dump(mode="json")
+
+    # ------------------------------------------------------------------ modules (stage 6)
+    def plugin_call(fn):
+        try:
+            return fn()
+        except PluginError as exc:
+            return JSONResponse({"error": "plugin_refused", "detail": str(exc)}, status_code=409)
+
+    def plugins_view() -> dict[str, Any]:
+        settings = s.settings.get()
+        return {"plugins": [s.plugins.view(p, settings) for p in s.plugins.list()],
+                "trusted_keys": [k.model_dump() for k in settings.plugins.trusted_keys],
+                "allow_unsigned": settings.plugins.allow_unsigned, "errors": s.plugins.load_errors,
+                "requestable": list(REQUESTABLE_MODULES)}
+
+    def plugin_audit(action: str, params: dict[str, Any], message: str) -> None:
+        s.journal.audit(action=action, params=params, risk="-", source="ui", decision="allow", status="done",
+                        message=message)
+
+    @app.get("/api/plugins")
+    def plugins() -> dict[str, Any]:
+        return plugins_view()
+
+    @app.post("/api/plugins/import")
+    def plugin_import(body: PathBody) -> Any:
+        def run():
+            plugin = s.plugins.import_file(body.path)
+            plugin_audit("plugins.install", {"id": plugin.id, "version": plugin.manifest.version,
+                                             "trust": plugin.trust}, f"Установлен модуль «{plugin.manifest.name}»")
+            return {**plugins_view(), "installed": plugin.id}
+        return plugin_call(run)
+
+    @app.post("/api/plugins/{plugin_id}/enable")
+    def plugin_enable(plugin_id: str, body: EnabledBody) -> Any:
+        def run():
+            s.plugins.set_enabled(plugin_id, body.enabled)
+            plugin_audit("plugins.enable", {"id": plugin_id, "enabled": body.enabled},
+                         f"Модуль {plugin_id} {'включён' if body.enabled else 'выключен'}")
+            return plugins_view()
+        return plugin_call(run)
+
+    @app.put("/api/plugins/{plugin_id}/grants")
+    def plugin_grants(plugin_id: str, body: GrantBody) -> Any:
+        def run():
+            s.plugins.set_modules(plugin_id, body.modules)
+            plugin_audit("plugins.grant", {"id": plugin_id, "modules": sorted(body.modules)},
+                         f"Разрешения модуля {plugin_id}: {', '.join(sorted(body.modules)) or 'нет'}")
+            return plugins_view()
+        return plugin_call(run)
+
+    @app.delete("/api/plugins/{plugin_id}")
+    def plugin_remove(plugin_id: str) -> dict[str, Any]:
+        if not s.plugins.remove(plugin_id):
+            raise KeyError("Модуль не найден")
+        plugin_audit("plugins.remove", {"id": plugin_id}, f"Модуль {plugin_id} удалён")
+        return plugins_view()
+
+    @app.post("/api/plugins/keys")
+    def trust_key(body: TrustKeyBody) -> dict[str, Any]:
+        settings = s.settings.get()
+        kid = key_id(body.public_key)
+        keys = [k.model_dump() for k in settings.plugins.trusted_keys if k.id != kid]
+        keys.append({"id": kid, "name": body.name.strip(), "public_key": body.public_key.strip()})
+        s.settings.update({"plugins": {"trusted_keys": keys}})
+        s.plugins.refresh_trust()
+        plugin_audit("plugins.trust_key", {"key_id": kid, "name": body.name}, f"Добавлен доверенный ключ {kid}")
+        return plugins_view()
+
+    @app.delete("/api/plugins/keys/{kid}")
+    def untrust_key(kid: str) -> dict[str, Any]:
+        settings = s.settings.get()
+        keys = [k.model_dump() for k in settings.plugins.trusted_keys if k.id != kid]
+        s.settings.update({"plugins": {"trusted_keys": keys}})
+        s.plugins.refresh_trust()
+        plugin_audit("plugins.untrust_key", {"key_id": kid}, f"Ключ {kid} удалён из доверенных")
+        return plugins_view()
 
     # ------------------------------------------------------------------ voice
     def voice_call(fn):

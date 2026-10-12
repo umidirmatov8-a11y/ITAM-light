@@ -25,6 +25,7 @@ from ..storage.settings import NetworkMode, Settings
 log = logging.getLogger(__name__)
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_REDIRECTS = 3
 USER_AGENT = "A.R.C./0.5 (local voice assistant; +https://github.com/umidirmatov8-a11y/ITAM-light)"
 
 
@@ -145,24 +146,35 @@ class OnlineClient:
         all_headers = {"User-Agent": USER_AGENT, "Accept-Language": "ru,en;q=0.7"}
         all_headers.update(headers or {})
         try:
-            with httpx.Client(timeout=httpx.Timeout(timeout_s, connect=min(5.0, timeout_s)), follow_redirects=True,
-                              max_redirects=3, transport=self._transport) as client:
-                with client.stream(method, url, params=params, data=data, headers=all_headers) as response:
-                    self._check_url(str(response.url))  # a redirect must not leave https
-                    chunks: list[bytes] = []
-                    size = 0
-                    for chunk in response.iter_bytes():
-                        size += len(chunk)
-                        if size > MAX_RESPONSE_BYTES:
-                            raise OnlineError("Ответ сервера слишком большой")
-                        chunks.append(chunk)
-                    body = b"".join(chunks)
-                    result = Fetched(response.status_code, str(response.url), body,
-                                     response.headers.get("content-type", ""))
+            with httpx.Client(timeout=httpx.Timeout(timeout_s, connect=min(5.0, timeout_s)), follow_redirects=False,
+                              transport=self._transport) as client:
+                request = client.build_request(method, url, params=params, data=data, headers=all_headers)
+                for _hop in range(MAX_REDIRECTS + 1):
+                    response = client.send(request, stream=True)
+                    try:
+                        if response.is_redirect:
+                            target = response.next_request
+                            if target is None:
+                                raise OnlineError("Сервер вернул неверное перенаправление")
+                            self._check_url(str(target.url))  # every hop must stay on https
+                            request = target
+                            continue
+                        chunks: list[bytes] = []
+                        size = 0
+                        for chunk in response.iter_bytes():
+                            size += len(chunk)
+                            if size > MAX_RESPONSE_BYTES:
+                                raise OnlineError("Ответ сервера слишком большой")
+                            chunks.append(chunk)
+                        result = Fetched(response.status_code, str(response.url), b"".join(chunks),
+                                         response.headers.get("content-type", ""))
+                        break
+                    finally:
+                        response.close()
+                else:
+                    raise OnlineError("Слишком много перенаправлений")
         except httpx.TimeoutException:
             raise OnlineError(f"Сервер не ответил за {timeout_s:g} с")
-        except httpx.TooManyRedirects:
-            raise OnlineError("Слишком много перенаправлений")
         except httpx.HTTPError as exc:
             raise OnlineError(f"Нет связи с сервером ({type(exc).__name__})")
         if result.status_code == 429:

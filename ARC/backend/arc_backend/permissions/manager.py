@@ -94,6 +94,10 @@ class PermissionManager:
             return Decision("deny", "Это действие нельзя выполнить жестом", spec, params)
         if spec.name == "mode.set" and request.source == Source.AI:
             return Decision("deny", "Языковая модель не может менять режим работы", spec, params)
+        if request.source == Source.PLUGIN:
+            from ..plugins.manifest import FORBIDDEN_ACTIONS  # late import: manifest imports the catalog
+            if spec.risk == Risk.C or spec.name in FORBIDDEN_ACTIONS:
+                return Decision("deny", "Это действие недоступно модулям", spec, params)
         if spec.risk == Risk.A:
             if request.source == Source.AI and settings.ai.confirm_actions:
                 return Decision("confirm", "Действие предложено языковой моделью", spec, params)
@@ -136,7 +140,7 @@ class PermissionManager:
                 raise ConfirmationError("Запрос подтверждения не найден или истёк")
             if self._emergency:
                 raise ConfirmationError("Аварийная остановка активна")
-            if source in (Source.GESTURE, Source.AI, Source.SCENARIO):
+            if source in (Source.GESTURE, Source.AI, Source.SCENARIO, Source.PLUGIN):
                 raise ConfirmationError("Это действие нельзя подтвердить данным способом")
             if item.spec.risk == Risk.C and (source != Source.UI or not acknowledge):
                 raise ConfirmationError("Критическое действие подтверждается только в окне A.R.C. "

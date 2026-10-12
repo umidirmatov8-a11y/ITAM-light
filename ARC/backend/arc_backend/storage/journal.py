@@ -10,6 +10,14 @@ from typing import Any
 from .db import Database
 
 
+def csv_cell(value: object) -> object:
+    """Spreadsheet programs execute cells that start with = + - @ (CSV formula injection).
+    Logged text comes from users, web pages and models, so such cells are prefixed with a quote."""
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    return value
+
+
 class Journal:
     def __init__(self, db: Database, max_rows: int = 20000):
         self._db = db
@@ -65,11 +73,11 @@ class Journal:
             writer = csv.writer(buffer)
             writer.writerow(["time", "action", "params", "risk", "source", "decision", "status", "dry_run", "message"])
             for item in entries:
-                writer.writerow([
+                writer.writerow([csv_cell(v) for v in (
                     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(item["ts"])), item["action"],
                     json.dumps(item["params"], ensure_ascii=False), item["risk"], item["source"],
                     item["decision"], item["status"], item["dry_run"], item["message"],
-                ])
+                )])
             return buffer.getvalue()
         return json.dumps({"exported_at": time.time(), "audit": entries, "history": history},
                           ensure_ascii=False, indent=2)

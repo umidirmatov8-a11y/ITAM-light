@@ -255,3 +255,9 @@ code {
   flex: 1;
   min-width: 0;
 }
+.plugin-commands {
+  margin: 6px 0 0 16px;
+  padding: 0;
+  color: var(--text-dim);
+  font-size: 0.9em;
+}

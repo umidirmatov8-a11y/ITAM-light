@@ -79,6 +79,45 @@ class DocumentsSettings(BaseModel):
     max_sections: int = Field(8, ge=3, le=12)
 
 
+class TrustedKey(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{16}$")
+    name: str = Field(min_length=1, max_length=80)
+    public_key: str = Field(min_length=40, max_length=64)  # base64 of a raw 32-byte Ed25519 key
+
+
+class PluginGrant(BaseModel):
+    enabled: bool = False
+    modules: list[str] = Field(default_factory=list)
+
+
+class PluginsSettings(BaseModel):
+    """Stage 6: declarative modules (.arcplugin). Nothing here can be changed by a module itself."""
+    allow_unsigned: bool = False
+    trusted_keys: list[TrustedKey] = Field(default_factory=list)
+    grants: dict[str, PluginGrant] = Field(default_factory=dict)
+
+    @field_validator("trusted_keys")
+    @classmethod
+    def _keys(cls, value: list[TrustedKey]) -> list[TrustedKey]:
+        from ..plugins.signing import key_id, load_public_key  # late import: keeps settings light
+        result, seen = [], set()
+        for key in value:
+            load_public_key(key.public_key)  # raises ValueError for a malformed key
+            if key_id(key.public_key) != key.id:
+                raise ValueError("key id does not match the public key")
+            if key.id not in seen:
+                seen.add(key.id)
+                result.append(key)
+        return result
+
+    @field_validator("grants")
+    @classmethod
+    def _grants(cls, value: dict[str, PluginGrant]) -> dict[str, PluginGrant]:
+        for grant in value.values():
+            grant.modules = sorted({m for m in grant.modules if m in MODULES})
+        return value
+
+
 class DevicesSettings(BaseModel):
     microphone_enabled: bool = True
     camera_enabled: bool = False
@@ -220,6 +259,7 @@ class Settings(BaseModel):
     network: NetworkSettings = Field(default_factory=NetworkSettings)
     online: OnlineSettings = Field(default_factory=OnlineSettings)
     documents: DocumentsSettings = Field(default_factory=DocumentsSettings)
+    plugins: PluginsSettings = Field(default_factory=PluginsSettings)
     devices: DevicesSettings = Field(default_factory=DevicesSettings)
     ai: AISettings = Field(default_factory=AISettings)
     safety: SafetySettings = Field(default_factory=SafetySettings)

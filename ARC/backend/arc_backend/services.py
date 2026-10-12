@@ -22,6 +22,7 @@ from .online.client import OnlineClient
 from .online.research import ResearchEngine
 from .online.secrets import SecretStore, create_secret_store
 from .permissions.manager import PermissionManager
+from .plugins.manager import PluginManager
 from .storage.db import Database
 from .storage.journal import Journal
 from .storage.scenarios import ScenarioInput, ScenarioStep, ScenarioStore
@@ -67,6 +68,7 @@ class Services:
     online: OnlineClient
     research: ResearchEngine
     documents: DocumentEngine
+    plugins: PluginManager
 
     @classmethod
     def create(cls, data_dir: Optional[Path] = None, controller: Optional[SystemController] = None,
@@ -119,9 +121,10 @@ class Services:
                                    opener=controller.shell_open, emergency=lambda: permissions.emergency_stop,
                                    ai_transport=ai_transport)
         executor = Executor(controller, registry, settings, folder_map, gpu, research=research, documents=documents)
+        plugins = PluginManager(data_dir / "plugins", settings, registry)
         assistant = Assistant(settings=settings, registry=registry, scenarios=scenarios, journal=journal,
                               permissions=permissions, executor=executor, folders=folder_map,
-                              planner=planner or LocalPlanner())
+                              planner=planner or LocalPlanner(), plugins=plugins)
         models = ModelManager(models_dir or data_dir / "models")
 
         def hints() -> list[str]:
@@ -155,7 +158,7 @@ class Services:
         vision = VisionEngine(settings, models, on_gesture, **(vision_options or {}))
         log.info("services ready: data=%s controller=%s first_run=%s", data_dir, controller.name, first_run)
         return cls(data_dir, db, settings, registry, scenarios, journal, permissions, controller, executor, gpu,
-                   assistant, folder_map, models, voice, vision, secrets, online, research, documents)
+                   assistant, folder_map, models, voice, vision, secrets, online, research, documents, plugins)
 
     def close(self) -> None:
         self.documents.shutdown()

@@ -124,7 +124,9 @@ jobs:
         if: success()
         with:
           name: ARC-Setup
-          path: ARC/app/release/ARC-Setup-*.exe
+          path: |
+            ARC/app/release/ARC-Setup-*.exe
+            ARC/app/release/ARC-Setup-*.exe.sha256
 
       - name: Collect logs
         if: always()
@@ -143,6 +145,92 @@ jobs:
             ARC/backend/build/selftest.json
             ARC/app/release/smoke-*.json
             ARC/ci-logs/
+
+  signing:
+    # Code-signing pipeline. With repository secrets ARC_SIGN_PFX_BASE64 / ARC_SIGN_PASSWORD the real
+    # certificate is used and a signed installer is published; otherwise a temporary self-signed
+    # certificate proves that every executable gets signed (that build is not published).
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      PYTHONUTF8: '1'
+      REAL_PFX: ${{ secrets.ARC_SIGN_PFX_BASE64 }}
+      REAL_PASSWORD: ${{ secrets.ARC_SIGN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ARC/backend/requirements*.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ARC/app/package-lock.json
+
+      - name: Certificate
+        id: cert
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'arc-sign.pfx'
+          if ($env:REAL_PFX) {
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:REAL_PFX))
+            "ARC_SIGN_PASSWORD=$env:REAL_PASSWORD" >> $env:GITHUB_ENV
+            "real=true" >> $env:GITHUB_OUTPUT
+            'Using the release certificate from repository secrets'
+          } else {
+            $password = [Guid]::NewGuid().ToString('N')
+            $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=A.R.C. CI test signing' `
+              -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddDays(2)
+            Export-PfxCertificate -Cert $cert -FilePath $pfx -Password (ConvertTo-SecureString $password -AsPlainText -Force) | Out-Null
+            # trust the temporary certificate on this runner only, so Windows reports the signatures as Valid
+            $cer = Join-Path $env:RUNNER_TEMP 'arc-sign.cer'
+            Export-Certificate -Cert $cert -FilePath $cer | Out-Null
+            Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+            Import-Certificate -FilePath $cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher | Out-Null
+            "::add-mask::$password"
+            "ARC_SIGN_PASSWORD=$password" >> $env:GITHUB_ENV
+            "real=false" >> $env:GITHUB_OUTPUT
+            'No release certificate configured: testing the pipeline with a temporary self-signed certificate'
+          }
+          "ARC_SIGN_PFX=$pfx" >> $env:GITHUB_ENV
+
+      - name: Signed build
+        run: powershell -ExecutionPolicy Bypass -File ARC\scripts\build.ps1 -SkipTests
+
+      - name: Verify signatures and checksum
+        working-directory: ARC/app/release
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = Get-ChildItem ARC-Setup-*.exe | Select-Object -First 1
+          foreach ($f in @($setup.FullName, 'win-unpacked\ARC.exe', 'win-unpacked\resources\backend\arc-backend.exe')) {
+            $sig = Get-AuthenticodeSignature $f
+            "{0}: {1} — {2}" -f (Split-Path $f -Leaf), $sig.Status, $sig.SignerCertificate.Subject
+            if ($sig.Status -ne 'Valid') { throw "Signature of $f is $($sig.Status)" }
+          }
+          $line = (Get-Content "$($setup.FullName).sha256").Split(' ')[0]
+          $actual = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
+          if ($line -ne $actual) { throw 'SHA-256 file does not match the installer' }
+          "SHA-256 OK: $actual"
+
+      - name: Remove the signing material
+        if: always()
+        run: |
+          if ($env:ARC_SIGN_PFX) { Remove-Item $env:ARC_SIGN_PFX -Force -ErrorAction SilentlyContinue }
+
+      - uses: actions/upload-artifact@v4
+        if: success() && steps.cert.outputs.real == 'true'
+        with:
+          name: ARC-Setup-signed
+          path: |
+            ARC/app/release/ARC-Setup-*.exe
+            ARC/app/release/ARC-Setup-*.exe.sha256
 
   local-ai:
     # Local AI planner against a real Ollama model on Windows (separate job: large download, cached).

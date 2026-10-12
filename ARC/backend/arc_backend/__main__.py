@@ -97,6 +97,22 @@ def _documents_check(folder: str) -> dict:
     return result
 
 
+def _plugins_check() -> dict:
+    """Ed25519 (cryptography) must be in the frozen EXE for signed modules."""
+    try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+        from .plugins.signing import public_key_b64, sign, verify
+        key = Ed25519PrivateKey.generate()
+        manifest = {"id": "selftest", "name": "Проверка"}
+        signature = sign(manifest, key)
+        ok = verify(manifest, signature["ed25519"], public_key_b64(key)) and \
+            not verify({**manifest, "name": "x"}, signature["ed25519"], public_key_b64(key))
+        return {"ed25519": "ok" if ok else "error: verification mismatch", "ok": ok}
+    except Exception as exc:
+        return {"ed25519": f"error: {type(exc).__name__}: {exc}", "ok": False}
+
+
 def selftest(out: str | None) -> int:
     """Runs core scenarios against a temporary database with the mock controller."""
     from .automation.controller import MockController
@@ -124,9 +140,10 @@ def selftest(out: str | None) -> int:
             services.close()
         documents = _documents_check(tmp)
     libs = _voice_libs()
-    passed = all(r["ok"] for r in results) and libs["ok"] and documents["ok"]
-    report = json.dumps({"passed": passed, "results": results, "voice_libs": libs, "documents": documents},
-                        ensure_ascii=False, indent=2)
+    plugins = _plugins_check()
+    passed = all(r["ok"] for r in results) and libs["ok"] and documents["ok"] and plugins["ok"]
+    report = json.dumps({"passed": passed, "results": results, "voice_libs": libs, "documents": documents,
+                         "plugins": plugins}, ensure_ascii=False, indent=2)
     if out:
         Path(out).write_text(report, encoding="utf-8")
     else:

@@ -9,6 +9,7 @@ import {
   IconDoc,
   IconHome,
   IconLog,
+  IconModule,
   IconMaximize,
   IconMinimize,
   IconScenario,
@@ -16,13 +17,14 @@ import {
   IconShield,
 } from "./Icons";
 
-export type Screen = "home" | "apps" | "scenarios" | "documents" | "log" | "permissions" | "settings" | "diagnostics";
+export type Screen = "home" | "apps" | "scenarios" | "documents" | "plugins" | "log" | "permissions" | "settings" | "diagnostics";
 
 const NAV: Array<{ id: Screen; label: string; icon: ReactNode }> = [
   { id: "home", label: "Пульт", icon: <IconHome /> },
   { id: "apps", label: "Прилож.", icon: <IconApps /> },
   { id: "scenarios", label: "Сценарии", icon: <IconScenario /> },
   { id: "documents", label: "Докум.", icon: <IconDoc /> },
+  { id: "plugins", label: "Модули", icon: <IconModule /> },
   { id: "log", label: "Журнал", icon: <IconLog /> },
   { id: "permissions", label: "Доступ", icon: <IconShield /> },
   { id: "settings", label: "Настр.", icon: <IconSettings /> },

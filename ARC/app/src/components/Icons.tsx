@@ -95,3 +95,6 @@ export const IconSend = (p: IconProps) => (
 export const IconDoc = (p: IconProps) => (
   <Svg {...p}><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v4h4M9 12h7M9 16h7" /></Svg>
 );
+export const IconModule = (p: IconProps) => (
+  <Svg {...p}><path d="M4 8l8-4 8 4v8l-8 4-8-4z" /><path d="M4 8l8 4 8-4M12 12v8" /></Svg>
+);

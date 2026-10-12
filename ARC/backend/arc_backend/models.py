@@ -22,6 +22,7 @@ class Source(str, Enum):
     GESTURE = "gesture"  # camera gesture
     SCENARIO = "scenario"
     AI = "ai"            # plan proposed by a language model
+    PLUGIN = "plugin"    # phrase defined by an installed module
 
 
 class Status(str, Enum):
