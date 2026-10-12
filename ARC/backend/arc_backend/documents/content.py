@@ -77,8 +77,11 @@ def tidy_content(content: DocumentContent, max_sections: int) -> DocumentContent
     return content
 
 
+SOURCE_CHARS = 450  # per source: keeps the prompt short enough for a small model on CPU
+
+
 def sources_block(results: list[SearchResult]) -> str:
-    return "\n\n".join(f"[{i}] {r.title} ({r.url})\n{r.snippet}" for i, r in enumerate(results, 1))
+    return "\n\n".join(f"[{i}] {r.title} ({r.url})\n{r.snippet[:SOURCE_CHARS]}" for i, r in enumerate(results, 1))
 
 
 def generate_with_ai(kind: str, topic: str, settings: Settings, results: list[SearchResult],
@@ -86,12 +89,12 @@ def generate_with_ai(kind: str, topic: str, settings: Settings, results: list[Se
     """Raises OllamaError / ValueError if the model is unavailable or its answer is unusable."""
     user = f"Тема: {topic[:300]}"
     if results:
-        user += "\n\nИсточники:\n" + sources_block(results)[:8000]
+        user += "\n\nИсточники:\n" + sources_block(results)[:4000]
     messages = [{"role": "system", "content": build_prompt(kind, settings, bool(results))},
                 {"role": "user", "content": user}]
     raw = chat(settings.ai.ollama_url, settings.ai.model, messages,
                timeout_s=max(settings.ai.timeout_s, 120.0), temperature=0.3,
-               num_ctx=max(settings.ai.num_ctx, 8192 if results else 4096), schema=content_schema(),
+               num_ctx=max(settings.ai.num_ctx, 6144 if results else 4096), schema=content_schema(),
                transport=transport)
     try:
         data = json.loads(raw)
