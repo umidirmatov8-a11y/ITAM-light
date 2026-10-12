@@ -196,7 +196,7 @@ jobs:
           .venv\Scripts\python -m pip install -q -r requirements-dev.txt
           if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }
 
-      - name: Local AI end-to-end (real model: safety, accuracy, documents, web summary)
+      - name: Local AI end-to-end (real model - safety, accuracy, documents, web summary)
         working-directory: ARC/backend
         run: |
           .venv\Scripts\python -m pytest tests\test_ai_real.py -v -s -p no:warnings
