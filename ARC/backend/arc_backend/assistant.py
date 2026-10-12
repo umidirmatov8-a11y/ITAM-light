@@ -252,8 +252,10 @@ class Assistant:
             response.input, response.intent = text, "ai.plan"
             response.data = {**response.data, **data,
                              "actions": [{"action": r.action, "params": r.params} for r in plan.actions]}
-            if plan.reply and response.status == Status.DONE:
-                response.message = f"{plan.reply} {response.message}".strip()
+            # Only A.R.C.'s own result is shown: the model's free text could claim things that did not
+            # happen ("защита отключена"). It stays in data for the log.
+            if plan.reply:
+                response.data["model_reply"] = plan.reply
             return response
         if plan.question:
             return CommandResponse(input=text, source=source, status=Status.CLARIFY, intent="ai.clarify",

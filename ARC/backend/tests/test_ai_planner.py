@@ -48,6 +48,9 @@ def test_unknown_phrase_is_planned_and_executed_with_ai_source(env):
     response = svc.assistant.handle_text("хочу быстро записать одну мысль")
     assert response.status == Status.DONE and response.intent == "ai.plan"
     assert response.data["ai"] is True
+    # the user sees A.R.C.'s own result, not the model's claim about it
+    assert response.message.startswith("Запускаю") and "мысль" not in response.message
+    assert response.data["model_reply"] == "Открываю блокнот, чтобы записать мысль."
     assert controller.called("launch_exe")[0][0].endswith("notepad.exe")
     audit = svc.journal.audit_entries(1)[0]
     assert audit["source"] == "ai" and audit["action"] == "app.launch"
