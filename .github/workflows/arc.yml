@@ -2,6 +2,9 @@ name: A.R.C. (Windows)
 
 on:
   push:
+    branches: ['**']
+    # a tag arc-vX.Y.Z publishes a GitHub Release (job "release"); path filters do not apply to tags
+    tags: ['arc-v*']
     paths:
       - 'ARC/**'
       - '.github/workflows/arc.yml'
@@ -290,3 +293,63 @@ jobs:
           .venv\Scripts\python -m pytest tests\test_ai_real.py -v -s -p no:warnings
           if ($LASTEXITCODE -ne 0) { throw 'local AI end-to-end failed' }
 
+
+  release:
+    # Runs only for a pushed tag arc-vX.Y.Z, after every check above passed on that commit.
+    if: startsWith(github.ref, 'refs/tags/arc-v')
+    needs: [build-test, signing, local-ai]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Versions and release notes
+        run: python ARC/scripts/release_notes.py --tag "$GITHUB_REF_NAME" --out "$RUNNER_TEMP/notes.md"
+
+      - name: Signed installer (when a release certificate is configured)
+        id: signed
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ARC-Setup-signed
+          path: dist-signed
+
+      - name: Installer from the build job
+        if: steps.signed.outcome != 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: ARC-Setup
+          path: dist-unsigned
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.signed.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          dir=dist-unsigned; [ "$SIGNED" = "true" ] && dir=dist-signed
+          cd "$dir"
+          ls -l
+          setup=$(ls ARC-Setup-*.exe | head -n1)
+          # the checksum file must match the installer that is published
+          tr -d '\r' < "$setup.sha256" | sha256sum -c -  # the file is written on Windows (CRLF)
+          notes="$RUNNER_TEMP/notes.md"
+          if [ "$SIGNED" != "true" ]; then
+            printf '\n> Установщик без цифровой подписи (нет сертификата): SmartScreen → «Подробнее» → «Выполнить в любом случае». Проверьте SHA-256.\n' >> "$notes"
+          fi
+          version="${GITHUB_REF_NAME#arc-v}"
+          prerelease=""; case "$version" in *-*) prerelease="--prerelease";; esac
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists: uploading files again"
+            gh release upload "$GITHUB_REF_NAME" "$setup" "$setup.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$setup" "$setup.sha256" \
+              --title "A.R.C. $version" --notes-file "$notes" --verify-tag $prerelease
+          fi
+          echo "Published: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME"

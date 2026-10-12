@@ -14,6 +14,9 @@ powershell -ExecutionPolicy Bypass -File scripts\check_env.ps1
 
 ## Установка
 
+Установщик — на странице релизов: <https://github.com/umidirmatov8-a11y/ITAM-light/releases/latest>
+(файлы `ARC-Setup-<версия>.exe` и `.sha256`).
+
 1. Проверьте файл (по желанию): `Get-FileHash ARC-Setup-<версия>.exe` должен совпасть с `.sha256` рядом
    ([SIGNING.md](SIGNING.md)). Установщик без подписи: SmartScreen → «Подробнее» → «Выполнить в любом случае».
 2. Запустите `ARC-Setup-<версия>.exe`.

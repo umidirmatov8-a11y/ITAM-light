@@ -78,5 +78,6 @@
 | Офлайн-тесты: целая сессия в LOCAL без внешних соединений; карта 15 обязательных проверок | ✅ | `tests/test_offline.py`, [TESTING.md](TESTING.md) |
 | Подпись: signtool + electron-builder по сертификату, проверка подписи в CI, SHA-256 рядом с установщиком | ✅ | `scripts/build.ps1`, CI `signing`, [SIGNING.md](SIGNING.md) |
 | Быстрая сводка поиска на CPU (короткий запрос модели) | ✅ | `online/research.py` |
+| Автоматическая публикация GitHub Release по тегу `arc-vX.Y.Z` (проверка версий, CHANGELOG, SHA-256) | ✅ | CI `release`, [RELEASING.md](RELEASING.md) |
 
 Коммерческого сертификата у проекта нет: опубликованный установщик не подписан (см. [SIGNING.md](SIGNING.md)).

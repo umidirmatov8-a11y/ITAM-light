@@ -44,7 +44,8 @@
 
 ## Быстрый старт (пользователь)
 
-1. Скачайте `ARC-Setup-<версия>.exe` (артефакт CI «ARC-Setup» или собранный локально) и запустите.
+1. Скачайте `ARC-Setup-<версия>.exe` со страницы [релизов](https://github.com/umidirmatov8-a11y/ITAM-light/releases/latest)
+   (или артефакт CI «ARC-Setup», или соберите сами) и запустите.
 2. Откройте A.R.C. из меню «Пуск» → «Приложения» → **Найти установленные**.
 3. «Настройки → Локальные модели» → загрузите `Whisper small` (484 МБ, один раз).
 4. Нажмите **Ctrl+Alt+Space** и скажите «открой Telegram» — или введите это в терминале на пульте.
@@ -52,7 +53,7 @@
 Подробно: [docs/INSTALL.md](docs/INSTALL.md) · модели: [docs/MODELS.md](docs/MODELS.md) ·
 микрофон и камера: [docs/DEVICES.md](docs/DEVICES.md) · ошибки: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) ·
 безопасность: [docs/SECURITY.md](docs/SECURITY.md), [аудит](docs/SECURITY_REVIEW.md) · архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
-тесты: [docs/TESTING.md](docs/TESTING.md) · модули: [docs/PLUGINS.md](docs/PLUGINS.md) · подпись: [docs/SIGNING.md](docs/SIGNING.md).
+тесты: [docs/TESTING.md](docs/TESTING.md) · выпуск версий: [docs/RELEASING.md](docs/RELEASING.md) · модули: [docs/PLUGINS.md](docs/PLUGINS.md) · подпись: [docs/SIGNING.md](docs/SIGNING.md).
 
 ## Разработка
 
