@@ -11,11 +11,14 @@ describe("IPC route allowlist", () => {
     expect(isAllowedRoute("GET", "/api/audit/export?format=csv")).toBe(true);
     expect(isAllowedRoute("POST", "/api/voice/ptt")).toBe(true);
     expect(isAllowedRoute("DELETE", "/api/voice/models/whisper-small")).toBe(true);
+    expect(isAllowedRoute("POST", "/api/vision/calibrate")).toBe(true);
+    expect(isAllowedRoute("GET", "/api/vision/preview")).toBe(true);
   });
 
   it("rejects everything else", () => {
     expect(isAllowedRoute("POST", "/api/shutdown")).toBe(false);
     expect(isAllowedRoute("DELETE", "/api/voice/models/../../settings")).toBe(false);
+    expect(isAllowedRoute("POST", "/api/vision/preview")).toBe(false);
     expect(isAllowedRoute("GET", "/api/command")).toBe(false);
     expect(isAllowedRoute("DELETE", "/api/settings")).toBe(false);
     expect(isAllowedRoute("PUT", "/api/apps/../settings")).toBe(false);

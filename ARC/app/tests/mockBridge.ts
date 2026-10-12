@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import type { ArcBridge, ArcState, CommandResponse, Settings, VoiceStatus } from "../src/lib/types";
+import type { ArcBridge, ArcState, CommandResponse, Settings, VisionStatus, VoiceStatus } from "../src/lib/types";
 
 export const settings: Settings = {
   general: { language: "ru", wake_word: "арк", autostart: false, start_minimized: false, require_wake_word_for_voice: true, min_confidence: 0.6 },
@@ -12,6 +12,16 @@ export const settings: Settings = {
   profile: { silent: false },
   voice: { mode: "ptt", stt_model: "whisper-small", stt_device: "auto", input_device: null, tts_engine: "sapi",
            tts_voice: "", tts_rate: 1, tts_volume: 80, vad_sensitivity: 0.5, silence_ms: 800, max_utterance_s: 12 },
+  vision: { camera_index: 0, mirror: true, fps: 15, confidence: 0.7, hold_ms: 600, cooldown_ms: 1500, min_interval_ms: 800,
+            zone: [0.65, 0, 1, 0.4], zone_hold_ms: 1500, calibration: null,
+            bindings: { fist: { enabled: true, action: "gestures.cancel", params: {} },
+                        victory: { enabled: false, action: "volume.mute", params: { muted: true } } } },
+};
+
+export const visionStatus: VisionStatus = {
+  state: "idle", message: "Жесты выключены", running: false, paused: false, fps: 0, brightness: null, dark: false,
+  gesture: "none", gesture_title: "—", raw_gesture: "none", confidence: 0, fingers: {}, progress: 0, landmarks: null,
+  zone: [0.65, 0, 1, 0.4], events: [], preview: false, calibration: null, calibrating: null, model_installed: true,
 };
 
 export const voiceStatus: VoiceStatus = {
@@ -34,7 +44,7 @@ export const state: ArcState = {
   dry_run: true,
   simulated: false,
   voice: { state: "idle", message: "Готов", ptt: false, continuous: false },
-  camera: { state: "not_installed", message: "Модуль жестов подключается на этапе 3" },
+  camera: { state: "idle", message: "Жесты выключены", running: false, paused: false },
 };
 
 export function response(partial: Partial<CommandResponse>): CommandResponse {
@@ -68,6 +78,11 @@ export function installBridge(handler: Handler = () => undefined) {
     if (path.startsWith("/api/history")) return { status: 200, body: [] };
     if (path.startsWith("/api/ai/status")) return { status: 200, body: { state: "offline", message: "Ollama недоступна", model: "m", url: "u", models: [] } };
     if (path === "/api/voice/status") return { status: 200, body: voiceStatus };
+    if (path === "/api/vision/status") return { status: 200, body: visionStatus };
+    if (path === "/api/vision/actions") return { status: 200, body: {
+      actions: { "gestures.cancel": "Отменить", "volume.mute": "Звук вкл/выкл", "window.minimize_all": "Свернуть все окна" },
+      gestures: { fist: "Кулак", victory: "Два пальца (V)" } } };
+    if (path === "/api/scenarios") return { status: 200, body: { scenarios: [], allowed_actions: [] } };
     if (path === "/api/voice/devices") return { status: 200, body: { inputs: [{ index: 1, name: "USB Mic", default: true }], voices: [], cuda: false } };
     if (path === "/api/voice/models") return { status: 200, body: { free_mb: 50000, dir: "C:/models", models: [
       { id: "whisper-small", title: "Whisper small", kind: "stt", size_mb: 484, description: "", license: "MIT", supported: true, installed: false, download: null },

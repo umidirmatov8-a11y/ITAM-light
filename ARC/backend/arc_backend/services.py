@@ -13,12 +13,14 @@ from .assistant import Assistant
 from .automation.controller import SystemController, create_controller
 from .automation.executor import Executor
 from .automation.sysinfo import GpuProbe
-from .models import Source
+from .models import ActionRequest, Source
 from .permissions.manager import PermissionManager
 from .storage.db import Database
 from .storage.journal import Journal
 from .storage.scenarios import ScenarioInput, ScenarioStep, ScenarioStore
-from .storage.settings import SettingsStore
+from .storage.settings import GestureBinding, SettingsStore
+from .vision.engine import VisionEngine
+from .vision.gestures import GESTURE_TITLES
 from .voice.engine import VoiceEngine
 from .voice.models import ModelManager
 
@@ -53,11 +55,13 @@ class Services:
     folders: Callable[[], dict[str, str]]
     models: ModelManager
     voice: VoiceEngine
+    vision: VisionEngine
 
     @classmethod
     def create(cls, data_dir: Optional[Path] = None, controller: Optional[SystemController] = None,
                folders: Optional[Callable[[], dict[str, str]]] = None, db_name: str = "arc.db",
-               voice_options: Optional[dict[str, Any]] = None, models_dir: Optional[Path] = None) -> "Services":
+               voice_options: Optional[dict[str, Any]] = None, models_dir: Optional[Path] = None,
+               vision_options: Optional[dict[str, Any]] = None) -> "Services":
         """`voice_options` are passed to VoiceEngine (tests inject fake audio/recognizer/synthesizer)."""
         data_dir = data_dir or paths.data_dir()
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -96,11 +100,31 @@ class Services:
             return assistant.handle_text(text, Source.VOICE, confidence, explicit=explicit)
 
         voice = VoiceEngine(settings, models, on_utterance, hints=hints, **(voice_options or {}))
+
+        def on_gesture(gesture: str, binding: GestureBinding) -> dict:
+            label = f"жест: {GESTURE_TITLES.get(gesture, gesture)}"
+            if binding.action == "gestures.cancel":
+                response = assistant.cancel_current(Source.GESTURE, label)
+            elif binding.action == "assistant.repeat":
+                response = assistant.repeat_from(Source.GESTURE, label)
+            elif binding.action == "ui.toggle_compact":
+                return {"status": "done", "message": "Переключение вида интерфейса", "ui": "toggle_compact"}
+            elif binding.action == "profile.silent_toggle":
+                enabled = not settings.get().profile.silent
+                response = assistant.run_action(ActionRequest(action="profile.silent", params={"enabled": enabled},
+                                                              source=Source.GESTURE), input_text=label)
+            else:
+                response = assistant.run_action(ActionRequest(action=binding.action, params=binding.params,
+                                                              source=Source.GESTURE), input_text=label)
+            return {"status": response.status.value, "message": response.message}
+
+        vision = VisionEngine(settings, models, on_gesture, **(vision_options or {}))
         log.info("services ready: data=%s controller=%s first_run=%s", data_dir, controller.name, first_run)
         return cls(data_dir, db, settings, registry, scenarios, journal, permissions, controller, executor, gpu,
-                   assistant, folder_map, models, voice)
+                   assistant, folder_map, models, voice, vision)
 
     def close(self) -> None:
+        self.vision.shutdown()
         self.voice.shutdown()
         self.assistant.close()
         self.db.close()

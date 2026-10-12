@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Field, Panel, Toggle } from "../components/ui";
 import { useArc } from "../lib/store";
 import type { Settings as SettingsT } from "../lib/types";
+import { GestureSettingsPanel } from "./GestureSettings";
 import { VoiceSettingsPanel } from "./VoiceSettings";
 
 /** Text input that saves on blur / Enter instead of on every keystroke. */
@@ -92,12 +93,13 @@ export function Settings() {
           <Toggle checked={s.devices.microphone_enabled} onChange={(v) => save("devices", { microphone_enabled: v })}
                   label="Микрофон" hint="Выключено — A.R.C. не открывает микрофон ни при каких условиях" />
           <Toggle checked={s.devices.camera_enabled} onChange={(v) => save("devices", { camera_enabled: v })}
-                  label="Камера" hint="Модуль жестов (этап 3) не будет открывать камеру, если выключено" />
+                  label="Камера" hint="Выключено — A.R.C. не открывает камеру ни при каких условиях" />
           <Toggle checked={s.devices.local_ai_enabled} onChange={(v) => save("devices", { local_ai_enabled: v })}
                   label="Локальный ИИ (Ollama)" />
         </Panel>
       </div>
       <VoiceSettingsPanel />
+      <GestureSettingsPanel />
       <Panel title="Локальная модель (Ollama)" tag={ai ? ai.state : "—"}>
         <div className="form-grid">
           <Field label="Адрес сервера" hint="Адрес вне этого компьютера считается внешним сервисом (нужен ONLINE)">

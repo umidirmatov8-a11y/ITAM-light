@@ -51,13 +51,23 @@ def _watch_parent(pid: int, on_exit, interval: float = 1.5) -> None:
 def _voice_libs() -> dict:
     """The frozen EXE must contain the speech stack (models themselves are downloaded later)."""
     result: dict = {}
-    for name in ("numpy", "ctranslate2", "faster_whisper", "sounddevice"):
+    for name in ("numpy", "ctranslate2", "faster_whisper", "sounddevice", "cv2", "mediapipe"):
         try:
             module = importlib.import_module(name)
             result[name] = getattr(module, "__version__", "ok")
         except Exception as exc:  # sounddevice raises OSError when PortAudio is missing (Linux CI)
             result[name] = f"error: {type(exc).__name__}: {exc}"
-    required = ["numpy", "ctranslate2", "faster_whisper"] + (["sounddevice"] if sys.platform == "win32" else [])
+    required = ["numpy", "ctranslate2", "faster_whisper", "cv2", "mediapipe"] + (
+        ["sounddevice"] if sys.platform == "win32" else [])
+    try:  # MediaPipe Tasks loads a native library on first use; make sure it is in the bundle
+        from mediapipe.tasks.python import vision as _mp_vision  # type: ignore
+        from mediapipe.tasks.python.core import mediapipe_c_bindings  # type: ignore
+        assert _mp_vision.HandLandmarker
+        mediapipe_c_bindings.load_raw_library()
+        result["mediapipe_native"] = "ok"
+    except Exception as exc:
+        result["mediapipe_native"] = f"error: {type(exc).__name__}: {exc}"
+    required.append("mediapipe_native")
     result["ok"] = all(not str(result[n]).startswith("error") for n in required)
     return result
 

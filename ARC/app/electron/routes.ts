@@ -46,6 +46,9 @@ export const ALLOWED_ROUTES: ReadonlyArray<readonly [HttpMethod, RegExp]> = [
   ["POST", /^\/api\/voice\/models\/download$/],
   ["POST", /^\/api\/voice\/models\/cancel$/],
   ["DELETE", /^\/api\/voice\/models\/[a-z0-9-]{1,64}$/],
+  ["GET", /^\/api\/vision\/status$/],
+  ["POST", /^\/api\/vision\/(start|stop|pause|setup|calibrate)$/],
+  ["GET", /^\/api\/vision\/(preview|cameras|actions)$/],
 ];
 
 export function isAllowedRoute(method: string, path: string): boolean {

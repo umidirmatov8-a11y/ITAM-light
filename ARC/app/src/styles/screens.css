@@ -173,3 +173,13 @@ code {
   color: var(--text);
   mix-blend-mode: difference;
 }
+.camera-check {
+  display: grid;
+  grid-template-columns: minmax(240px, 420px) 1fr;
+  gap: 14px;
+  margin-top: 12px;
+}
+.camera-check img {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+}

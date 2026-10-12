@@ -128,10 +128,25 @@ class Assistant:
         return self._finish(CommandResponse(source=Source.UI, status=Status.DONE, message=message,
                                             intent="emergency_stop"))
 
-    def run_action(self, request: ActionRequest, labels: Optional[dict[str, str]] = None) -> CommandResponse:
-        """Direct action from the UI (quick-launch button)."""
+    def run_action(self, request: ActionRequest, labels: Optional[dict[str, str]] = None,
+                   input_text: str = "") -> CommandResponse:
+        """Direct action from the UI (quick-launch button) or a gesture."""
         with self._lock:
             response = self._run_request(request, labels or {})
+            response.input = input_text
+            return self._finish(response)
+
+    def cancel_current(self, source: Source = Source.UI, input_text: str = "") -> CommandResponse:
+        """Cancels an open question and a pending confirmation (cancelling is always safe)."""
+        with self._lock:
+            response = self._meta(Plan("meta", "cancel", meta="cancel"), source)
+            response.input = input_text
+            return self._finish(response)
+
+    def repeat_from(self, source: Source, input_text: str = "") -> CommandResponse:
+        with self._lock:
+            response = self._repeat_last(source, "")
+            response.input = input_text
             return self._finish(response)
 
     # ================================================================== plan handling

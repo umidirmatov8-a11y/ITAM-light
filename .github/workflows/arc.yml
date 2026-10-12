@@ -39,11 +39,11 @@ jobs:
       - name: Build (backend tests, PyInstaller, self-test, UI tests, electron-builder)
         run: powershell -ExecutionPolicy Bypass -File ARC\scripts\build.ps1
 
-      - name: Cache speech models for the voice end-to-end test
+      - name: Cache speech and hand models for the end-to-end tests
         uses: actions/cache@v4
         with:
           path: ARC/ci-models
-          key: arc-voice-models-v1-whisper-small-piper-irina
+          key: arc-models-v2-whisper-small-piper-irina-mediapipe-hand
 
       - name: Voice end-to-end (Piper speaks -> VAD -> Whisper -> Assistant -> action)
         working-directory: ARC/backend
@@ -53,6 +53,14 @@ jobs:
         run: |
           .venv\Scripts\python -m pytest tests\test_voice_real.py -v -s -p no:warnings
           if ($LASTEXITCODE -ne 0) { throw 'voice end-to-end failed' }
+
+      - name: Gestures end-to-end (MediaPipe on real hand photos -> gesture -> action)
+        working-directory: ARC/backend
+        env:
+          ARC_TEST_MODELS: ${{ github.workspace }}\ARC\ci-models
+        run: |
+          .venv\Scripts\python -m pytest tests\test_vision_real.py -v -s -p no:warnings
+          if ($LASTEXITCODE -ne 0) { throw 'gestures end-to-end failed' }
 
       - name: Frozen backend recognizes Russian speech (arc-backend.exe --transcribe)
         working-directory: ARC/backend

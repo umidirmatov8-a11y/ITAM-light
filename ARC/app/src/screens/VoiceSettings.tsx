@@ -23,6 +23,7 @@ const KIND_TITLE: Record<VoiceModel["kind"], string> = {
   stt: "Распознавание речи (Whisper)",
   tts_runtime: "Синтез речи Piper",
   tts_voice: "Голоса Piper",
+  vision: "Распознавание рук (жесты)",
 };
 
 export function formatMb(mb: number): string {
@@ -144,7 +145,7 @@ export function VoiceSettingsPanel() {
   };
 
   const sttModels = models?.models.filter((m) => m.kind === "stt") ?? [];
-  const groups: VoiceModel["kind"][] = ["stt", "tts_runtime", "tts_voice"];
+  const groups: VoiceModel["kind"][] = ["stt", "tts_runtime", "tts_voice", "vision"];
 
   return (
     <>

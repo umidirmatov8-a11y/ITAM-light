@@ -1,6 +1,7 @@
 """Local HTTP API (loopback only). The only client is the Electron main process."""
 from __future__ import annotations
 
+import base64
 import hmac
 import os
 import platform
@@ -23,6 +24,10 @@ from ..permissions.catalog import catalog_view
 from ..services import Services
 from ..storage.scenarios import SCENARIO_ACTIONS, ScenarioInput
 from ..storage.settings import NetworkMode
+from ..vision.actions import gesture_actions
+from ..vision.camera import probe_cameras
+from ..vision.engine import VisionError
+from ..vision.gestures import GESTURE_TITLES
 from ..voice.engine import VoiceError, stt_device_info
 from ..voice.models import DownloadError
 
@@ -89,6 +94,10 @@ class EmergencyBody(BaseModel):
 
 class PttBody(BaseModel):
     action: Literal["start", "stop", "toggle"]
+
+
+class PauseBody(BaseModel):
+    paused: bool
 
 
 class ListenBody(BaseModel):
@@ -167,7 +176,7 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
                 "silent": settings.profile.silent, "dry_run": settings.safety.dry_run,
                 "simulated": s.controller.simulated,
                 "voice": {k: v for k, v in s.voice.status().items() if k in ("state", "message", "ptt", "continuous")},
-                "camera": {"state": "not_installed", "message": "Модуль жестов подключается на этапе 3"}}
+                "camera": {k: v for k, v in s.vision.status().items() if k in ("state", "message", "running", "paused")}}
 
     @app.post("/api/command")
     def command(body: CommandBody) -> dict[str, Any]:
@@ -204,6 +213,8 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         updated = s.settings.update(patch)
         if not updated.devices.microphone_enabled:
             s.voice.stop_all()
+        if not updated.devices.camera_enabled and s.vision.running:
+            s.vision.stop("Камера выключена в настройках")
         if "ai" in patch or "devices" in patch or "network" in patch:
             ai_cache["ts"] = 0.0
         s.journal.audit(action="settings.update", params={"sections": sorted(patch)}, risk="-", source="ui",
@@ -365,7 +376,11 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         voice_status = s.voice.status()
         add("Синтез речи", "warn" if voice_status["tts"]["warning"] else "ok",
             voice_status["tts"]["warning"] or f"Движок: {settings.voice.tts_engine}")
-        add("Камера / жесты", "info", "Модуль жестов подключается на этапе 3")
+        vision_status = s.vision.status()
+        add("Камера / жесты", "ok" if vision_status["model_installed"] and settings.devices.camera_enabled else "warn",
+            ("Модель рук установлена" if vision_status["model_installed"] else "Модель рук не установлена")
+            + ("; камера включена" if settings.devices.camera_enabled else "; камера выключена в настройках")
+            + (f"; {vision_status['fps']} кадр/с" if vision_status["running"] else ""))
         add("Сеть", "ok", f"Режим {settings.network.mode.value}; онлайн-функции "
                           f"{'разрешены' if settings.network.online_allowed else 'выключены'}")
         add("Приложения", "ok", f"В реестре: {len(s.registry.list())}")
@@ -433,6 +448,55 @@ def create_app(services: Services, token: str, *, on_shutdown: Optional[Callable
         except DownloadError as exc:
             raise ValueError(str(exc))
         return {"removed": removed}
+
+    # ------------------------------------------------------------------ vision
+    def vision_call(fn):
+        try:
+            return fn()
+        except VisionError as exc:
+            return JSONResponse({"error": "vision_unavailable", "detail": str(exc)}, status_code=409)
+
+    @app.get("/api/vision/status")
+    def vision_status() -> dict[str, Any]:
+        return s.vision.status()
+
+    @app.post("/api/vision/start")
+    def vision_start() -> dict[str, Any]:
+        return vision_call(s.vision.start)
+
+    @app.post("/api/vision/stop")
+    def vision_stop() -> dict[str, Any]:
+        return s.vision.stop()
+
+    @app.post("/api/vision/pause")
+    def vision_pause(body: PauseBody) -> dict[str, Any]:
+        return s.vision.set_paused(body.paused)
+
+    @app.post("/api/vision/setup")
+    def vision_setup(body: ListenBody) -> dict[str, Any]:
+        return s.vision.set_preview(body.enabled)
+
+    @app.get("/api/vision/preview")
+    def vision_preview() -> dict[str, Any]:
+        jpeg = s.vision.preview_jpeg()
+        return {"image": base64.b64encode(jpeg).decode("ascii") if jpeg else None}
+
+    @app.post("/api/vision/calibrate")
+    def vision_calibrate() -> dict[str, Any]:
+        return vision_call(s.vision.calibrate)
+
+    @app.get("/api/vision/cameras")
+    def vision_cameras() -> dict[str, Any]:
+        if not s.settings.get().devices.camera_enabled:
+            raise ValueError("Камера выключена в настройках")
+        if s.vision.running:
+            index = s.settings.get().vision.camera_index
+            return {"cameras": [{"index": index, "name": f"Камера {index}", "resolution": "используется"}]}
+        return {"cameras": probe_cameras()}
+
+    @app.get("/api/vision/actions")
+    def vision_actions() -> dict[str, Any]:
+        return {"actions": gesture_actions(), "gestures": {k: v for k, v in GESTURE_TITLES.items() if k != "none"}}
 
     @app.post("/api/shutdown")
     def shutdown() -> dict[str, Any]:

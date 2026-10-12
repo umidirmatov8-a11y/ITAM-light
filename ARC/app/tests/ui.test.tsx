@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { App } from "../src/App";
 import { ConfirmDialog } from "../src/components/ConfirmDialog";
 import { ArcProvider } from "../src/lib/store";
-import { installBridge, response, voiceStatus } from "./mockBridge";
+import { installBridge, response, visionStatus, voiceStatus } from "./mockBridge";
 
 describe("home screen", () => {
   it("sends a typed command through the bridge and shows the answer", async () => {
@@ -105,5 +105,38 @@ describe("confirmation dialog", () => {
     render(<ArcProvider><ConfirmDialog info={{ ...base, risk: "B", requires_acknowledge: false }} /></ArcProvider>);
     expect((screen.getByTestId("confirm-approve") as HTMLButtonElement).disabled).toBe(false);
     expect(screen.queryByTestId("confirm-ack")).toBeNull();
+  });
+});
+
+describe("gestures", () => {
+  it("a gesture asking to switch the view toggles the window, once", async () => {
+    let polls = 0;
+    const { bridge } = installBridge((_m, path) => {
+      if (path !== "/api/vision/status") return undefined;
+      polls += 1;
+      const events = polls > 1
+        ? [{ id: 7, gesture: "index_up", title: "Указательный палец вверх", ts: 1, action: "ui.toggle_compact",
+             status: "done", message: "Переключение вида интерфейса", ui: "toggle_compact" }]
+        : [];
+      return { ...visionStatus, state: "running", running: true, events };
+    });
+    render(<App />);
+    await waitFor(() => expect(bridge.window).toHaveBeenCalledWith("compact"), { timeout: 3000 });
+    await new Promise((r) => setTimeout(r, 600));
+    expect((bridge.window as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1);
+    expect(screen.getByTestId("gesture-name")).toBeTruthy();
+  });
+
+  it("binding a gesture saves only through settings", async () => {
+    const { api } = installBridge();
+    render(<App />);
+    fireEvent.click(await screen.findByTestId("nav-settings"));
+    const select = (await screen.findByTestId("binding-fist")) as HTMLSelectElement;
+    expect(Array.from(select.options).map((o) => o.value)).not.toContain("power.shutdown");
+    await act(async () => {
+      fireEvent.change(select, { target: { value: "window.minimize_all" } });
+    });
+    expect(api).toHaveBeenCalledWith("PUT", "/api/settings", { vision: { bindings: expect.objectContaining({
+      fist: { enabled: true, action: "window.minimize_all", params: {} } }) } });
   });
 });

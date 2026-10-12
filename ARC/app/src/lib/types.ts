@@ -61,7 +61,7 @@ export interface ArcState {
   dry_run: boolean;
   simulated: boolean;
   voice: { state: VoiceStateName; message: string; ptt: boolean; continuous: boolean };
-  camera: ModuleState;
+  camera: { state: string; message: string; running: boolean; paused: boolean };
 }
 
 export interface Settings {
@@ -86,6 +86,61 @@ export interface Settings {
   ui: { theme: "amber" | "phosphor" | "ice"; scale: number; animations: boolean; scanlines: boolean };
   profile: { silent: boolean };
   voice: VoiceSettings;
+  vision: VisionSettings;
+}
+
+export interface GestureBinding {
+  enabled: boolean;
+  action: string;
+  params: Record<string, any>;
+}
+
+export interface VisionSettings {
+  camera_index: number;
+  mirror: boolean;
+  fps: number;
+  confidence: number;
+  hold_ms: number;
+  cooldown_ms: number;
+  min_interval_ms: number;
+  zone: number[];
+  zone_hold_ms: number;
+  bindings: Record<string, GestureBinding>;
+  calibration: { palm_scale: number; brightness: number; ts: number } | null;
+}
+
+export interface GestureEvent {
+  id: number;
+  gesture: string;
+  title: string;
+  ts: number;
+  action: string | null;
+  status: string;
+  message: string;
+  ui?: string;
+}
+
+export interface VisionStatus {
+  state: "disabled" | "not_installed" | "idle" | "running" | "paused" | "calibrating" | "error";
+  message: string;
+  running: boolean;
+  paused: boolean;
+  fps: number;
+  brightness: number | null;
+  dark: boolean;
+  gesture: string;
+  gesture_title: string;
+  raw_gesture: string;
+  confidence: number;
+  fingers: Record<string, string>;
+  progress: number;
+  landmarks: number[][] | null;
+  zone: number[];
+  events: GestureEvent[];
+  preview: boolean;
+  calibration: { palm_scale: number; brightness: number; ts: number } | null;
+  calibrating: { progress: number; message: string } | null;
+  model_installed: boolean;
 }
 
 export interface VoiceSettings {
@@ -129,7 +184,7 @@ export interface VoiceStatus {
 export interface VoiceModel {
   id: string;
   title: string;
-  kind: "stt" | "tts_runtime" | "tts_voice";
+  kind: "stt" | "tts_runtime" | "tts_voice" | "vision";
   size_mb: number;
   description: string;
   license: string;

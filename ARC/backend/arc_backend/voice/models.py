@@ -21,7 +21,7 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-Kind = Literal["stt", "tts_runtime", "tts_voice"]
+Kind = Literal["stt", "tts_runtime", "tts_voice", "vision"]
 HF = "https://huggingface.co"
 PIPER_VOICES = f"{HF}/rhasspy/piper-voices/resolve/v1.0.0/ru/ru_RU"
 WHISPER_FILES = ("config.json", "model.bin", "tokenizer.json", "vocabulary.txt")
@@ -66,6 +66,11 @@ CATALOG: dict[str, ModelSpec] = {m.id: m for m in [
                       "piper.zip"),),
               description="Локальный синтез речи (запускается как отдельная программа)", license="MIT",
               platform="win32", archive=True, marker="piper/piper.exe"),
+    ModelSpec(id="mediapipe-hand", title="MediaPipe: распознавание рук", kind="vision", size_mb=8,
+              files=(("https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/"
+                      "hand_landmarker.task", "hand_landmarker.task"),),
+              description="Точки руки для управления жестами (работает локально, видео не сохраняется)",
+              license="Apache 2.0 (Google MediaPipe)", marker="hand_landmarker.task"),
     _voice("irina", "Ирина"),
     _voice("dmitri", "Дмитрий"),
     _voice("denis", "Денис"),

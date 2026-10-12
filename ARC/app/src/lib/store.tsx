@@ -10,6 +10,7 @@ import type {
   HistoryItem,
   Settings,
   SystemStats,
+  VisionStatus,
   VoiceStatus,
 } from "./types";
 
@@ -29,6 +30,9 @@ export interface ArcContextValue {
   history: HistoryItem[];
   conversation: CommandResponse[];
   voice: VoiceStatus | null;
+  vision: VisionStatus | null;
+  visionCall(path: "start" | "stop" | "calibrate"): Promise<void>;
+  setVisionPaused(paused: boolean): Promise<void>;
   voiceAction(action: "start" | "stop" | "toggle"): Promise<void>;
   setContinuous(enabled: boolean): Promise<void>;
   busy: boolean;
@@ -75,6 +79,8 @@ export function ArcProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [conversation, setConversation] = useState<CommandResponse[]>([]);
   const [voice, setVoice] = useState<VoiceStatus | null>(null);
+  const [vision, setVision] = useState<VisionStatus | null>(null);
+  const lastGestureEvent = useRef<number | null>(null);
   const lastTranscriptTs = useRef(0);
   const [busy, setBusy] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -219,6 +225,62 @@ export function ArcProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, voiceActive, refreshState, refreshHistory]);
 
+  // ---------------------------------------------------------------- vision
+  const visionRunning = Boolean(vision?.running);
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await get<VisionStatus>("/api/vision/status");
+        if (cancelled) return;
+        setVision(status);
+        const fresh = status.events.filter((e) => lastGestureEvent.current !== null && e.id > lastGestureEvent.current);
+        if (status.events.length) lastGestureEvent.current = Math.max(...status.events.map((e) => e.id));
+        else if (lastGestureEvent.current === null) lastGestureEvent.current = 0;
+        for (const event of fresh) {
+          // only the main window reacts (the widget polls too); a hidden main window means the widget is shown
+          if (event.ui === "toggle_compact" && window.arc && window.location.hash !== "#compact") {
+            void window.arc.window(document.visibilityState === "visible" ? "compact" : "expand");
+          }
+          setConversation((all) => [...all.slice(-29), {
+            id: `gesture-${event.id}-${event.ts}`, ts: event.ts, input: `жест: ${event.title}`, source: "gesture",
+            status: (event.status as CommandResponse["status"]) || "done", message: event.message, intent: null,
+            action: event.action, risk: null, data: {}, confirmation: null, clarify: null, dry_run: event.status === "dry_run",
+          }]);
+        }
+        if (fresh.length) {
+          void refreshState();
+          void refreshHistory();
+        }
+      } catch {
+        /* backend banner covers this */
+      }
+    };
+    void poll();
+    const timer = window.setInterval(poll, visionRunning ? 250 : 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [ready, visionRunning, refreshState, refreshHistory]);
+
+  const visionCall = useCallback(
+    async (path: "start" | "stop" | "calibrate") => {
+      const status = await guard(() => post<VisionStatus>(`/api/vision/${path}`));
+      if (status) setVision(status);
+    },
+    [guard],
+  );
+
+  const setVisionPaused = useCallback(
+    async (paused: boolean) => {
+      const status = await guard(() => post<VisionStatus>("/api/vision/pause", { paused }));
+      if (status) setVision(status);
+    },
+    [guard],
+  );
+
   const voiceAction = useCallback(
     async (action: "start" | "stop" | "toggle") => {
       const status = await guard(() => post<VoiceStatus>("/api/voice/ptt", { action }));
@@ -323,6 +385,9 @@ export function ArcProvider({ children }: { children: ReactNode }) {
       history,
       conversation,
       voice,
+      vision,
+      visionCall,
+      setVisionPaused,
       voiceAction,
       setContinuous,
       busy,
@@ -341,7 +406,7 @@ export function ArcProvider({ children }: { children: ReactNode }) {
       notify,
       dismissToast,
     }),
-    [backend, state, settings, stats, ai, apps, history, conversation, voice, voiceAction, setContinuous, busy, toasts, sendCommand, confirm, undo, repeat,
+    [backend, state, settings, stats, ai, apps, history, conversation, voice, vision, visionCall, setVisionPaused, voiceAction, setContinuous, busy, toasts, sendCommand, confirm, undo, repeat,
      setEmergency, launchApp, updateSettings, refreshApps, refreshHistory, refreshAi, refreshState, notify, dismissToast],
   );
   return <ArcContext.Provider value={value}>{children}</ArcContext.Provider>;

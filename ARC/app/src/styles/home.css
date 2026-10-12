@@ -569,3 +569,53 @@
   border-style: double;
   border-width: 3px;
 }
+
+/* ------------------------------------------------------------------ gestures */
+.gesture-live {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.gesture-live__name {
+  font-size: 15px;
+  margin: 2px 0 6px;
+}
+.hold-bar {
+  height: 6px;
+  border: 1px solid var(--line-strong);
+  margin-bottom: 4px;
+}
+.hold-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  box-shadow: var(--glow);
+  transition: width 0.2s linear;
+}
+.hand-view {
+  display: block;
+  background: rgba(0, 0, 0, 0.35);
+}
+.hand-view__frame {
+  fill: none;
+  stroke: var(--line);
+}
+.hand-view__zone {
+  fill: var(--accent-soft);
+  stroke: var(--accent-dim);
+  stroke-dasharray: 3 3;
+}
+.hand-view__bone {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+.hand-view__joint {
+  fill: var(--ok);
+}
+.hand-view__empty {
+  fill: var(--text-faint);
+  font-family: var(--font);
+  font-size: 10px;
+  letter-spacing: 2px;
+}

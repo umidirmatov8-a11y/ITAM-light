@@ -107,6 +107,65 @@ class VoiceSettings(BaseModel):
     max_utterance_s: float = Field(12.0, ge=3.0, le=30.0)
 
 
+GESTURES = ("open_palm", "fist", "thumbs_up", "index_up", "ok", "victory", "palm_zone")
+
+
+class GestureBinding(BaseModel):
+    enabled: bool = True
+    action: str = Field(max_length=64)
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+def default_bindings() -> dict[str, GestureBinding]:
+    return {
+        "open_palm": GestureBinding(action="gestures.pause_toggle"),
+        "fist": GestureBinding(action="gestures.cancel"),
+        "thumbs_up": GestureBinding(enabled=False, action="assistant.repeat"),
+        "index_up": GestureBinding(action="ui.toggle_compact"),
+        "ok": GestureBinding(action="profile.silent_toggle"),
+        "victory": GestureBinding(enabled=False, action="volume.mute", params={"muted": True}),
+        "palm_zone": GestureBinding(action="window.minimize_all"),
+    }
+
+
+class VisionCalibration(BaseModel):
+    palm_scale: float = Field(gt=0, le=1)
+    brightness: float = Field(ge=0, le=255)
+    ts: float
+
+
+class VisionSettings(BaseModel):
+    camera_index: int = Field(0, ge=0, le=9)
+    mirror: bool = True
+    fps: int = Field(15, ge=5, le=30)
+    confidence: float = Field(0.7, ge=0.3, le=0.99)
+    hold_ms: int = Field(600, ge=150, le=3000)
+    cooldown_ms: int = Field(1500, ge=300, le=10000)
+    min_interval_ms: int = Field(800, ge=200, le=10000)
+    zone: list[float] = Field(default_factory=lambda: [0.65, 0.0, 1.0, 0.4])
+    zone_hold_ms: int = Field(1500, ge=500, le=5000)
+    bindings: dict[str, GestureBinding] = Field(default_factory=default_bindings)
+    calibration: Optional[VisionCalibration] = None
+
+    @field_validator("zone")
+    @classmethod
+    def _zone(cls, value: list[float]) -> list[float]:
+        if len(value) != 4 or not all(0.0 <= v <= 1.0 for v in value) or value[0] >= value[2] or value[1] >= value[3]:
+            raise ValueError("zone must be [x0, y0, x1, y1] within 0..1")
+        return value
+
+    @field_validator("bindings")
+    @classmethod
+    def _bindings(cls, value: dict[str, GestureBinding]) -> dict[str, GestureBinding]:
+        from ..vision.actions import validate_binding  # late import: avoids a cycle with the catalog
+        merged = default_bindings()
+        for gesture, binding in value.items():
+            if gesture not in GESTURES:
+                raise ValueError(f"unknown gesture: {gesture}")
+            merged[gesture] = validate_binding(binding)
+        return merged
+
+
 class ProfileSettings(BaseModel):
     silent: bool = False
 
@@ -120,6 +179,7 @@ class Settings(BaseModel):
     ui: UISettings = Field(default_factory=UISettings)
     profile: ProfileSettings = Field(default_factory=ProfileSettings)
     voice: VoiceSettings = Field(default_factory=VoiceSettings)
+    vision: VisionSettings = Field(default_factory=VisionSettings)
 
     @model_validator(mode="after")
     def _online_switch(self) -> "Settings":

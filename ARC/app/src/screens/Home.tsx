@@ -13,6 +13,7 @@ import {
   IconStop,
   IconUndo,
 } from "../components/Icons";
+import { HandView } from "../components/HandView";
 import { Oscilloscope } from "../components/Oscilloscope";
 import { formatTime, Panel, RiskBadge, STATUS_LABEL, statusTone } from "../components/ui";
 import { useArc } from "../lib/store";
@@ -57,6 +58,61 @@ export const VOICE_LABEL: Record<string, string> = {
   error: "ошибка",
 };
 
+export const VISION_LABEL: Record<string, string> = {
+  disabled: "выключена",
+  not_installed: "нет модели рук",
+  idle: "жесты выкл.",
+  running: "жесты активны",
+  paused: "жесты на паузе",
+  calibrating: "калибровка",
+  error: "ошибка",
+};
+
+function camTone(state: string): "ok" | "warn" | "danger" | "accent" | "off" {
+  if (state === "disabled") return "off";
+  if (state === "error") return "danger";
+  if (state === "not_installed" || state === "paused") return "warn";
+  if (state === "running" || state === "calibrating") return "accent";
+  return "ok";
+}
+
+function GesturePanel() {
+  const { vision, visionCall, setVisionPaused } = useArc();
+  if (!vision) return null;
+  const unavailable = vision.state === "disabled" || vision.state === "not_installed";
+  return (
+    <Panel title="Жесты" tag={vision.running ? `${vision.fps} кадр/с` : VISION_LABEL[vision.state]} testId="gesture-panel">
+      {vision.running ? (
+        <>
+          <div className="gesture-live">
+            <HandView landmarks={vision.landmarks} zone={vision.zone} />
+            <div className="gesture-live__info">
+              <div className="mono-label">Жест</div>
+              <div className="gesture-live__name glow" data-testid="gesture-name">{vision.gesture_title}</div>
+              <div className="hold-bar" aria-label="удержание"><span style={{ width: `${vision.progress * 100}%` }} /></div>
+              <div className="faint">уверенность {Math.round(vision.confidence * 100)}%</div>
+              {vision.dark && <div className="danger-text">Темно: добавьте освещение</div>}
+            </div>
+          </div>
+          <div className="btn-row" style={{ marginTop: 8 }}>
+            <button className={`btn btn--sm ${vision.paused ? "btn--solid" : ""}`}
+                    onClick={() => void setVisionPaused(!vision.paused)}>{vision.paused ? "Продолжить" : "Пауза"}</button>
+            <button className="btn btn--sm btn--danger" onClick={() => void visionCall("stop")} data-testid="gestures-stop">
+              Выключить камеру
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="dim" style={{ marginTop: 0 }}>{vision.message}</p>
+          <button className="btn btn--sm" disabled={unavailable} onClick={() => void visionCall("start")}
+                  data-testid="gestures-start">Включить жесты</button>
+        </>
+      )}
+    </Panel>
+  );
+}
+
 function micTone(state: string | undefined): "ok" | "warn" | "danger" | "accent" | "off" {
   if (!state || state === "disabled") return "off";
   if (state === "error") return "danger";
@@ -66,7 +122,7 @@ function micTone(state: string | undefined): "ok" | "warn" | "danger" | "accent"
 }
 
 function StatusPanel() {
-  const { state, ai, settings, updateSettings, voice } = useArc();
+  const { state, ai, settings, updateSettings, voice, vision } = useArc();
   if (!state || !settings) return <Panel title="Состояние"><div className="empty">Ожидание ядра…</div></Panel>;
   const mic = settings.devices.microphone_enabled;
   const cam = settings.devices.camera_enabled;
@@ -79,10 +135,10 @@ function StatusPanel() {
         <button className="btn btn--sm" onClick={() => updateSettings({ devices: { microphone_enabled: !mic } })}
                 title={voice?.message ?? state.voice.message} data-testid="toggle-mic">{mic ? "Откл." : "Вкл."}</button>
       </StatusRow>
-      <StatusRow icon={<IconCam size={16} />} name="Камера" tone={cam ? "warn" : "off"}
-                 value={cam ? "модуль не установлен" : "выключена"}>
+      <StatusRow icon={<IconCam size={16} />} name="Камера" tone={camTone(vision?.state ?? state.camera.state)}
+                 value={VISION_LABEL[vision?.state ?? state.camera.state] ?? state.camera.state}>
         <button className="btn btn--sm" onClick={() => updateSettings({ devices: { camera_enabled: !cam } })}
-                title={state.camera.message} data-testid="toggle-camera">{cam ? "Откл." : "Вкл."}</button>
+                title={vision?.message ?? state.camera.message} data-testid="toggle-camera">{cam ? "Откл." : "Вкл."}</button>
       </StatusRow>
       <StatusRow icon={<IconNet size={16} />} name="Сеть" tone={state.mode === "ONLINE" ? "accent" : "ok"}
                  value={state.mode === "ONLINE" ? "ONLINE" : "LOCAL"}>
@@ -381,6 +437,7 @@ export function Home() {
       </div>
       <div className="home__right">
         <ControlPanel />
+        <GesturePanel />
         <HistoryPanel />
       </div>
     </div>
