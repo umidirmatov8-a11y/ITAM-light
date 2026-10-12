@@ -91,7 +91,8 @@ def test_engine_with_real_tracker(assets, tmp_path):
                                                                  "params": {"muted": True}}}}})
         svc.vision.start()
         deadline = time.monotonic() + 30
-        while time.monotonic() < deadline and not controller.called("mute_set"):
+        # the action runs before the event is recorded: wait for both
+        while time.monotonic() < deadline and not (controller.called("mute_set") and svc.vision.status()["events"]):
             time.sleep(0.05)
         status = svc.vision.status()
         print("fps", status["fps"], "gesture", status["gesture"], status["events"])
