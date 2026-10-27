@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using ITAM.Domain.Common;
+using ITAM.Domain.Entities;
 
 namespace ITAM.Application.Common;
 
@@ -13,6 +14,10 @@ public interface IRegionScope
     IQueryable<T> Apply<T>(IQueryable<T> query, Expression<Func<T, Guid?>> regionSelector, bool includeNull = true);
     bool CanAccess(Guid? regionId);
     void EnsureAccess(Guid? regionId);
+    /// <summary>Assets of the allowed regions plus every asset stored in a shared warehouse (<see cref="Location.IsShared"/>).</summary>
+    IQueryable<Asset> ApplyAssets(IQueryable<Asset> query);
+    /// <summary>Locations of the allowed regions plus shared warehouses.</summary>
+    IQueryable<Location> ApplyLocations(IQueryable<Location> query);
 }
 
 public sealed class RegionScope : IRegionScope
@@ -44,6 +49,20 @@ public sealed class RegionScope : IRegionScope
             : r => allowed.Contains(r);
         var body = new ParameterReplacer(contains.Parameters[0], regionSelector.Body).Visit(contains.Body)!;
         return query.Where(Expression.Lambda<Func<T, bool>>(body, regionSelector.Parameters));
+    }
+
+    public IQueryable<Asset> ApplyAssets(IQueryable<Asset> query)
+    {
+        if (IsUnrestricted) return query;
+        var allowed = Allowed.ToList();
+        return query.Where(a => allowed.Contains(a.RegionId) || (a.Location != null && a.Location.IsShared));
+    }
+
+    public IQueryable<Location> ApplyLocations(IQueryable<Location> query)
+    {
+        if (IsUnrestricted) return query;
+        var allowed = Allowed.ToList();
+        return query.Where(l => allowed.Contains(l.RegionId) || l.IsShared);
     }
 
     public bool CanAccess(Guid? regionId) => IsUnrestricted || regionId is null || Allowed.Contains(regionId.Value);

@@ -251,7 +251,7 @@ public sealed class LicenseService
                        ?? throw new NotFoundException("Сотрудник", req.EmployeeId);
         Asset? asset = null;
         if (req.AssetId is not null)
-            asset = await _scope.Apply(_db.Assets.AsQueryable(), a => a.RegionId).FirstOrDefaultAsync(a => a.Id == req.AssetId, ct)
+            asset = await _scope.ApplyAssets(_db.Assets.AsQueryable()).FirstOrDefaultAsync(a => a.Id == req.AssetId, ct)
                     ?? throw new NotFoundException("Актив", req.AssetId);
         if (await _db.LicenseAssignments.AnyAsync(a => a.LicenseId == licenseId && a.RevokedAt == null && a.EmployeeId == req.EmployeeId && a.AssetId == req.AssetId, ct))
             throw new ConflictException(ErrorCodes.Duplicate, "Такое назначение уже существует");

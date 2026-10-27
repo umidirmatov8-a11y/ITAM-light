@@ -15,7 +15,7 @@ const en = {
   menu: {
     agents: 'Agents', 
     dashboard: 'Dashboard', employees: 'Employees', assetsGroup: 'Equipment', assets: 'Assets', operations: 'Operations', repairs: 'Repairs',
-    inventory: 'Stocktaking', stock: 'Consumables', contracts: 'Contracts', licensesGroup: 'Software & access', licenses: 'Licenses',
+    inventory: 'Stocktaking', warehouse: 'Equipment warehouse', stock: 'Consumables', contracts: 'Contracts', licensesGroup: 'Software & access', licenses: 'Licenses',
     software: 'Software catalog', access: 'Access', lifecycle: 'Lifecycle', onboarding: 'Onboarding', offboarding: 'Offboarding',
     documents: 'Documents', reports: 'Reports', import: 'Import', notifications: 'Notifications', admin: 'Administration',
     dictionaries: 'Dictionaries', customFields: 'Custom fields', templates: 'Document templates', checklistTemplates: 'Checklist templates',
@@ -26,7 +26,7 @@ const en = {
     logout: 'Sign out', darkTheme: 'Dark theme', lightTheme: 'Light theme',
   },
   quick: {
-    addEmployee: 'Add employee', addAsset: 'Add asset', issue: 'Issue equipment', return: 'Receive return',
+    addEmployee: 'Add employee', addAsset: 'Add asset', receipt: 'Receive equipment', issue: 'Issue equipment', return: 'Receive return',
     transfer: 'Transfer equipment', repair: 'Send to repair', document: 'Generate document',
   },
   login: { subtitle: 'IT asset management', userName: 'Login', password: 'Password', submit: 'Sign in' },
@@ -142,6 +142,22 @@ const en = {
     cancel: 'Cancel operation', cancelWarning: 'The cancellation is kept in history; later events are checked for consistency.',
     cancelledInfo: 'Operation cancelled {{date}}',
   },
+  warehouse: {
+    warehouse: 'Warehouse', warehouseHint: 'Default: the shared warehouse available to all regions', shared: 'Shared', receipt: 'Receive equipment',
+    receiptTitle: 'Equipment receipt', receiptSubmit: 'Receive into warehouse ({{count}} pcs)', openWarehouse: 'Open warehouse',
+    receivedAt: 'Receipt date', nameHint: 'Default: type and model', serials: 'Serial numbers',
+    serialsHint: 'One per line (paste a column from Excel or scan). Quantity = number of serial numbers.',
+    serialsRequired: 'This type requires a serial number for every unit', serialsDuplicate: 'Repeated serial numbers: {{list}}',
+    quantity: 'Quantity', quantityFromSerials: 'From serial numbers: {{count}}', invoice: 'Invoice / waybill', unitPrice: 'Unit price',
+    currency: 'Currency', writeOff: 'Write-off', writeOffTitle: 'Equipment write-off', writeOffSubmit: 'Write off',
+    writeOffReason: 'Reason for write-off', writeOffReasonPlaceholder: 'Beyond repair, worn out, damaged in delivery…',
+    disposalPlaceholder: 'Recycling, spare parts, handed over…', pickFromWarehouse: 'Search among equipment of the selected warehouse',
+    cancelReceiptWarning: 'Cancelling the receipt deletes the assets it registered. Possible only while they have no operations.',
+    registeredAt: 'Received', noWarehouses: 'No warehouses available. Create a location of type “Warehouse” in the Locations dictionary.',
+    sharedHint: 'Shared warehouse: users of every region can see, issue, move and write off its equipment.',
+    regionalHint: 'Warehouse of region “{{region}}”', inStock: 'In stock', reserved: 'Reserved', inRepair: 'In repair',
+    reservedShort: 'Reserved', inRepairShort: 'Repair', byType: 'Stock by type', empty: 'Warehouse is empty',
+  },
   repairs: {
     new: 'New repair', edit: 'Edit repair', number: 'No.', repair: 'Repair', asset: 'Asset', employee: 'Employee',
     problem: 'Problem', description: 'Description', diagnosis: 'Diagnosis', serviceCenter: 'Service center', technician: 'Technician',
@@ -199,7 +215,7 @@ const en = {
       sortOrder: 'Order', accessSystemId: 'System', address: 'Address', category: 'Category', categoryId: 'Category', color: 'Color',
       contactPerson: 'Contact person', costCenter: 'Cost center', criticality: 'Criticality', defaultUsefulLifeMonths: 'Useful life, months',
       email: 'Email', headEmployeeId: 'Head', icon: 'Icon', inventoryNumberFormat: 'Inventory no. format', isDefaultForKind: 'Default for kind',
-      isServiceCenter: 'Service center', isSupplier: 'Supplier', isSystem: 'System', isVendor: 'Vendor', kind: 'System kind',
+      isServiceCenter: 'Service center', isShared: 'Shared warehouse', isSupplier: 'Supplier', isSystem: 'System', isVendor: 'Vendor', kind: 'System kind',
       minQuantity: 'Min. quantity', model: 'Model', owner: 'Owner', parentId: 'Parent', phone: 'Phone', prefix: 'Prefix', publisher: 'Publisher',
       regionId: 'Region', requireSerialNumber: 'Serial no. required', requiresLicense: 'Requires license', reviewIntervalMonths: 'Review, months',
       sku: 'SKU', stage: 'Stage', supportPhone: 'Support phone', taxId: 'Tax ID', type: 'Type', unit: 'Unit', unitPrice: 'Unit price',
@@ -226,7 +242,7 @@ const en = {
   audit: {
     time: 'Time', user: 'User', action: 'Action', object: 'Object', result: 'Result', success: 'Success', failure: 'Failure',
     old: 'Before', new: 'After', readonly: 'The audit log is read-only: records cannot be modified or deleted.',
-    actions: { agent_register: 'Agent registered', agent_link: 'Computer linked to asset', agent_unlink: 'Computer unlinked', agent_create_asset: 'Asset created from agent data', agent_ignore: 'Computer ignored', agent_unignore: 'Computer no longer ignored', agent_delete: 'Computer removed', agents_settings: 'Agent settings changed', agents_key_regenerate: 'Agent enrollment key regenerated', auth_login: 'Sign-in', auth_login_failed: 'Failed sign-in', auth_login_locked: 'Account locked', auth_logout: 'Sign-out', auth_password_change: 'Password change', apitoken_create: 'API token created', apitoken_revoke: 'API token revoked', asset_assign: 'Asset issued', asset_return: 'Asset returned', asset_transfer: 'Asset transferred', asset_status: 'Asset status changed', asset_repair_open: 'Sent to repair', access_revoke: 'Access revoked', access_review: 'Access reviewed', backup_create: 'Backup created', backup_delete: 'Backup deleted', backup_download: 'Backup downloaded', backup_restore: 'Restored from backup', backup_failed: 'Backup failed', checklist_complete: 'Checklist completed', checklist_item: 'Checklist item', cli_reset_admin: 'Administrator password reset (CLI)', document_generate: 'Document generated', document_sign: 'Document signed', document_void: 'Document voided', employee_terminate: 'Employee terminated', file_upload: 'File uploaded', file_delete: 'File deleted', import_complete: 'Data import', inventory_start: 'Stocktaking started', inventory_complete: 'Stocktaking completed', license_assign: 'License assigned', license_revoke: 'License revoked', license_key_view: 'License key viewed', operation_cancel: 'Operation cancelled', repair_status: 'Repair stage changed', role_create: 'Role created', role_update: 'Role updated', role_delete: 'Role deleted', session_revoke: 'Session ended', settings_update: 'Settings changed', setup_complete: 'Initial setup', template_version_add: 'Template version added', template_version_activate: 'Template version activated', user_create: 'User created', user_update: 'User updated', user_password_reset: 'Password reset', user_unlock: 'User unlocked' },
+    actions: { agent_register: 'Agent registered', agent_link: 'Computer linked to asset', agent_unlink: 'Computer unlinked', agent_create_asset: 'Asset created from agent data', agent_ignore: 'Computer ignored', agent_unignore: 'Computer no longer ignored', agent_delete: 'Computer removed', agents_settings: 'Agent settings changed', agents_key_regenerate: 'Agent enrollment key regenerated', auth_login: 'Sign-in', auth_login_failed: 'Failed sign-in', auth_login_locked: 'Account locked', auth_logout: 'Sign-out', auth_password_change: 'Password change', apitoken_create: 'API token created', apitoken_revoke: 'API token revoked', asset_receipt: 'Asset received into warehouse', asset_assign: 'Asset issued', asset_return: 'Asset returned', asset_transfer: 'Asset transferred', asset_status: 'Asset status changed', asset_repair_open: 'Sent to repair', access_revoke: 'Access revoked', access_review: 'Access reviewed', backup_create: 'Backup created', backup_delete: 'Backup deleted', backup_download: 'Backup downloaded', backup_restore: 'Restored from backup', backup_failed: 'Backup failed', checklist_complete: 'Checklist completed', checklist_item: 'Checklist item', cli_reset_admin: 'Administrator password reset (CLI)', document_generate: 'Document generated', document_sign: 'Document signed', document_void: 'Document voided', employee_terminate: 'Employee terminated', file_upload: 'File uploaded', file_delete: 'File deleted', import_complete: 'Data import', inventory_start: 'Stocktaking started', inventory_complete: 'Stocktaking completed', license_assign: 'License assigned', license_revoke: 'License revoked', license_key_view: 'License key viewed', operation_cancel: 'Operation cancelled', repair_status: 'Repair stage changed', role_create: 'Role created', role_update: 'Role updated', role_delete: 'Role deleted', session_revoke: 'Session ended', settings_update: 'Settings changed', setup_complete: 'Initial setup', template_version_add: 'Template version added', template_version_activate: 'Template version activated', user_create: 'User created', user_update: 'User updated', user_password_reset: 'Password reset', user_unlock: 'User unlocked' },
     entities: { employee: 'Employee', asset: 'Asset', asset_assignment: 'Asset assignment', asset_event: 'Asset event', operation_batch: 'Operation', operation_line: 'Operation line', region: 'Region', location: 'Location', department: 'Department', position: 'Position', asset_type: 'Asset type', asset_category: 'Asset category', asset_status: 'Asset status', employee_status: 'Employee status', manufacturer: 'Manufacturer', supplier: 'Supplier', software: 'Software', license: 'License', license_assignment: 'License assignment', license_type: 'License type', access_system: 'Access system', access_level: 'Access level', access_grant: 'Access', repair: 'Repair', repair_status: 'Repair status', document: 'Document', document_template: 'Document template', document_template_version: 'Template version', checklist: 'Checklist', checklist_item: 'Checklist item', checklist_template: 'Checklist template', custom_field_definition: 'Custom field', user: 'User', role: 'Role', contract: 'Contract', stock_item: 'Stock item', stock_movement: 'Stock movement', inventory_campaign: 'Stocktaking', inventory_item: 'Stocktaking item', stored_file: 'File', setting: 'Setting', notification_rule: 'Notification rule', organization: 'Organization' },
     verbs: { create: 'created', update: 'updated', delete: 'deleted', archive: 'archived', restore: 'restored' },
   },
@@ -234,7 +250,7 @@ const en = {
     general: 'General', numbering: 'Numbering', documents: 'Documents', notifications: 'Notifications', security: 'Security', backup: 'Backup',
     logo: 'Logo', uploadLogo: 'Upload logo', dateFormat: 'Date format', numberingHint: 'Placeholders: {PREFIX}, {SEQ:6}, {YYYY}, {YY}, {MM}, {REGION}. Counters never reset.',
     fmt: {
-      assetFormat: 'Inventory number', issueFormat: 'Issue act', returnFormat: 'Return act', transferFormat: 'Transfer act', statusChangeFormat: 'Status change',
+      assetFormat: 'Inventory number', issueFormat: 'Issue act', returnFormat: 'Return act', transferFormat: 'Transfer act', statusChangeFormat: 'Status change', receiptFormat: 'Receipt act',
       repairFormat: 'Repair', documentFormat: 'Document', inventoryFormat: 'Stocktaking', employeeNumberFormat: 'Personnel number',
     },
     pdfEngine: 'PDF conversion', pdfEngineHint: 'LibreOffice gives an exact copy of the DOCX; the built-in engine needs no extra software.',
@@ -358,7 +374,7 @@ const en = {
     },
     employeeKind: { Active: 'Active', Leave: 'On leave', Suspended: 'Suspended', Terminated: 'Terminated', Archived: 'Archived' },
     condition: { New: 'New', Good: 'Good', Fair: 'Fair', Poor: 'Poor', Broken: 'Broken' },
-    operation: { Issue: 'Issue', Return: 'Return', Transfer: 'Transfer', StatusChange: 'Status change', Repair: 'Repair' },
+    operation: { Receipt: 'Receipt', Issue: 'Issue', Return: 'Return', Transfer: 'Transfer', StatusChange: 'Status change', Repair: 'Repair' },
     signature: { NotRequired: 'Not required', Pending: 'Awaiting signature', Signed: 'Signed', Refused: 'Refused' },
     signatureMethod: { None: 'None', Paper: 'Paper', Scan: 'Scan', Electronic: 'Electronic' },
     repairStage: {
@@ -379,7 +395,7 @@ const en = {
     },
     documentType: {
       EquipmentIssue: 'Issue act', EquipmentReturn: 'Return act', EquipmentTransfer: 'Transfer act', EquipmentRepair: 'Repair handover act',
-      EmployeeOnboarding: 'Onboarding sheet', EmployeeOffboarding: 'Clearance sheet', InventoryAct: 'Stocktaking act', WriteOffAct: 'Write-off act', Other: 'Other',
+      EmployeeOnboarding: 'Onboarding sheet', EmployeeOffboarding: 'Clearance sheet', InventoryAct: 'Stocktaking act', WriteOffAct: 'Write-off act', ReceiptAct: 'Warehouse receipt act', Other: 'Other',
     },
     cfType: {
       Text: 'Text', Number: 'Number', Date: 'Date', DateTime: 'Date & time', Boolean: 'Yes/No', Dropdown: 'Dropdown', MultiSelect: 'Multi-select',

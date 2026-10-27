@@ -9,7 +9,7 @@ const uz = {
   },
   menu: {
     dashboard: 'Bosh sahifa', employees: 'Xodimlar', assetsGroup: 'Uskunalar', assets: 'Aktivlar', operations: 'Operatsiyalar',
-    repairs: "Ta'mirlash", inventory: 'Inventarizatsiya', stock: 'Sarf materiallari ombori', contracts: 'Shartnomalar',
+    repairs: "Ta'mirlash", inventory: 'Inventarizatsiya', warehouse: 'Texnika ombori', stock: 'Sarf materiallari ombori', contracts: 'Shartnomalar',
     licensesGroup: "Dasturlar va ruxsatlar", licenses: 'Litsenziyalar', software: 'Dasturlar katalogi', access: 'Ruxsatlar',
     lifecycle: 'Hayot sikli', onboarding: 'Ishga qabul', offboarding: "Ishdan bo'shatish", documents: 'Hujjatlar', reports: 'Hisobotlar',
     import: 'Import', notifications: 'Bildirishnomalar', admin: "Ma'muriyat", dictionaries: "Ma'lumotnomalar", customFields: "Qo'shimcha maydonlar",
@@ -17,7 +17,7 @@ const uz = {
     audit: 'Audit jurnali', settings: 'Sozlamalar', backup: 'Zaxira nusxalar', system: 'Tizim haqida',
   },
   header: { searchPlaceholder: 'Qidirish: inventar raqami, seriya raqami, F.I.Sh…', quickActions: 'Tezkor amallar', profile: 'Profil', logout: 'Chiqish', darkTheme: "Qorong'i mavzu", lightTheme: "Yorug' mavzu" },
-  quick: { addEmployee: "Xodim qo'shish", addAsset: "Aktiv qo'shish", issue: 'Uskuna berish', return: 'Qaytarib olish', transfer: 'Uskunani topshirish', repair: "Ta'mirga yuborish", document: 'Hujjat yaratish' },
+  quick: { addEmployee: "Xodim qo'shish", addAsset: "Aktiv qo'shish", receipt: 'Texnika kirimi', issue: 'Uskuna berish', return: 'Qaytarib olish', transfer: 'Uskunani topshirish', repair: "Ta'mirga yuborish", document: 'Hujjat yaratish' },
   login: { subtitle: 'IT aktivlarini hisobga olish', userName: 'Login', password: 'Parol', submit: 'Kirish' },
   dashboard: { title: 'Bosh sahifa', welcome: 'Xush kelibsiz, {{name}}', allRegions: 'Barcha hududlar', recentOperations: "So'nggi operatsiyalar", expiring: 'Muddati tugayotganlar' },
   employees: { new: 'Yangi xodim', fullName: 'F.I.Sh.', position: 'Lavozim', phone: 'Telefon', hireDate: 'Ishga qabul sanasi', terminationDate: "Bo'shatish sanasi" },
@@ -30,7 +30,7 @@ const uz = {
   enums: {
     assetKind: { InStock: 'Omborda', Assigned: 'Berilgan', Reserved: 'Band qilingan', InRepair: "Ta'mirda", Lost: "Yo'qolgan", WrittenOff: 'Hisobdan chiqarilgan', Archived: 'Arxiv' },
     employeeKind: { Active: 'Ishlaydi', Leave: "Ta'tilda", Terminated: "Bo'shatilgan", Archived: 'Arxiv' },
-    operation: { Issue: 'Berish', Return: 'Qaytarish', Transfer: 'Topshirish', StatusChange: "Holat o'zgarishi", Repair: "Ta'mirlash" },
+    operation: { Receipt: 'Kirim', Issue: 'Berish', Return: 'Qaytarish', Transfer: 'Topshirish', StatusChange: "Holat o'zgarishi", Repair: "Ta'mirlash" },
   },
   errors: { generic: 'Xatolik', NOT_FOUND: 'Topilmadi', FORBIDDEN: "Huquq yetarli emas", INVALID_CREDENTIALS: "Login yoki parol noto'g'ri" },
 };

@@ -44,7 +44,7 @@ public enum AssetEventType
     AgentInventory = 15
 }
 
-public enum OperationType { Issue = 0, Return = 1, Transfer = 2, StatusChange = 3, Repair = 4 }
+public enum OperationType { Issue = 0, Return = 1, Transfer = 2, StatusChange = 3, Repair = 4, Receipt = 5 }
 
 public enum RepairStage { Created = 0, Sent = 1, Diagnostics = 2, Repairing = 3, WaitingParts = 4, Completed = 5, Returned = 6, Cancelled = 7 }
 
@@ -80,6 +80,7 @@ public enum DocumentType
     EmployeeOffboarding = 5,
     InventoryAct = 6,
     WriteOffAct = 7,
+    ReceiptAct = 8,
     Other = 99
 }
 

@@ -30,7 +30,7 @@ public sealed class DataSeeder
         var added = await SyncPermissionsAsync(ct);
         await SeedRolesAsync(added, ct);
         if (!await _db.Regions.AnyAsync(ct)) await SeedReferenceDataAsync(ct);
-        if (!await _db.DocumentTemplates.AnyAsync(ct)) await SeedTemplatesAsync(ct);
+        await SeedTemplatesAsync(ct);
         _log.LogInformation("Database is up to date");
     }
 
@@ -99,6 +99,11 @@ public sealed class DataSeeder
             var warehouse = new Location { Name = "Склад IT", Type = LocationType.Warehouse, RegionId = r.Id, ParentId = office.Id, FullPath = $"{office.FullPath} / Склад IT" };
             _db.Locations.AddRange(city, office, warehouse);
         }
+        _db.Locations.Add(new Location
+        {
+            Name = "Общий склад", Description = "Общий склад для прихода техники: доступен всем регионам", Type = LocationType.Warehouse,
+            RegionId = regions[0].Id, IsShared = true, FullPath = "Общий склад",
+        });
 
         var mgmt = new Department { Name = "Руководство", Code = "MGMT", Type = DepartmentType.Division, FullPath = "Руководство" };
         var it = new Department { Name = "IT", Code = "IT", Type = DepartmentType.Division, FullPath = "IT" };
@@ -268,11 +273,18 @@ public sealed class DataSeeder
         await _db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Adds built-in templates for document types that have no template yet: everything on first start, and templates of
+    /// document types introduced by an upgrade. Templates removed or replaced by administrators are not restored.
+    /// </summary>
     private async Task SeedTemplatesAsync(CancellationToken ct)
     {
         var service = _sp.GetRequiredService<DocumentTemplateService>();
+        var types = (await _db.DocumentTemplates.IgnoreQueryFilters().Select(t => t.DocumentType).Distinct().ToListAsync(ct)).ToHashSet();
+        var codes = (await _db.DocumentTemplates.IgnoreQueryFilters().Where(t => t.Code != null).Select(t => t.Code!).ToListAsync(ct)).ToHashSet();
         foreach (var (name, code, type, content) in DefaultTemplates.All())
         {
+            if (types.Contains(type) || codes.Contains(code)) continue;
             var t = new DocumentTemplate { Name = name, Code = code, DocumentType = type, IsDefault = true, Description = "Встроенный шаблон" };
             _db.DocumentTemplates.Add(t);
             await service.AddVersionCoreAsync(t, new MemoryStream(content), $"{code.ToLowerInvariant()}.docx", "Встроенный шаблон", true, ct);

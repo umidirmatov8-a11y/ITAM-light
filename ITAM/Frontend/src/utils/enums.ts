@@ -1,13 +1,13 @@
 export const ASSET_KINDS = ['Ordered', 'InStock', 'Assigned', 'Reserved', 'InRepair', 'Lost', 'Stolen', 'Disposed', 'WrittenOff', 'Archived'] as const;
 export const EMPLOYEE_KINDS = ['Active', 'Leave', 'Suspended', 'Terminated', 'Archived'] as const;
 export const CONDITIONS = ['New', 'Good', 'Fair', 'Poor', 'Broken'] as const;
-export const OPERATION_TYPES = ['Issue', 'Return', 'Transfer', 'StatusChange'] as const;
+export const OPERATION_TYPES = ['Receipt', 'Issue', 'Return', 'Transfer', 'StatusChange'] as const;
 export const SIGNATURE_STATUSES = ['NotRequired', 'Pending', 'Signed', 'Refused'] as const;
 export const SIGNATURE_METHODS = ['None', 'Paper', 'Scan', 'Electronic'] as const;
 export const REPAIR_STAGES = ['Created', 'Sent', 'Diagnostics', 'Repairing', 'WaitingParts', 'Completed', 'Returned', 'Cancelled'] as const;
 export const LICENSE_MODELS = ['PerUser', 'PerDevice', 'Subscription', 'Perpetual', 'Volume', 'Concurrent', 'Site'] as const;
 export const ACCESS_STATUSES = ['Requested', 'Active', 'Suspended', 'Revoked'] as const;
-export const DOCUMENT_TYPES = ['EquipmentIssue', 'EquipmentReturn', 'EquipmentTransfer', 'EquipmentRepair', 'EmployeeOnboarding', 'EmployeeOffboarding', 'InventoryAct', 'WriteOffAct', 'Other'] as const;
+export const DOCUMENT_TYPES = ['EquipmentIssue', 'EquipmentReturn', 'EquipmentTransfer', 'EquipmentRepair', 'EmployeeOnboarding', 'EmployeeOffboarding', 'InventoryAct', 'WriteOffAct', 'ReceiptAct', 'Other'] as const;
 export const CUSTOM_FIELD_TYPES = ['Text', 'Number', 'Date', 'DateTime', 'Boolean', 'Dropdown', 'MultiSelect', 'Url', 'Email', 'Currency', 'LongText'] as const;
 export const CUSTOM_FIELD_ENTITIES = ['Employee', 'Asset', 'License', 'Software', 'Repair', 'Access', 'Department', 'Location'] as const;
 export const CHECKLIST_ACTIONS = ['Manual', 'IssueAssetType', 'GrantAccess', 'AssignSoftware', 'SignDocuments', 'ReturnAllAssets', 'RevokeAllAccess', 'RevokeAllLicenses', 'CloseRepairs', 'GenerateDocument'] as const;

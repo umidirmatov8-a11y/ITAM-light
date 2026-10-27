@@ -315,6 +315,39 @@ public sealed class DocumentService : IDocumentGenerator
                         }
                         break;
                     }
+                    case OperationType.Receipt:
+                    {
+                        type = DocumentType.ReceiptAct;
+                        title = $"Акт приёма оборудования на склад {b.Number}";
+                        values["Operation.Type"] = "Приход оборудования";
+                        values["Receipt.Date"] = D(b.EffectiveAt);
+                        var created = await _db.AssetEvents.AsNoTracking()
+                            .Where(e => e.BatchId == b.Id && e.EventType == AssetEventType.Created && !e.IsCancelled)
+                            .Select(e => new { e.AssetId, e.LocationId, e.Asset!.InventoryNumber }).OrderBy(e => e.InventoryNumber).ToListAsync(ct);
+                        var warehouseId = created.FirstOrDefault()?.LocationId;
+                        values["Operation.Location"] = values["Receipt.Warehouse"] = warehouseId is null ? null
+                            : await _db.Locations.Where(l => l.Id == warehouseId).Select(l => l.FullPath ?? l.Name).FirstOrDefaultAsync(ct);
+                        var snapshots = new SnapshotService(_db);
+                        foreach (var c in created)
+                        {
+                            var snap = Json.ToElement(Json.Serialize(await snapshots.AssetAsync(c.AssetId, ct)));
+                            var item = ItemFromSnapshot(snap);
+                            items.Add(item);
+                            assetIds.Add(c.AssetId);
+                            if (items.Count == 1) AddAsset(values, snap);
+                        }
+                        if (assetIds.Count > 0)
+                        {
+                            var first = await _db.Assets.AsNoTracking().Where(a => a.Id == assetIds[0])
+                                .Select(a => new { a.InvoiceNumber, a.PurchaseDate, Supplier = a.Supplier != null ? a.Supplier.Name : null, Contract = a.Contract != null ? a.Contract.Number : null })
+                                .FirstAsync(ct);
+                            values["Receipt.Supplier"] = first.Supplier;
+                            values["Receipt.Invoice"] = first.InvoiceNumber;
+                            values["Receipt.Contract"] = first.Contract;
+                            values["Receipt.PurchaseDate"] = first.PurchaseDate?.ToString("dd.MM.yyyy");
+                        }
+                        break;
+                    }
                     default:
                     {
                         var lines = await _db.AssetStatusChanges.AsNoTracking().Where(a => a.BatchId == b.Id && !a.IsCancelled).OrderBy(a => a.CreatedAt).ToListAsync(ct);

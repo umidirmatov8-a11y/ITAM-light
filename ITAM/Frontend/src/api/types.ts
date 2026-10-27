@@ -3,7 +3,7 @@ export type Guid = string;
 export type AssetStateKind = 'Ordered' | 'InStock' | 'Assigned' | 'Reserved' | 'InRepair' | 'Lost' | 'Stolen' | 'Disposed' | 'WrittenOff' | 'Archived';
 export type EmployeeStatusKind = 'Active' | 'Leave' | 'Suspended' | 'Terminated' | 'Archived';
 export type AssetCondition = 'New' | 'Good' | 'Fair' | 'Poor' | 'Broken';
-export type OperationType = 'Issue' | 'Return' | 'Transfer' | 'StatusChange' | 'Repair';
+export type OperationType = 'Issue' | 'Return' | 'Transfer' | 'StatusChange' | 'Repair' | 'Receipt';
 export type SignatureStatus = 'NotRequired' | 'Pending' | 'Signed' | 'Refused';
 export type SignatureMethod = 'None' | 'Paper' | 'Scan' | 'Electronic';
 export type RepairStage = 'Created' | 'Sent' | 'Diagnostics' | 'Repairing' | 'WaitingParts' | 'Completed' | 'Returned' | 'Cancelled';
@@ -11,7 +11,7 @@ export type LicenseModel = 'PerUser' | 'PerDevice' | 'Subscription' | 'Perpetual
 export type AccessStatus = 'Requested' | 'Active' | 'Suspended' | 'Revoked';
 export type ChecklistKind = 'Onboarding' | 'Offboarding';
 export type ChecklistStatus = 'InProgress' | 'Completed' | 'Cancelled';
-export type DocumentType = 'EquipmentIssue' | 'EquipmentReturn' | 'EquipmentTransfer' | 'EquipmentRepair' | 'EmployeeOnboarding' | 'EmployeeOffboarding' | 'InventoryAct' | 'WriteOffAct' | 'Other';
+export type DocumentType = 'EquipmentIssue' | 'EquipmentReturn' | 'EquipmentTransfer' | 'EquipmentRepair' | 'EmployeeOnboarding' | 'EmployeeOffboarding' | 'InventoryAct' | 'WriteOffAct' | 'ReceiptAct' | 'Other';
 export type CustomFieldType = 'Text' | 'Number' | 'Date' | 'DateTime' | 'Boolean' | 'Dropdown' | 'MultiSelect' | 'Url' | 'Email' | 'Currency' | 'LongText';
 export type CustomFieldEntity = 'Employee' | 'Asset' | 'License' | 'Software' | 'Repair' | 'Access' | 'Department' | 'Location';
 
@@ -107,7 +107,10 @@ export interface Batch {
   documents: { id: Guid; number: string; title: string; createdAt: string; docxFileId?: Guid; pdfFileId?: Guid; templateVersion: number }[];
 }
 
-export interface OperationResult { batchId: Guid; number: string; type: OperationType; assetCount: number; isBackdated: boolean; documentId?: Guid; repairIds?: Guid[] }
+export interface OperationResult { batchId: Guid; number: string; type: OperationType; assetCount: number; isBackdated: boolean; documentId?: Guid; repairIds?: Guid[]; assetIds?: Guid[] }
+
+export interface Warehouse { id: Guid; name: string; fullPath: string; regionId: Guid; regionName?: string; isShared: boolean; inStock: number }
+export interface WarehouseStockRow { assetTypeId: Guid; typeName: string; inStock: number; reserved: number; inRepair: number }
 
 export interface Repair {
   id: Guid; number: string; assetId: Guid; inventoryNumber: string; assetName: string; serialNumber?: string; statusId: Guid; statusName: string;

@@ -27,6 +27,9 @@ const IssuePage = lazy(() => import('@/pages/operations/IssuePage'));
 const ReturnPage = lazy(() => import('@/pages/operations/ReturnPage'));
 const TransferPage = lazy(() => import('@/pages/operations/TransferPage'));
 const StatusChangePage = lazy(() => import('@/pages/operations/StatusChangePage'));
+const ReceiptPage = lazy(() => import('@/pages/operations/ReceiptPage'));
+const WriteOffPage = lazy(() => import('@/pages/operations/WriteOffPage'));
+const WarehousePage = lazy(() => import('@/pages/warehouse/WarehousePage'));
 const LicensesPage = lazy(() => import('@/pages/licenses/LicensesPage'));
 const LicenseCard = lazy(() => import('@/pages/licenses/LicenseCard'));
 const SoftwarePage = lazy(() => import('@/pages/licenses/SoftwarePage'));
@@ -127,6 +130,9 @@ export default function App() {
             <Route path="operations/return" element={<Guard perm="assets.return"><ReturnPage /></Guard>} />
             <Route path="operations/transfer" element={<Guard perm="assets.transfer"><TransferPage /></Guard>} />
             <Route path="operations/status" element={<Guard perm="assets.status"><StatusChangePage /></Guard>} />
+            <Route path="operations/receipt" element={<Guard perm="assets.create"><ReceiptPage /></Guard>} />
+            <Route path="operations/write-off" element={<Guard perm="assets.status"><WriteOffPage /></Guard>} />
+            <Route path="warehouse" element={<Guard perm="assets.view"><WarehousePage /></Guard>} />
             <Route path="operations/:id" element={<Guard perm="assets.view"><OperationCard /></Guard>} />
             <Route path="licenses" element={<Guard perm="licenses.view"><LicensesPage /></Guard>} />
             <Route path="licenses/:id" element={<Guard perm="licenses.view"><LicenseCard /></Guard>} />

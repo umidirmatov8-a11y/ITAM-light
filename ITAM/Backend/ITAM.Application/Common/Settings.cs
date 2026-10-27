@@ -24,6 +24,7 @@ public sealed class NumberingSettings
     public string ReturnFormat { get; set; } = "RET-{SEQ:6}";
     public string TransferFormat { get; set; } = "TRF-{SEQ:6}";
     public string StatusChangeFormat { get; set; } = "STC-{SEQ:6}";
+    public string ReceiptFormat { get; set; } = "RCV-{SEQ:6}";
     public string RepairFormat { get; set; } = "REP-{SEQ:6}";
     public string DocumentFormat { get; set; } = "DOC-{YYYY}-{SEQ:6}";
     public string InventoryFormat { get; set; } = "INV-{YYYY}-{SEQ:4}";

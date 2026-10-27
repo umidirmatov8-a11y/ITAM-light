@@ -14,6 +14,7 @@ public static class DefaultTemplates
         yield return ("Акт перемещения оборудования", "TRANSFER", DocumentType.EquipmentTransfer, Transfer());
         yield return ("Акт передачи в ремонт", "REPAIR", DocumentType.EquipmentRepair, Repair());
         yield return ("Акт списания", "WRITEOFF", DocumentType.WriteOffAct, WriteOff());
+        yield return ("Акт приёма оборудования на склад", "RECEIPT", DocumentType.ReceiptAct, Receipt());
         yield return ("Инвентаризационная опись", "INVENTORY", DocumentType.InventoryAct, Inventory());
         yield return ("Лист онбординга", "ONBOARDING", DocumentType.EmployeeOnboarding, Checklist("ЛИСТ ОНБОРДИНГА СОТРУДНИКА"));
         yield return ("Обходной лист (офбординг)", "OFFBOARDING", DocumentType.EmployeeOffboarding, Checklist("ОБХОДНОЙ ЛИСТ"));
@@ -87,6 +88,20 @@ public static class DefaultTemplates
             new[] { 500, 1400, 2200, 1500, 1300, 1800, 1500 })
         .Empty()
         .Signatures(("Председатель комиссии:", "____________"), ("Член комиссии:", "____________"), ("Член комиссии:", "____________"))
+        .Build();
+
+    private static byte[] Receipt() => Header("АКТ ПРИЁМА ОБОРУДОВАНИЯ НА СКЛАД")
+        .KeyValueTable(("Склад", "{{Receipt.Warehouse}}"), ("Дата приёма", "{{Receipt.Date}}"), ("Поставщик", "{{Receipt.Supplier}}"),
+            ("Договор", "{{Receipt.Contract}}"), ("Счёт / накладная", "{{Receipt.Invoice}}"), ("Количество", "{{Operation.AssetCount}}"))
+        .Paragraph("На склад принято следующее оборудование:")
+        .Table(new[] { "№", "Инв. номер", "Наименование", "Производитель / модель", "Серийный номер", "Стоимость" },
+            new[] { "{{Item.Index}}", "{{Item.InventoryNumber}}", "{{Item.Name}}", "{{Item.Manufacturer}} {{Item.Model}}", "{{Item.SerialNumber}}", "{{Item.Price}}" },
+            new[] { 500, 1500, 2400, 2200, 1800, 1500 })
+        .Paragraph("Комментарий: {{Operation.Comment}}")
+        .Empty()
+        .Signatures(("Сдал (поставщик):", "____________"), ("Принял (ответственный):", "{{Responsible.ShortName}}"))
+        .Empty()
+        .Paragraph("Запись внесена в систему {{Operation.RecordedAt}} пользователем {{Operation.RecordedBy}}. Документ {{Document.Number}}.", false, null, 16)
         .Build();
 
     private static byte[] Inventory() => new DocxBuilder()

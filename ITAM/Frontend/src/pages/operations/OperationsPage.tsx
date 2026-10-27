@@ -34,10 +34,12 @@ export default function OperationsPage() {
     <>
       <PageHeader title={t('menu.operations')} crumbs={[{ title: t('menu.operations') }]}
         extra={<Dropdown menu={{ items: [
+          can('assets.create') && { key: 'rc', label: t('warehouse.receipt'), onClick: () => navigate('/operations/receipt') },
           can('assets.assign') && { key: 'i', label: t('assets.actions.issue'), onClick: () => navigate('/operations/issue') },
           can('assets.return') && { key: 'r', label: t('assets.actions.return'), onClick: () => navigate('/operations/return') },
           can('assets.transfer') && { key: 't', label: t('assets.actions.transfer'), onClick: () => navigate('/operations/transfer') },
           can('assets.status') && { key: 's', label: t('assets.actions.status'), onClick: () => navigate('/operations/status') },
+          can('assets.status') && { key: 'w', label: t('warehouse.writeOff'), onClick: () => navigate('/operations/write-off') },
         ].filter(Boolean) as never }}><Button type="primary" icon={<PlusOutlined />}>{t('operations.new')}</Button></Dropdown>} />
       <DataTable<BatchListItem> id="operations" url="/operations" columns={columns} params={filters} defaultSort={{ field: 'effectiveAt', order: 'desc' }}
         filters={<>

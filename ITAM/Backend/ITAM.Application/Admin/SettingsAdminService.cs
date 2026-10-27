@@ -53,7 +53,7 @@ public sealed class SettingsAdminService
                 var v = body.Deserialize<NumberingSettings>(Json.Options) ?? throw new ValidationFailedException("Пустые настройки");
                 foreach (var (name, pattern) in new[] { ("assetFormat", v.AssetFormat), ("issueFormat", v.IssueFormat), ("returnFormat", v.ReturnFormat),
                              ("transferFormat", v.TransferFormat), ("repairFormat", v.RepairFormat), ("documentFormat", v.DocumentFormat),
-                             ("statusChangeFormat", v.StatusChangeFormat), ("inventoryFormat", v.InventoryFormat), ("employeeNumberFormat", v.EmployeeNumberFormat) })
+                             ("statusChangeFormat", v.StatusChangeFormat), ("receiptFormat", v.ReceiptFormat), ("inventoryFormat", v.InventoryFormat), ("employeeNumberFormat", v.EmployeeNumberFormat) })
                     if (!NumberFormatter.IsValidPattern(pattern))
                         throw new ValidationFailedException($"Формат {name} должен содержать {{SEQ}} или {{SEQ:n}}");
                 await SaveWithAudit(await _settings.GetAsync<NumberingSettings>(ct), v, ct);

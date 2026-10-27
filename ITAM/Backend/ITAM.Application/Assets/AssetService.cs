@@ -37,10 +37,11 @@ public sealed class AssetService
 
     public async Task<IQueryable<Asset>> VisibleAsync(CancellationToken ct)
     {
-        var q = _scope.Apply(_db.Assets.AsQueryable(), a => a.RegionId);
+        var q = _scope.ApplyAssets(_db.Assets.AsQueryable());
         var depts = await _deptScope.AllowedDepartmentsAsync(ct);
         if (depts is not null)
-            q = q.Where(a => (a.DepartmentId != null && depts.Contains(a.DepartmentId.Value))
+            q = q.Where(a => (a.Location != null && a.Location.IsShared)
+                             || (a.DepartmentId != null && depts.Contains(a.DepartmentId.Value))
                              || (a.Employee != null && a.Employee.DepartmentId != null && depts.Contains(a.Employee.DepartmentId.Value)));
         return q;
     }
@@ -112,6 +113,43 @@ public sealed class AssetService
         }
         if (!q.IncludeArchived) query = query.Where(a => a.Status!.Kind != AssetStateKind.Archived);
         return query;
+    }
+
+    /// <summary>Warehouses visible to the user — shared warehouses first — with the number of assets in stock (sub-locations included).</summary>
+    public async Task<IReadOnlyList<WarehouseDto>> WarehousesAsync(CancellationToken ct)
+    {
+        var warehouses = await _scope.ApplyLocations(_db.Locations.AsNoTracking())
+            .Where(l => l.Type == LocationType.Warehouse && !l.IsArchived)
+            .OrderByDescending(l => l.IsShared).ThenBy(l => l.FullPath ?? l.Name)
+            .Select(l => new { l.Id, l.Name, Path = l.FullPath ?? l.Name, l.RegionId, Region = l.Region!.Name, l.IsShared }).ToListAsync(ct);
+        var visible = (await VisibleAsync(ct)).AsNoTracking();
+        var result = new List<WarehouseDto>(warehouses.Count);
+        foreach (var w in warehouses)
+        {
+            var ids = await LocationSubtreeAsync(w.Id, ct);
+            var inStock = await visible.CountAsync(a => a.LocationId != null && ids.Contains(a.LocationId.Value) && a.Status!.Kind == AssetStateKind.InStock, ct);
+            result.Add(new WarehouseDto(w.Id, w.Name, w.Path, w.RegionId, w.Region, w.IsShared, inStock));
+        }
+        return result;
+    }
+
+    /// <summary>Stock of a warehouse by asset type: in stock, reserved and in repair (sub-locations included).</summary>
+    public async Task<IReadOnlyList<WarehouseStockRow>> WarehouseStockAsync(Guid locationId, CancellationToken ct)
+    {
+        if (!await _scope.ApplyLocations(_db.Locations.AsNoTracking()).AnyAsync(l => l.Id == locationId, ct)) throw new NotFoundException("Склад", locationId);
+        var ids = await LocationSubtreeAsync(locationId, ct);
+        var counts = await (await VisibleAsync(ct)).AsNoTracking()
+            .Where(a => a.LocationId != null && ids.Contains(a.LocationId.Value)
+                        && (a.Status!.Kind == AssetStateKind.InStock || a.Status.Kind == AssetStateKind.Reserved || a.Status.Kind == AssetStateKind.InRepair))
+            .GroupBy(a => new { a.AssetTypeId, TypeName = a.AssetType!.Name, a.Status!.Kind })
+            .Select(g => new { g.Key.AssetTypeId, g.Key.TypeName, g.Key.Kind, Count = g.Count() })
+            .ToListAsync(ct);
+        return counts.GroupBy(c => (c.AssetTypeId, c.TypeName))
+            .Select(g => new WarehouseStockRow(g.Key.AssetTypeId, g.Key.TypeName,
+                g.Where(c => c.Kind == AssetStateKind.InStock).Sum(c => c.Count),
+                g.Where(c => c.Kind == AssetStateKind.Reserved).Sum(c => c.Count),
+                g.Where(c => c.Kind == AssetStateKind.InRepair).Sum(c => c.Count)))
+            .OrderBy(r => r.TypeName).ToList();
     }
 
     private async Task<List<Guid>> LocationSubtreeAsync(Guid root, CancellationToken ct)
@@ -196,10 +234,24 @@ public sealed class AssetService
 
     public async Task<AssetDto> CreateAsync(AssetInput input, CancellationToken ct)
     {
+        var asset = await AddAsync(input, null, ct);
+        await _db.SaveChangesAsync(ct);
+        return await GetAsync(asset.Id, ct);
+    }
+
+    /// <summary>
+    /// Registers a new asset in the change tracker (the caller saves). <paramref name="receipt"/> links the registration to a
+    /// receipt act. An asset placed in a shared warehouse belongs to the warehouse's region and may be registered by any user.
+    /// </summary>
+    public async Task<Asset> AddAsync(AssetInput input, ReceiptLink? receipt, CancellationToken ct)
+    {
         var type = await _db.AssetTypes.AsNoTracking().FirstOrDefaultAsync(t => t.Id == input.AssetTypeId && !t.IsArchived, ct)
                    ?? throw new ValidationFailedException("Тип актива не найден", new Dictionary<string, string[]> { ["assetTypeId"] = new[] { "Тип не найден" } });
+        var location = input.LocationId is null ? null
+            : await _db.Locations.AsNoTracking().Where(l => l.Id == input.LocationId).Select(l => new { l.RegionId, l.IsShared }).FirstOrDefaultAsync(ct);
+        if (location is { IsShared: true }) input.RegionId = location.RegionId;
         if (input.RegionId is null) throw new ValidationFailedException("Укажите регион", new Dictionary<string, string[]> { ["regionId"] = new[] { "Обязательное поле" } });
-        _scope.EnsureAccess(input.RegionId);
+        if (location is not { IsShared: true }) _scope.EnsureAccess(input.RegionId);
         if (type.RequireSerialNumber && string.IsNullOrWhiteSpace(input.SerialNumber))
             throw new ValidationFailedException("Для этого типа обязателен серийный номер", new Dictionary<string, string[]> { ["serialNumber"] = new[] { "Обязательное поле" } });
         await ValidateReferencesAsync(input, null, ct);
@@ -233,15 +285,16 @@ public sealed class AssetService
             SetDepartment = true, DepartmentId = input.DepartmentId,
             SetRegion = true, RegionId = input.RegionId,
             SetLocation = true, LocationId = input.LocationId,
-        }, description: "Актив зарегистрирован", data: new
+        }, receipt is null ? null : OperationType.Receipt, receipt?.BatchId, receipt?.BatchId,
+            receipt is null ? "Актив зарегистрирован" : $"Поступил на склад ({receipt.Number})", new
         {
             status = await _snapshots.StatusNameAsync(statusId, ct),
             location = await _snapshots.LocationNameAsync(input.LocationId, ct),
             region = await _snapshots.RegionNameAsync(input.RegionId, ct),
+            batch = receipt?.Number,
         });
         await _temporal.ApplyAsync(asset, created, null, ct);
-        await _db.SaveChangesAsync(ct);
-        return await GetAsync(asset.Id, ct);
+        return asset;
     }
 
     public async Task<string> NextInventoryNumberAsync(AssetType type, Guid regionId, CancellationToken ct)
