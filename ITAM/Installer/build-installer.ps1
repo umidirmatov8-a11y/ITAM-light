@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Builds ITAM-Setup.exe: frontend → backend publish (self-contained win-x64) → PostgreSQL binaries → Inno Setup.
+  Builds ITAM-Setup.exe and ITAM-Update.exe: frontend → backend publish (self-contained win-x64) → PostgreSQL binaries → Inno Setup.
 .EXAMPLE
   .\build-installer.ps1 -Version 1.0.0
   .\build-installer.ps1 -SkipPostgres          # installer without the bundled PostgreSQL option
@@ -53,4 +53,7 @@ if (-not $iscc) { $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Sourc
 if (-not $iscc) { throw "Inno Setup 6 (ISCC.exe) not found. Install: choco install innosetup" }
 & $iscc "/DAppVersion=$Version" (Join-Path $PSScriptRoot "ITAM.iss")
 if ($LASTEXITCODE) { throw "ISCC failed" }
-Get-Item (Join-Path $PSScriptRoot "Output\ITAM-Setup.exe") | Format-Table Name, Length
+# Update package: same content, runs only where ITAM is already installed (backup → files → migrations → restart).
+& $iscc "/DAppVersion=$Version" "/DUpdateOnly" (Join-Path $PSScriptRoot "ITAM.iss")
+if ($LASTEXITCODE) { throw "ISCC failed (update package)" }
+Get-Item (Join-Path $PSScriptRoot "Output\ITAM-Setup.exe"), (Join-Path $PSScriptRoot "Output\ITAM-Update.exe") | Format-Table Name, Length

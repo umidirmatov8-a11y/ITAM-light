@@ -95,6 +95,14 @@ jobs:
       - name: Build installer
         run: .\Installer\build-installer.ps1 -Version "1.0.${{ github.run_number }}"
 
+      - name: Update package refuses to run without an installation
+        run: |
+          $p = Start-Process .\Installer\Output\ITAM-Update.exe -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          if (-not $p.WaitForExit(5 * 60 * 1000)) { throw "update package hung" }
+          "Exit code: $($p.ExitCode)"
+          if ($p.ExitCode -eq 0) { throw "ITAM-Update.exe must not install on a clean machine" }
+          if (Get-Service ITAM -ErrorAction SilentlyContinue) { throw "ITAM-Update.exe created the service" }
+
       - name: Silent install with bundled PostgreSQL
         run: |
           # Wait for the installer process itself (Start-Process -Wait would also wait for every descendant process).
@@ -177,13 +185,48 @@ jobs:
           & "$env:ProgramFiles\ITAM Agent\Install-ITAMAgent.ps1" -Uninstall
           if (Get-ScheduledTask -TaskName 'ITAM Agent' -ErrorAction SilentlyContinue) { throw 'uninstall left the task' }
 
+      - name: Update the installed system with ITAM-Update.exe
+        run: |
+          $base = 'http://localhost:8080'
+          function Login { $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+            Invoke-RestMethod "$base/api/auth/login" -Method Post -WebSession $s -ContentType 'application/json' -Body '{"userName":"admin","password":"Admin12345!"}' | Out-Null; $s }
+          $s = Login
+          $assetsBefore = (Invoke-RestMethod "$base/api/assets?pageSize=1" -WebSession $s).total
+          $employeesBefore = (Invoke-RestMethod "$base/api/employees?pageSize=1" -WebSession $s).total
+          $backupsBefore = @(Get-ChildItem "$env:ProgramData\ITAM\backups" -File).Count
+          $configBefore = Get-FileHash "$env:ProgramData\ITAM\config\itam.json"
+
+          $p = Start-Process .\Installer\Output\ITAM-Update.exe -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=update.log'
+          $finished = $p.WaitForExit(20 * 60 * 1000)
+          if (Test-Path update.log) { Get-Content update.log -Tail 80 }
+          if (-not $finished) { throw "update did not finish in 20 minutes" }
+          if ($p.ExitCode -ne 0) { throw "update exit code $($p.ExitCode)" }
+
+          $backupsAfter = @(Get-ChildItem "$env:ProgramData\ITAM\backups" -File)
+          $backupsAfter | Sort-Object LastWriteTime | Select-Object -Last 3 | Format-Table Name, Length, LastWriteTime
+          if ($backupsAfter.Count -le $backupsBefore) { throw "no backup was made before the update" }
+          if ((Get-FileHash "$env:ProgramData\ITAM\config\itam.json").Hash -ne $configBefore.Hash) { throw "configuration was changed by the update" }
+          Get-Service ITAM, ITAM-PostgreSQL | Format-Table Name, Status
+          $ok = $false
+          for ($i = 0; $i -lt 30 -and -not $ok; $i++) { try { $ok = (Invoke-WebRequest "$base/health" -UseBasicParsing).StatusCode -eq 200 } catch { Start-Sleep 2 } }
+          if (-not $ok) { throw "ITAM did not come back after the update" }
+          $s = Login
+          $assetsAfter = (Invoke-RestMethod "$base/api/assets?pageSize=1" -WebSession $s).total
+          $employeesAfter = (Invoke-RestMethod "$base/api/employees?pageSize=1" -WebSession $s).total
+          "Assets: $assetsBefore -> $assetsAfter; employees: $employeesBefore -> $employeesAfter"
+          if ($assetsAfter -ne $assetsBefore -or $employeesAfter -ne $employeesBefore) { throw "data changed by the update" }
+          $shared = (Invoke-RestMethod "$base/api/assets/warehouses" -WebSession $s) | Where-Object { $_.isShared }
+          if (-not $shared) { throw "shared warehouse missing after the update" }
+          $version = (Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{6C1E3A57-7E54-4A0B-9A7E-2F3B8C1D9E11}_is1').DisplayVersion
+          "Installed version: $version"
+
       - name: Diagnostics
         if: always()
         continue-on-error: true
         run: |
           icacls "$env:ProgramData\ITAM\config" "$env:ProgramData\ITAM\config\itam.json"
           New-Item -ItemType Directory -Force ci-logs | Out-Null
-          Copy-Item install.log, "$env:ProgramData\ITAM\logs\*", "$env:ProgramData\ITAM\pgdata\log\*", "$env:ProgramData\ITAM Agent\*.log" ci-logs -ErrorAction SilentlyContinue
+          Copy-Item install.log, update.log, "$env:ProgramData\ITAM\logs\*", "$env:ProgramData\ITAM\pgdata\log\*", "$env:ProgramData\ITAM Agent\*.log" ci-logs -ErrorAction SilentlyContinue
           Get-Service ITAM*, postgresql* -ErrorAction SilentlyContinue | Format-Table Name, Status, StartType
           Get-ChildItem "$env:ProgramData\ITAM" -ErrorAction SilentlyContinue | Format-Table Name, Length
           Get-ChildItem "$env:ProgramData\ITAM\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }
@@ -196,6 +239,11 @@ jobs:
         with:
           name: ITAM-Setup
           path: ITAM/Installer/Output/ITAM-Setup.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ITAM-Update
+          path: ITAM/Installer/Output/ITAM-Update.exe
 
       - uses: actions/upload-artifact@v4
         if: always()
