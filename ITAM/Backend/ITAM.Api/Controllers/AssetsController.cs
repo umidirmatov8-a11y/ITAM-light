@@ -24,6 +24,13 @@ public sealed class AssetsController : ApiControllerBase
     public async Task<IActionResult> Export([FromQuery] AssetQuery q, [FromQuery] string? format, [FromServices] ExportService export)
         => Export(await export.AssetsAsync(q, Ct), format, "assets");
 
+    /// <summary>Warehouses visible to the user (shared warehouses first) with the number of assets in stock.</summary>
+    [HttpGet("warehouses"), HasPermission(Permissions.AssetsView)]
+    public Task<IReadOnlyList<WarehouseDto>> Warehouses() => _service.WarehousesAsync(Ct);
+
+    [HttpGet("warehouses/{id:guid}/stock"), HasPermission(Permissions.AssetsView)]
+    public Task<IReadOnlyList<WarehouseStockRow>> WarehouseStock(Guid id) => _service.WarehouseStockAsync(id, Ct);
+
     [HttpGet("{id:guid}"), HasPermission(Permissions.AssetsView)]
     public Task<AssetDto> Get(Guid id) => _service.GetAsync(id, Ct);
 

@@ -85,12 +85,44 @@ public sealed class StatusChangeRequest
     public Guid? TemplateId { get; set; }
 }
 
+/// <summary>Receipt (приход) of new equipment into a warehouse; one asset is registered per unit.</summary>
+public sealed class ReceiptRequest
+{
+    /// <summary>Receiving warehouse; default: the shared warehouse.</summary>
+    public Guid? LocationId { get; set; }
+    public DateTime? EffectiveAt { get; set; }
+    [Required] public Guid AssetTypeId { get; set; }
+    /// <summary>Asset name; default: type name and model.</summary>
+    [MaxLength(256)] public string? Name { get; set; }
+    public Guid? ManufacturerId { get; set; }
+    [MaxLength(256)] public string? Model { get; set; }
+    /// <summary>Number of units when serial numbers are not listed.</summary>
+    [Range(1, AssetOperationService.MaxReceiptQuantity)] public int Quantity { get; set; } = 1;
+    /// <summary>One serial number per unit; when given, the quantity equals the number of serial numbers.</summary>
+    [MaxLength(AssetOperationService.MaxReceiptQuantity)] public List<string>? SerialNumbers { get; set; }
+    public Guid? SupplierId { get; set; }
+    public Guid? ContractId { get; set; }
+    [MaxLength(128)] public string? InvoiceNumber { get; set; }
+    public DateOnly? PurchaseDate { get; set; }
+    /// <summary>Price of one unit.</summary>
+    [Range(0, 999999999999)] public decimal? PurchasePrice { get; set; }
+    [MaxLength(8)] public string? Currency { get; set; }
+    public DateOnly? WarrantyExpiration { get; set; }
+    public AssetCondition Condition { get; set; } = AssetCondition.New;
+    public Guid? ResponsibleEmployeeId { get; set; }
+    [MaxLength(4000)] public string? Notes { get; set; }
+    [MaxLength(4000)] public string? Comment { get; set; }
+    public bool GenerateDocument { get; set; }
+    public Guid? TemplateId { get; set; }
+}
+
 public sealed class CancelOperationRequest
 {
     [Required, MinLength(3), MaxLength(1000)] public string Reason { get; set; } = string.Empty;
 }
 
-public sealed record OperationResult(Guid BatchId, string Number, OperationType Type, int AssetCount, bool IsBackdated, Guid? DocumentId, IReadOnlyList<Guid>? RepairIds = null);
+public sealed record OperationResult(Guid BatchId, string Number, OperationType Type, int AssetCount, bool IsBackdated, Guid? DocumentId,
+    IReadOnlyList<Guid>? RepairIds = null, IReadOnlyList<Guid>? AssetIds = null);
 
 public sealed record BatchListItem(Guid Id, string Number, OperationType Type, DateTime EffectiveAt, DateTime RecordedAt, string? CreatedBy,
     Guid? EmployeeId, string? EmployeeName, int AssetCount, string? AssetNumbers, bool IsBackdated, bool IsCancelled,

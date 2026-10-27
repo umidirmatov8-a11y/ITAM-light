@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using ITAM.Application.Common;
 using ITAM.Domain.Common;
 using ITAM.Domain.Entities;
+using ITAM.Domain.Enums;
 using ITAM.Domain.Numbering;
 using Microsoft.EntityFrameworkCore;
 
@@ -75,7 +76,7 @@ public sealed partial class LookupService
 
     private IQueryable<T> Scoped<T>(IQueryable<T> q) where T : LookupEntity
     {
-        if (typeof(T) == typeof(Location)) return (IQueryable<T>)_scope.Apply((IQueryable<Location>)q, l => l.RegionId);
+        if (typeof(T) == typeof(Location)) return (IQueryable<T>)_scope.ApplyLocations((IQueryable<Location>)q);
         if (typeof(T) == typeof(Department)) return (IQueryable<T>)_scope.Apply((IQueryable<Department>)q, d => d.RegionId);
         if (typeof(T) == typeof(Region)) return (IQueryable<T>)_scope.Apply((IQueryable<Region>)q, r => r.Id);
         return q;
@@ -262,6 +263,10 @@ public sealed partial class LookupService
                 break;
             case Location loc:
                 _scope.EnsureAccess(loc.RegionId);
+                var wasShared = id is not null && await _db.Locations.AsNoTracking().AnyAsync(l => l.Id == id && l.IsShared, ct);
+                if (loc.IsShared != wasShared && !_scope.IsUnrestricted)
+                    throw new ForbiddenException("Общий склад может назначать только пользователь с доступом ко всем регионам");
+                if (loc.IsShared && loc.Type != LocationType.Warehouse) errors["isShared"] = new[] { "Общим может быть только склад (тип «Склад»)" };
                 if (loc.ParentId is not null)
                 {
                     if (loc.ParentId == loc.Id) errors["parentId"] = new[] { "Локация не может быть родителем самой себя" };

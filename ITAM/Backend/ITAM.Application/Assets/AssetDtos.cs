@@ -60,6 +60,13 @@ public sealed record CurrentAssignmentDto(Guid AssignmentId, Guid BatchId, strin
 public sealed record ChildAssetDto(Guid Id, string InventoryNumber, string Name, string? StatusName);
 public sealed record OpenRepairDto(Guid Id, string Number, string Status, DateTime OpenedAt);
 
+public sealed record WarehouseDto(Guid Id, string Name, string FullPath, Guid RegionId, string? RegionName, bool IsShared, int InStock);
+
+public sealed record WarehouseStockRow(Guid AssetTypeId, string TypeName, int InStock, int Reserved, int InRepair);
+
+/// <summary>Receipt act an asset registration belongs to.</summary>
+public sealed record ReceiptLink(Guid BatchId, string Number);
+
 public sealed class AssetInput
 {
     [MaxLength(64)] public string? InventoryNumber { get; set; }

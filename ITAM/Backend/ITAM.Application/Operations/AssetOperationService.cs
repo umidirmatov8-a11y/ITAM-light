@@ -1,3 +1,4 @@
+using ITAM.Application.Assets;
 using ITAM.Application.Common;
 using ITAM.Application.Repairs;
 using ITAM.Domain.Common;
@@ -28,20 +29,36 @@ public sealed class AssetOperationService
     private readonly AuditContext _auditCtx;
     private readonly RepairService _repairs;
     private readonly IDocumentGenerator _documents;
+    private readonly AssetService _assets;
     private readonly ILogger<AssetOperationService> _log;
+
+    /// <summary>Upper bound of units in one receipt act.</summary>
+    public const int MaxReceiptQuantity = 500;
 
     public AssetOperationService(IAppDbContext db, IRegionScope scope, ICurrentUser user, IClock clock, AssetTemporalStore temporal,
         INumberingService numbering, ISnapshotService snapshots, IAuditService audit, AuditContext auditCtx, RepairService repairs,
-        IDocumentGenerator documents, ILogger<AssetOperationService> log)
+        IDocumentGenerator documents, AssetService assets, ILogger<AssetOperationService> log)
     {
         _db = db; _scope = scope; _user = user; _clock = clock; _temporal = temporal; _numbering = numbering; _snapshots = snapshots;
-        _audit = audit; _auditCtx = auditCtx; _repairs = repairs; _documents = documents; _log = log;
+        _audit = audit; _auditCtx = auditCtx; _repairs = repairs; _documents = documents; _assets = assets; _log = log;
     }
+
+    /// <summary>Region of a destination location. Shared warehouses accept equipment from every region.</summary>
+    private async Task<(Guid RegionId, bool IsShared)> TargetLocationAsync(Guid locationId, CancellationToken ct)
+    {
+        var loc = await _db.Locations.Where(l => l.Id == locationId).Select(l => new { l.RegionId, l.IsShared }).FirstOrDefaultAsync(ct)
+                  ?? throw new NotFoundException("Локация", locationId);
+        if (!loc.IsShared) _scope.EnsureAccess(loc.RegionId);
+        return (loc.RegionId, loc.IsShared);
+    }
+
+    private async Task<HashSet<Guid>> SharedLocationIdsAsync(CancellationToken ct)
+        => (await _db.Locations.Where(l => l.IsShared).Select(l => l.Id).ToListAsync(ct)).ToHashSet();
 
     private async Task<List<Asset>> LoadAssetsAsync(IEnumerable<Guid> ids, CancellationToken ct)
     {
         var list = ids.Distinct().ToList();
-        var assets = await _scope.Apply(_db.Assets.AsQueryable(), a => a.RegionId).Where(a => list.Contains(a.Id)).ToListAsync(ct);
+        var assets = await _scope.ApplyAssets(_db.Assets.AsQueryable()).Where(a => list.Contains(a.Id)).ToListAsync(ct);
         var missing = list.Except(assets.Select(a => a.Id)).ToList();
         if (missing.Count > 0) throw new NotFoundException("Актив", string.Join(", ", missing));
         return assets.OrderBy(a => a.InventoryNumber).ToList();
@@ -210,12 +227,7 @@ public sealed class AssetOperationService
         var empSnapshot = await _snapshots.EmployeeAsync(employee.Id, ct);
         var responsible = await _snapshots.EmployeeAsync(req.ResponsibleEmployeeId, ct);
         var locationName = await _snapshots.LocationNameAsync(req.LocationId, ct);
-        if (req.LocationId is not null)
-        {
-            var locRegion = await _db.Locations.Where(l => l.Id == req.LocationId).Select(l => (Guid?)l.RegionId).FirstOrDefaultAsync(ct)
-                            ?? throw new NotFoundException("Локация", req.LocationId);
-            _scope.EnsureAccess(locRegion);
-        }
+        if (req.LocationId is not null) await TargetLocationAsync(req.LocationId.Value, ct);
         var repairIds = new List<Guid>();
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
@@ -324,17 +336,18 @@ public sealed class AssetOperationService
         var effectiveAt = Effective(req.EffectiveAt);
         var toEmployee = req.ToEmployeeId is null ? null : await LoadEmployeeAsync(req.ToEmployeeId.Value, true, ct);
         Guid? toRegion = req.ToRegionId;
+        var toShared = false;
         if (req.ToLocationId is not null)
         {
-            var locRegion = await _db.Locations.Where(l => l.Id == req.ToLocationId).Select(l => (Guid?)l.RegionId).FirstOrDefaultAsync(ct)
-                            ?? throw new NotFoundException("Локация", req.ToLocationId);
+            var (locRegion, shared) = await TargetLocationAsync(req.ToLocationId.Value, ct);
             if (toRegion is not null && toRegion != locRegion) throw new ValidationFailedException("Локация не относится к выбранному региону");
             toRegion = locRegion;
+            toShared = shared;
         }
         if (toRegion is null && toEmployee is not null) toRegion = toEmployee.RegionId;
         if (toRegion is not null)
         {
-            _scope.EnsureAccess(toRegion);
+            if (!toShared) _scope.EnsureAccess(toRegion);
             if (!await _db.Regions.AnyAsync(r => r.Id == toRegion, ct)) throw new NotFoundException("Регион", toRegion);
         }
         if (req.ToDepartmentId is not null && !await _db.Departments.AnyAsync(d => d.Id == req.ToDepartmentId, ct))
@@ -352,7 +365,8 @@ public sealed class AssetOperationService
             RecordedAt = _clock.UtcNow,
             EmployeeId = toEmployee?.Id,
             ResponsibleEmployeeId = req.ResponsibleEmployeeId,
-            RegionId = toRegion,
+            // A move into a shared warehouse stays visible to every region.
+            RegionId = toShared ? null : toRegion,
             Comment = req.Comment ?? req.Reason,
             EmployeeSnapshot = Json.SerializeOrNull(toEmpSnapshot),
             ResponsibleSnapshot = Json.SerializeOrNull(responsible),
@@ -472,6 +486,7 @@ public sealed class AssetOperationService
         if (target.Kind is AssetStateKind.Reserved && req.ReservedForEmployeeId is not null)
             await LoadEmployeeAsync(req.ReservedForEmployeeId.Value, true, ct);
         var privileged = _user.Has(Permissions.AssetsReactivate);
+        var shared = await SharedLocationIdsAsync(ct);
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         var batch = new OperationBatch
@@ -492,7 +507,8 @@ public sealed class AssetOperationService
             {
                 batch.IsBackdated |= await _temporal.CheckEffectiveDateAsync(asset.Id, effectiveAt, ct);
                 var before = await _temporal.StateAtAsync(asset.Id, effectiveAt, ct);
-                batch.RegionId ??= asset.RegionId;
+                // Acts on shared-warehouse assets (e.g. a write-off) stay visible to every region.
+                if (asset.LocationId is null || !shared.Contains(asset.LocationId.Value)) batch.RegionId ??= asset.RegionId;
                 var change = new AssetStatusChange
                 {
                     BatchId = batch.Id,
@@ -539,6 +555,143 @@ public sealed class AssetOperationService
         return new OperationResult(batch.Id, batch.Number, batch.Type, assets.Count, batch.IsBackdated, docId);
     }
 
+    // ===================================================================== RECEIPT
+
+    /// <summary>
+    /// Receipt of new equipment into a warehouse (by default the shared one): registers one asset per unit with the status
+    /// "in stock" and records them in one receipt act.
+    /// </summary>
+    public async Task<OperationResult> ReceiveAsync(ReceiptRequest req, CancellationToken ct)
+    {
+        var locationId = req.LocationId
+                         ?? await _db.Locations.Where(l => l.IsShared && !l.IsArchived).OrderBy(l => l.SortOrder).ThenBy(l => l.Name)
+                             .Select(l => (Guid?)l.Id).FirstOrDefaultAsync(ct)
+                         ?? throw new ValidationFailedException("Укажите склад", new Dictionary<string, string[]> { ["locationId"] = new[] { "Общий склад не настроен — выберите склад" } });
+        var location = await _db.Locations.AsNoTracking().Where(l => l.Id == locationId)
+                           .Select(l => new { l.Id, l.RegionId, l.IsShared, l.IsArchived, Name = l.FullPath ?? l.Name }).FirstOrDefaultAsync(ct)
+                       ?? throw new NotFoundException("Локация", locationId);
+        if (location.IsArchived) throw new ValidationFailedException("Склад находится в архиве", new Dictionary<string, string[]> { ["locationId"] = new[] { "Склад в архиве" } });
+        if (!location.IsShared) _scope.EnsureAccess(location.RegionId);
+
+        var serials = (req.SerialNumbers ?? new List<string>()).Select(x => x?.Trim()).Where(x => !string.IsNullOrEmpty(x)).Select(x => x!).ToList();
+        var repeated = serials.GroupBy(x => x, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (repeated.Count > 0)
+            throw new ValidationFailedException($"Серийные номера повторяются: {string.Join(", ", repeated)}",
+                new Dictionary<string, string[]> { ["serialNumbers"] = new[] { "Повторяющиеся серийные номера" } });
+        var count = serials.Count > 0 ? serials.Count : req.Quantity;
+        if (count < 1 || count > MaxReceiptQuantity)
+            throw new ValidationFailedException($"Количество: от 1 до {MaxReceiptQuantity}", new Dictionary<string, string[]> { ["quantity"] = new[] { $"От 1 до {MaxReceiptQuantity}" } });
+        var type = await _db.AssetTypes.AsNoTracking().FirstOrDefaultAsync(t => t.Id == req.AssetTypeId && !t.IsArchived, ct)
+                   ?? throw new ValidationFailedException("Тип актива не найден", new Dictionary<string, string[]> { ["assetTypeId"] = new[] { "Тип не найден" } });
+        if (type.RequireSerialNumber && serials.Count == 0)
+            throw new ValidationFailedException($"Для типа «{type.Name}» укажите серийный номер каждой единицы",
+                new Dictionary<string, string[]> { ["serialNumbers"] = new[] { "Обязательное поле" } });
+
+        var effectiveAt = Effective(req.EffectiveAt);
+        var backdated = await _temporal.CheckEffectiveDateAsync(Guid.Empty, effectiveAt, ct);
+        var inStock = await _temporal.DefaultStatusAsync(AssetStateKind.InStock, ct);
+        var responsible = await _snapshots.EmployeeAsync(req.ResponsibleEmployeeId, ct);
+        var name = !string.IsNullOrWhiteSpace(req.Name) ? req.Name.Trim()
+            : string.IsNullOrWhiteSpace(req.Model) ? type.Name : $"{type.Name} {req.Model.Trim()}";
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var batch = new OperationBatch
+        {
+            Number = await _numbering.NextAsync(c => c.ReceiptFormat, "receipt", ct: ct),
+            Type = OperationType.Receipt,
+            EffectiveAt = effectiveAt,
+            RecordedAt = _clock.UtcNow,
+            ResponsibleEmployeeId = req.ResponsibleEmployeeId,
+            // A receipt into a shared warehouse is visible to every region.
+            RegionId = location.IsShared ? null : location.RegionId,
+            Comment = req.Comment,
+            ResponsibleSnapshot = Json.SerializeOrNull(responsible),
+            EmployeeSignatureStatus = SignatureStatus.NotRequired,
+            IsBackdated = backdated,
+        };
+        _db.OperationBatches.Add(batch);
+        var link = new ReceiptLink(batch.Id, batch.Number);
+        var assetIds = new List<Guid>(count);
+
+        using (_auditCtx.Suppress())
+        {
+            for (var i = 0; i < count; i++)
+            {
+                var asset = await _assets.AddAsync(new AssetInput
+                {
+                    Name = name,
+                    AssetTypeId = type.Id,
+                    ManufacturerId = req.ManufacturerId,
+                    Model = req.Model,
+                    SerialNumber = serials.Count > 0 ? serials[i] : null,
+                    StatusId = inStock,
+                    RegionId = location.RegionId,
+                    LocationId = location.Id,
+                    RegisteredAt = effectiveAt,
+                    ResponsibleEmployeeId = req.ResponsibleEmployeeId,
+                    PurchaseDate = req.PurchaseDate,
+                    PurchasePrice = req.PurchasePrice,
+                    Currency = req.Currency,
+                    SupplierId = req.SupplierId,
+                    ContractId = req.ContractId,
+                    InvoiceNumber = req.InvoiceNumber,
+                    WarrantyExpiration = req.WarrantyExpiration,
+                    Condition = req.Condition,
+                    Notes = req.Notes,
+                }, link, ct);
+                assetIds.Add(asset.Id);
+                _audit.Log("asset.receipt", nameof(Asset), asset.Id, asset.InventoryNumber, null,
+                    new { batch = batch.Number, warehouse = location.Name, serialNumber = asset.SerialNumber, effectiveAt }, req.Comment);
+            }
+            await _db.SaveChangesAsync(ct);
+        }
+        await tx.CommitAsync(ct);
+        var docId = await TryGenerateAsync(req.GenerateDocument, batch.Id, req.TemplateId, ct);
+        return new OperationResult(batch.Id, batch.Number, batch.Type, count, backdated, docId, AssetIds: assetIds);
+    }
+
+    /// <summary>
+    /// Cancels a receipt entered by mistake: the registered assets are deleted. Allowed only while none of them has been issued,
+    /// moved, written off or otherwise used after the receipt.
+    /// </summary>
+    private async Task<BatchDto> CancelReceiptAsync(OperationBatch batch, CancelOperationRequest req, CancellationToken ct)
+    {
+        var events = await _db.AssetEvents.Where(e => e.BatchId == batch.Id && !e.IsCancelled).ToListAsync(ct);
+        var assetIds = events.Select(e => e.AssetId).Distinct().ToList();
+        var assets = await LoadAssetsAsync(assetIds, ct);
+        var informational = new[] { AssetEventType.Updated, AssetEventType.DocumentGenerated, AssetEventType.AttachmentAdded, AssetEventType.AgentInventory, AssetEventType.OperationCancelled };
+        var used = await _db.AssetEvents.Where(e => assetIds.Contains(e.AssetId) && e.BatchId != batch.Id && !e.IsCancelled && !informational.Contains(e.EventType))
+            .Select(e => e.Asset!.InventoryNumber).Distinct().OrderBy(n => n).ToListAsync(ct);
+        if (used.Count > 0)
+            throw new ConflictException(ErrorCodes.TemporalConflict,
+                $"С активами из прихода уже были операции ({string.Join(", ", used.Take(10))}{(used.Count > 10 ? "…" : "")}) — сначала отмените их");
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        var now = _clock.UtcNow;
+        foreach (var e in events)
+        {
+            e.IsCancelled = true;
+            e.CancelledAt = now;
+            e.CancelledById = _user.UserId;
+            e.CancelReason = req.Reason;
+        }
+        foreach (var asset in assets)
+        {
+            // Soft delete without detaching the asset from its (now cancelled) history.
+            asset.IsDeleted = true;
+            asset.DeletedAt = now;
+            asset.DeletedById = _user.UserId;
+            _audit.Log("operation.cancel", nameof(Asset), asset.Id, asset.InventoryNumber, new { batch = batch.Number, type = batch.Type.ToString() }, new { cancelled = true, deleted = true }, req.Reason);
+        }
+        batch.IsCancelled = true;
+        batch.CancelledAt = now;
+        batch.CancelledById = _user.UserId;
+        batch.CancelReason = req.Reason;
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return await GetBatchAsync(batch.Id, ct);
+    }
+
     // ===================================================================== CANCEL (correction)
 
     public async Task<BatchDto> CancelAsync(Guid batchId, CancelOperationRequest req, CancellationToken ct)
@@ -546,6 +699,7 @@ public sealed class AssetOperationService
         var batch = await _db.OperationBatches.Include(b => b.Assignments).Include(b => b.Returns).Include(b => b.Transfers).Include(b => b.StatusChanges)
                         .FirstOrDefaultAsync(b => b.Id == batchId, ct) ?? throw new NotFoundException("Операция", batchId);
         if (batch.IsCancelled) throw new BusinessException("ALREADY_CANCELLED", "Операция уже отменена");
+        if (batch.Type == OperationType.Receipt) return await CancelReceiptAsync(batch, req, ct);
         var events = await _db.AssetEvents.Where(e => e.BatchId == batchId && !e.IsCancelled).ToListAsync(ct);
         var assetIds = events.Select(e => e.AssetId).Distinct().ToList();
         var assets = await LoadAssetsAsync(assetIds, ct);
@@ -684,6 +838,13 @@ public sealed class AssetOperationService
                     }
                     lines.Add(new BatchLineDto(t.Id, t.AssetId, t.InventoryNumber, t.Name, t.SerialNumber, null, null, null, null, Describe("from"), Describe("to"), t.Comment, null, t.IsCancelled));
                 }
+                break;
+            case OperationType.Receipt:
+                lines.AddRange(await _db.AssetEvents.AsNoTracking().IgnoreQueryFilters()
+                    .Where(e => e.BatchId == id && e.EventType == AssetEventType.Created).OrderBy(e => e.Asset!.InventoryNumber)
+                    .Select(e => new BatchLineDto(e.Id, e.AssetId, e.Asset!.InventoryNumber, e.Asset.Name, e.Asset.SerialNumber, e.Asset.Condition,
+                        null, null, null, null, _db.Locations.Where(l => l.Id == e.LocationId).Select(l => l.FullPath ?? l.Name).FirstOrDefault(),
+                        null, null, e.IsCancelled)).ToListAsync(ct));
                 break;
             case OperationType.StatusChange:
                 lines.AddRange(await _db.AssetStatusChanges.AsNoTracking().Where(a => a.BatchId == id).Select(a => new BatchLineDto(a.Id, a.AssetId, a.Asset!.InventoryNumber,

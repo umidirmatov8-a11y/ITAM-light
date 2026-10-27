@@ -15,7 +15,7 @@ const ru = {
   menu: {
     agents: 'Агенты', 
     dashboard: 'Главная', employees: 'Сотрудники', assetsGroup: 'Оборудование', assets: 'Активы', operations: 'Операции', repairs: 'Ремонты',
-    inventory: 'Инвентаризация', stock: 'Склад расходников', contracts: 'Договоры', licensesGroup: 'ПО и доступы', licenses: 'Лицензии',
+    inventory: 'Инвентаризация', warehouse: 'Склад техники', stock: 'Склад расходников', contracts: 'Договоры', licensesGroup: 'ПО и доступы', licenses: 'Лицензии',
     software: 'Каталог ПО', access: 'Доступы', lifecycle: 'Жизненный цикл', onboarding: 'Онбординг', offboarding: 'Оффбординг',
     documents: 'Документы', reports: 'Отчёты', import: 'Импорт', notifications: 'Уведомления', admin: 'Администрирование',
     dictionaries: 'Справочники', customFields: 'Дополнительные поля', templates: 'Шаблоны документов', checklistTemplates: 'Шаблоны чек-листов',
@@ -26,7 +26,7 @@ const ru = {
     logout: 'Выйти', darkTheme: 'Тёмная тема', lightTheme: 'Светлая тема',
   },
   quick: {
-    addEmployee: 'Добавить сотрудника', addAsset: 'Добавить актив', issue: 'Выдать оборудование', return: 'Принять возврат',
+    addEmployee: 'Добавить сотрудника', addAsset: 'Добавить актив', receipt: 'Приход техники', issue: 'Выдать оборудование', return: 'Принять возврат',
     transfer: 'Передать оборудование', repair: 'Отправить в ремонт', document: 'Сформировать документ',
   },
   login: { subtitle: 'Учёт IT-активов', userName: 'Логин', password: 'Пароль', submit: 'Войти' },
@@ -144,6 +144,22 @@ const ru = {
     cancel: 'Отменить операцию', cancelWarning: 'Отмена сохраняется в истории; последующие события будут проверены на согласованность.',
     cancelledInfo: 'Операция отменена {{date}}',
   },
+  warehouse: {
+    warehouse: 'Склад', warehouseHint: 'По умолчанию — общий склад, доступный всем регионам', shared: 'Общий', receipt: 'Приход техники',
+    receiptTitle: 'Приход техники на склад', receiptSubmit: 'Принять на склад ({{count}} шт.)', openWarehouse: 'Открыть склад',
+    receivedAt: 'Дата прихода', nameHint: 'Если не указано — тип и модель', serials: 'Серийные номера',
+    serialsHint: 'По одному в строке (можно вставить столбец из Excel или отсканировать). Количество = числу серийных номеров.',
+    serialsRequired: 'Для этого типа укажите серийный номер каждой единицы', serialsDuplicate: 'Повторяются серийные номера: {{list}}',
+    quantity: 'Количество', quantityFromSerials: 'По числу серийных номеров: {{count}}', invoice: 'Счёт / накладная', unitPrice: 'Цена за единицу',
+    currency: 'Валюта', writeOff: 'Списание', writeOffTitle: 'Списание оборудования', writeOffSubmit: 'Списать',
+    writeOffReason: 'Основание списания', writeOffReasonPlaceholder: 'Неремонтопригодно, физический износ, повреждено при доставке…',
+    disposalPlaceholder: 'Утилизация, разбор на запчасти, передача…', pickFromWarehouse: 'Поиск по технике выбранного склада',
+    cancelReceiptWarning: 'Отмена прихода удалит зарегистрированные по нему активы. Возможна, только пока с ними не было операций.',
+    registeredAt: 'Поступил', noWarehouses: 'Нет доступных складов. Создайте локацию типа «Склад» в справочнике «Локации».',
+    sharedHint: 'Общий склад: технику видят и выдают, перемещают и списывают сотрудники всех регионов.',
+    regionalHint: 'Склад региона «{{region}}»', inStock: 'На складе', reserved: 'В резерве', inRepair: 'В ремонте',
+    reservedShort: 'Резерв', inRepairShort: 'Ремонт', byType: 'Остатки по типам', empty: 'Склад пуст',
+  },
   repairs: {
     new: 'Новый ремонт', edit: 'Редактирование ремонта', number: 'Номер', repair: 'Ремонт', asset: 'Актив', employee: 'Сотрудник',
     problem: 'Проблема', description: 'Описание', diagnosis: 'Диагноз', serviceCenter: 'Сервисный центр', technician: 'Мастер',
@@ -203,7 +219,7 @@ const ru = {
       sortOrder: 'Порядок', accessSystemId: 'Система', address: 'Адрес', category: 'Категория', categoryId: 'Категория', color: 'Цвет',
       contactPerson: 'Контактное лицо', costCenter: 'Центр затрат', criticality: 'Критичность', defaultUsefulLifeMonths: 'Срок службы, мес.',
       email: 'Email', headEmployeeId: 'Руководитель', icon: 'Иконка', inventoryNumberFormat: 'Формат инв. номера', isDefaultForKind: 'По умолчанию для категории',
-      isServiceCenter: 'Сервисный центр', isSupplier: 'Поставщик', isSystem: 'Системный', isVendor: 'Вендор', kind: 'Системная категория',
+      isServiceCenter: 'Сервисный центр', isShared: 'Общий склад', isSupplier: 'Поставщик', isSystem: 'Системный', isVendor: 'Вендор', kind: 'Системная категория',
       minQuantity: 'Мин. остаток', model: 'Модель', owner: 'Владелец', parentId: 'Родитель', phone: 'Телефон', prefix: 'Префикс', publisher: 'Издатель',
       regionId: 'Регион', requireSerialNumber: 'Серийный номер обязателен', requiresLicense: 'Требует лицензии', reviewIntervalMonths: 'Пересмотр, мес.',
       sku: 'Артикул', stage: 'Этап', supportPhone: 'Телефон поддержки', taxId: 'ИНН', type: 'Тип', unit: 'Ед. изм.', unitPrice: 'Цена за единицу',
@@ -230,7 +246,7 @@ const ru = {
   audit: {
     time: 'Время', user: 'Пользователь', action: 'Действие', object: 'Объект', result: 'Результат', success: 'Успешно', failure: 'Ошибка',
     old: 'Было', new: 'Стало', readonly: 'Журнал аудита только для чтения: записи нельзя изменить или удалить.',
-    actions: { agent_register: 'Регистрация агента', agent_link: 'Компьютер связан с активом', agent_unlink: 'Связь компьютера с активом удалена', agent_create_asset: 'Актив создан по данным агента', agent_ignore: 'Компьютер игнорируется', agent_unignore: 'Компьютер возвращён из игнорируемых', agent_delete: 'Компьютер удалён', agents_settings: 'Изменены настройки агентов', agents_key_regenerate: 'Сменён ключ регистрации агентов', auth_login: 'Вход в систему', auth_login_failed: 'Неудачный вход', auth_login_locked: 'Блокировка учётной записи', auth_logout: 'Выход', auth_password_change: 'Смена пароля', apitoken_create: 'Создан API-токен', apitoken_revoke: 'Отозван API-токен', asset_assign: 'Выдача актива', asset_return: 'Возврат актива', asset_transfer: 'Передача актива', asset_status: 'Смена статуса актива', asset_repair_open: 'Отправка в ремонт', access_revoke: 'Отзыв доступа', access_review: 'Пересмотр доступа', backup_create: 'Создание резервной копии', backup_delete: 'Удаление резервной копии', backup_download: 'Скачивание резервной копии', backup_restore: 'Восстановление из копии', backup_failed: 'Ошибка резервного копирования', checklist_complete: 'Завершение чек-листа', checklist_item: 'Пункт чек-листа', cli_reset_admin: 'Сброс пароля администратора (CLI)', document_generate: 'Формирование документа', document_sign: 'Подписание документа', document_void: 'Аннулирование документа', employee_terminate: 'Увольнение сотрудника', file_upload: 'Загрузка файла', file_delete: 'Удаление файла', import_complete: 'Импорт данных', inventory_start: 'Начало инвентаризации', inventory_complete: 'Завершение инвентаризации', license_assign: 'Назначение лицензии', license_revoke: 'Отзыв лицензии', license_key_view: 'Просмотр ключа лицензии', operation_cancel: 'Отмена операции', repair_status: 'Смена этапа ремонта', role_create: 'Создание роли', role_update: 'Изменение роли', role_delete: 'Удаление роли', session_revoke: 'Завершение сессии', settings_update: 'Изменение настроек', setup_complete: 'Первоначальная настройка', template_version_add: 'Новая версия шаблона', template_version_activate: 'Активация версии шаблона', user_create: 'Создание пользователя', user_update: 'Изменение пользователя', user_password_reset: 'Сброс пароля', user_unlock: 'Разблокировка пользователя' },
+    actions: { agent_register: 'Регистрация агента', agent_link: 'Компьютер связан с активом', agent_unlink: 'Связь компьютера с активом удалена', agent_create_asset: 'Актив создан по данным агента', agent_ignore: 'Компьютер игнорируется', agent_unignore: 'Компьютер возвращён из игнорируемых', agent_delete: 'Компьютер удалён', agents_settings: 'Изменены настройки агентов', agents_key_regenerate: 'Сменён ключ регистрации агентов', auth_login: 'Вход в систему', auth_login_failed: 'Неудачный вход', auth_login_locked: 'Блокировка учётной записи', auth_logout: 'Выход', auth_password_change: 'Смена пароля', apitoken_create: 'Создан API-токен', apitoken_revoke: 'Отозван API-токен', asset_receipt: 'Приход актива на склад', asset_assign: 'Выдача актива', asset_return: 'Возврат актива', asset_transfer: 'Передача актива', asset_status: 'Смена статуса актива', asset_repair_open: 'Отправка в ремонт', access_revoke: 'Отзыв доступа', access_review: 'Пересмотр доступа', backup_create: 'Создание резервной копии', backup_delete: 'Удаление резервной копии', backup_download: 'Скачивание резервной копии', backup_restore: 'Восстановление из копии', backup_failed: 'Ошибка резервного копирования', checklist_complete: 'Завершение чек-листа', checklist_item: 'Пункт чек-листа', cli_reset_admin: 'Сброс пароля администратора (CLI)', document_generate: 'Формирование документа', document_sign: 'Подписание документа', document_void: 'Аннулирование документа', employee_terminate: 'Увольнение сотрудника', file_upload: 'Загрузка файла', file_delete: 'Удаление файла', import_complete: 'Импорт данных', inventory_start: 'Начало инвентаризации', inventory_complete: 'Завершение инвентаризации', license_assign: 'Назначение лицензии', license_revoke: 'Отзыв лицензии', license_key_view: 'Просмотр ключа лицензии', operation_cancel: 'Отмена операции', repair_status: 'Смена этапа ремонта', role_create: 'Создание роли', role_update: 'Изменение роли', role_delete: 'Удаление роли', session_revoke: 'Завершение сессии', settings_update: 'Изменение настроек', setup_complete: 'Первоначальная настройка', template_version_add: 'Новая версия шаблона', template_version_activate: 'Активация версии шаблона', user_create: 'Создание пользователя', user_update: 'Изменение пользователя', user_password_reset: 'Сброс пароля', user_unlock: 'Разблокировка пользователя' },
     entities: { employee: 'Сотрудник', asset: 'Актив', asset_assignment: 'Закрепление актива', asset_event: 'Событие актива', operation_batch: 'Операция', operation_line: 'Позиция операции', region: 'Регион', location: 'Локация', department: 'Подразделение', position: 'Должность', asset_type: 'Тип актива', asset_category: 'Категория активов', asset_status: 'Статус актива', employee_status: 'Статус сотрудника', manufacturer: 'Производитель', supplier: 'Поставщик', software: 'ПО', license: 'Лицензия', license_assignment: 'Назначение лицензии', license_type: 'Тип лицензии', access_system: 'Система доступа', access_level: 'Уровень доступа', access_grant: 'Доступ', repair: 'Ремонт', repair_status: 'Статус ремонта', document: 'Документ', document_template: 'Шаблон документа', document_template_version: 'Версия шаблона', checklist: 'Чек-лист', checklist_item: 'Пункт чек-листа', checklist_template: 'Шаблон чек-листа', custom_field_definition: 'Дополнительное поле', user: 'Пользователь', role: 'Роль', contract: 'Договор', stock_item: 'Номенклатура склада', stock_movement: 'Движение склада', inventory_campaign: 'Инвентаризация', inventory_item: 'Позиция инвентаризации', stored_file: 'Файл', setting: 'Настройка', notification_rule: 'Правило уведомлений', organization: 'Организация' },
     verbs: { create: 'создание', update: 'изменение', delete: 'удаление', archive: 'архивирование', restore: 'восстановление' },
   },
@@ -238,7 +254,7 @@ const ru = {
     general: 'Общие', numbering: 'Нумерация', documents: 'Документы', notifications: 'Уведомления', security: 'Безопасность', backup: 'Резервное копирование',
     logo: 'Логотип', uploadLogo: 'Загрузить логотип', dateFormat: 'Формат даты', numberingHint: 'Плейсхолдеры: {PREFIX}, {SEQ:6}, {YYYY}, {YY}, {MM}, {REGION}. Счётчики не сбрасываются.',
     fmt: {
-      assetFormat: 'Инвентарный номер', issueFormat: 'Акт выдачи', returnFormat: 'Акт возврата', transferFormat: 'Акт передачи', statusChangeFormat: 'Смена статуса',
+      assetFormat: 'Инвентарный номер', issueFormat: 'Акт выдачи', returnFormat: 'Акт возврата', transferFormat: 'Акт передачи', statusChangeFormat: 'Смена статуса', receiptFormat: 'Акт прихода',
       repairFormat: 'Ремонт', documentFormat: 'Документ', inventoryFormat: 'Инвентаризация', employeeNumberFormat: 'Табельный номер',
     },
     pdfEngine: 'Конвертация в PDF', pdfEngineHint: 'LibreOffice даёт точную копию DOCX; встроенный движок работает без дополнительных программ.',
@@ -364,7 +380,7 @@ const ru = {
     },
     employeeKind: { Active: 'Работает', Leave: 'В отпуске', Suspended: 'Приостановлен', Terminated: 'Уволен', Archived: 'Архив' },
     condition: { New: 'Новое', Good: 'Хорошее', Fair: 'Удовлетворительное', Poor: 'Плохое', Broken: 'Неисправно' },
-    operation: { Issue: 'Выдача', Return: 'Возврат', Transfer: 'Передача', StatusChange: 'Смена статуса', Repair: 'Ремонт' },
+    operation: { Receipt: 'Приход', Issue: 'Выдача', Return: 'Возврат', Transfer: 'Передача', StatusChange: 'Смена статуса', Repair: 'Ремонт' },
     signature: { NotRequired: 'Не требуется', Pending: 'Ожидает подписи', Signed: 'Подписан', Refused: 'Отказ' },
     signatureMethod: { None: 'Нет', Paper: 'На бумаге', Scan: 'Скан', Electronic: 'Электронная' },
     repairStage: {
@@ -385,7 +401,7 @@ const ru = {
     },
     documentType: {
       EquipmentIssue: 'Акт выдачи', EquipmentReturn: 'Акт возврата', EquipmentTransfer: 'Акт передачи', EquipmentRepair: 'Акт передачи в ремонт',
-      EmployeeOnboarding: 'Лист онбординга', EmployeeOffboarding: 'Обходной лист', InventoryAct: 'Акт инвентаризации', WriteOffAct: 'Акт списания', Other: 'Другое',
+      EmployeeOnboarding: 'Лист онбординга', EmployeeOffboarding: 'Обходной лист', InventoryAct: 'Акт инвентаризации', WriteOffAct: 'Акт списания', ReceiptAct: 'Акт приёма на склад', Other: 'Другое',
     },
     cfType: {
       Text: 'Текст', Number: 'Число', Date: 'Дата', DateTime: 'Дата и время', Boolean: 'Да/Нет', Dropdown: 'Список', MultiSelect: 'Множественный выбор',

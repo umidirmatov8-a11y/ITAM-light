@@ -61,8 +61,8 @@ Authorization: Bearer itam_XXXXXXXX...
 | Главная, поиск | `GET /dashboard?regionId=`, `GET /search?q=` |
 | Справочники | `GET /lookups` (описания), `GET/POST /lookups/{key}`, `GET /lookups/{key}/options`, `GET/PUT /lookups/{key}/{id}`, `POST /lookups/{key}/{id}/archive`, `.../restore`. Ключи: `regions`, `locations`, `departments`, `positions`, `employee-statuses`, `asset-categories`, `asset-types`, `asset-statuses`, `manufacturers`, `suppliers`, `repair-statuses`, `stock-items`, `software`, `license-types`, `access-systems`, `access-levels` |
 | Сотрудники | `GET/POST /employees`, `GET/PUT/DELETE /employees/{id}`, `GET /employees/{id}/open-items`, `POST /employees/{id}/terminate`, `POST /employees/{id}/archive`, `POST /employees/bulk`, `GET /employees/{id}/timeline`, `.../org-history`, `.../assets`, `GET/POST /employees/{id}/checklists` |
-| Активы | `GET/POST /assets`, `GET/PUT/DELETE /assets/{id}`, `GET /assets/{id}/history`, `.../timeline`, `.../state-at?at=`, `.../repairs`, `.../licenses`, `.../operations`, `.../audit`, `.../qr` (PNG), `.../barcode` (SVG), `POST /assets/labels` (PDF), `POST /assets/bulk-edit` |
-| Операции | `POST /operations/issue`, `/return`, `/transfer`, `/status`; `GET /operations`, `GET /operations/{id}`, `POST /operations/{id}/cancel`, `PUT /operations/{id}/signature` |
+| Активы | `GET/POST /assets`, `GET/PUT/DELETE /assets/{id}`, `GET /assets/{id}/history`, `.../timeline`, `.../state-at?at=`, `.../repairs`, `.../licenses`, `.../operations`, `.../audit`, `.../qr` (PNG), `.../barcode` (SVG), `POST /assets/labels` (PDF), `POST /assets/bulk-edit`, `GET /assets/warehouses` (склады и остатки), `GET /assets/warehouses/{id}/stock` |
+| Операции | `POST /operations/receipt` (приход на склад), `/issue`, `/return`, `/transfer`, `/status` (в т.ч. списание); `GET /operations`, `GET /operations/{id}`, `POST /operations/{id}/cancel`, `PUT /operations/{id}/signature` |
 | Ремонты | `GET/POST /repairs`, `GET/PUT /repairs/{id}`, `POST /repairs/{id}/status` |
 | Лицензии | `GET/POST /licenses`, `GET /licenses/summary`, `GET/PUT /licenses/{id}`, `GET /licenses/{id}/key`, `POST .../archive`, `.../restore`, `GET/POST /licenses/{id}/assignments`, `POST /licenses/assignments/{id}/revoke`, `GET /licenses/by-employee/{id}`, `/by-software/{id}` |
 | Доступы | `GET/POST /access`, `GET/PUT /access/{id}`, `POST /access/{id}/revoke`, `POST /access/{id}/review`, `POST /access/employee/{employeeId}/revoke-all` |
@@ -114,6 +114,24 @@ X-XSRF-TOKEN: ...
 POST /api/operations/return
 { "employeeId": "01a1...", "items": [ { "assetId": "01a2...", "condition": "Fair", "damage": "царапина на крышке" } ],
   "locationId": "01a6...", "generateDocument": true }
+```
+
+### Приход техники на склад и списание
+
+```json
+POST /api/operations/receipt
+{ "locationId": null, "assetTypeId": "01b1...", "manufacturerId": "01b2...", "model": "ThinkPad E14 Gen 6",
+  "serialNumbers": ["PF4XA001", "PF4XA002"], "supplierId": "01b3...", "invoiceNumber": "СФ-1024",
+  "purchaseDate": "2026-10-20", "purchasePrice": 9500000, "currency": "UZS", "condition": "New", "generateDocument": true }
+→ { "batchId": "...", "number": "RCV-000001", "type": "Receipt", "assetCount": 2, "assetIds": ["...", "..."], "documentId": "..." }
+```
+
+`locationId: null` — общий склад. Без `serialNumbers` укажите `"quantity": 5` (для типов без обязательного серийного номера);
+не более 500 единиц в одном акте. Отмена прихода — `POST /api/operations/{batchId}/cancel` (удаляет активы, пока с ними не
+было операций). Списание — `POST /api/operations/status` со статусом категории `WrittenOff` или `Disposed`:
+
+```json
+{ "assetIds": ["..."], "toStatusId": "<статус «Списан»>", "reason": "Неремонтопригодно", "disposalMethod": "Утилизация", "generateDocument": true }
 ```
 
 ### Состояние актива на дату

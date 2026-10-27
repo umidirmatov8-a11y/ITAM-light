@@ -30,6 +30,11 @@ public class Location : LookupEntity, IRegionBound, IHasCustomFields
     /// <summary>Materialized display path, e.g. "Ташкент / Головной офис / каб. 301". Recomputed on rename.</summary>
     public string? FullPath { get; set; }
     public string? CustomFields { get; set; }
+    /// <summary>
+    /// Shared (organization-wide) warehouse for incoming equipment: visible to users of every region; assets located in it
+    /// can be received, issued, moved and written off by any user with the corresponding asset permissions.
+    /// </summary>
+    public bool IsShared { get; set; }
     Guid? IRegionBound.RegionId => RegionId;
 }
 

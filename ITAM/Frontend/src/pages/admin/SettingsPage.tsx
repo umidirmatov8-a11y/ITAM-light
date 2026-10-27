@@ -60,7 +60,7 @@ export default function SettingsPage() {
             <GroupForm group="numbering" values={s.numbering}>
               <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('settings.numberingHint')} />
               <Row gutter={12}>
-                {['assetFormat', 'issueFormat', 'returnFormat', 'transferFormat', 'statusChangeFormat', 'repairFormat', 'documentFormat', 'inventoryFormat', 'employeeNumberFormat'].map((k) => txt(k, t(`settings.fmt.${k}`)))}
+                {['assetFormat', 'issueFormat', 'returnFormat', 'transferFormat', 'statusChangeFormat', 'receiptFormat', 'repairFormat', 'documentFormat', 'inventoryFormat', 'employeeNumberFormat'].map((k) => txt(k, t(`settings.fmt.${k}`)))}
               </Row>
             </GroupForm>
           ) },

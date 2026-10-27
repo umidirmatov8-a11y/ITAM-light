@@ -14,7 +14,7 @@ import { BackdatedTag, EnumTag } from '@/components/Tags';
 import { SIGNATURE_METHODS, SIGNATURE_STATUSES } from '@/utils/enums';
 import { fmtDateTime, parseDateTime, toApiDateTime } from '@/utils/format';
 
-const DOC_TYPES: Record<string, DocumentType> = { Issue: 'EquipmentIssue', Return: 'EquipmentReturn', Transfer: 'EquipmentTransfer', StatusChange: 'WriteOffAct' };
+const DOC_TYPES: Record<string, DocumentType> = { Issue: 'EquipmentIssue', Return: 'EquipmentReturn', Transfer: 'EquipmentTransfer', StatusChange: 'WriteOffAct', Receipt: 'ReceiptAct' };
 
 export default function OperationCard() {
   const { id } = useParams<{ id: string }>();
@@ -65,13 +65,14 @@ export default function OperationCard() {
             b.type === 'Return' ? { title: t('operations.missingItems'), dataIndex: 'missingItems' } : {},
             ['Transfer', 'StatusChange'].includes(b.type) ? { title: t('operations.from'), dataIndex: 'from' } : {},
             ['Transfer', 'StatusChange'].includes(b.type) ? { title: t('operations.to'), dataIndex: 'to' } : {},
+            b.type === 'Receipt' ? { title: t('warehouse.warehouse'), dataIndex: 'to' } : {},
             b.type === 'Issue' ? { title: t('operations.returnedAt'), dataIndex: 'effectiveTo', render: fmtDateTime } : {},
           ].filter((c) => 'title' in c) as never} />
       </Card>
       <Card title={t('tabs.documents')} style={{ marginBottom: 16 }}><DocumentsTable filter={{ sourceType: 'OperationBatch', sourceId: b.id }} /></Card>
       <Card title={t('tabs.attachments')}><Attachments entityType="OperationBatch" entityId={b.id} /></Card>
       <Modal open={cancelOpen} title={t('operations.cancel')} onCancel={() => setCancelOpen(false)} onOk={() => cancel.mutate(undefined)} okButtonProps={{ danger: true, disabled: reason.length < 3 }} confirmLoading={cancel.isPending}>
-        <Alert type="warning" showIcon message={t('operations.cancelWarning')} style={{ marginBottom: 12 }} />
+        <Alert type="warning" showIcon message={t(b.type === 'Receipt' ? 'warehouse.cancelReceiptWarning' : 'operations.cancelWarning')} style={{ marginBottom: 12 }} />
         <Input.TextArea rows={3} placeholder={t('common.reason')} value={reason} onChange={(e) => setReason(e.target.value)} />
       </Modal>
       <Modal open={signOpen} title={t('documents.signature')} onCancel={() => setSignOpen(false)} onOk={() => form.submit()} confirmLoading={sign.isPending}>

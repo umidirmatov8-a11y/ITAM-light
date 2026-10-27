@@ -25,6 +25,10 @@ public sealed class OperationsController : ApiControllerBase
     [HttpPost("status"), HasPermission(Permissions.AssetsStatus)]
     public Task<OperationResult> Status([FromBody] StatusChangeRequest req) => _service.ChangeStatusAsync(req, Ct);
 
+    /// <summary>Receipt of new equipment into a warehouse (by default the shared one).</summary>
+    [HttpPost("receipt"), HasPermission(Permissions.AssetsCreate)]
+    public Task<OperationResult> Receipt([FromBody] ReceiptRequest req) => _service.ReceiveAsync(req, Ct);
+
     [HttpGet, HasPermission(Permissions.AssetsView)]
     public Task<PagedResult<BatchListItem>> List([FromQuery] BatchQuery q) => _service.ListBatchesAsync(q, Ct);
 

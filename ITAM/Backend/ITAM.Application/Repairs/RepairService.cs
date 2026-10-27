@@ -152,7 +152,7 @@ public sealed class RepairService
 
     public async Task<RepairDto> CreateAsync(RepairInput input, CancellationToken ct)
     {
-        var asset = await _scope.Apply(_db.Assets.AsQueryable(), a => a.RegionId).FirstOrDefaultAsync(a => a.Id == input.AssetId, ct)
+        var asset = await _scope.ApplyAssets(_db.Assets.AsQueryable()).FirstOrDefaultAsync(a => a.Id == input.AssetId, ct)
                     ?? throw new NotFoundException("Актив", input.AssetId);
         if (await _db.Repairs.AnyAsync(r => r.AssetId == asset.Id && r.Status!.Stage != RepairStage.Returned && r.Status.Stage != RepairStage.Cancelled, ct))
             throw new ConflictException(ErrorCodes.AssetInRepair, "По активу уже есть открытый ремонт");

@@ -3,7 +3,7 @@ import { Avatar, Badge, Button, Dropdown, Input, Layout, Menu, Select, Space, To
 import {
   AppstoreOutlined, AuditOutlined, BarChartOutlined, BellOutlined, CloudServerOutlined, ContainerOutlined, DashboardOutlined, DatabaseOutlined,
   FileTextOutlined, ImportOutlined, InboxOutlined, KeyOutlined, LaptopOutlined, LogoutOutlined, MoonOutlined, PlusOutlined, ProfileOutlined,
-  SafetyCertificateOutlined, ScanOutlined, SettingOutlined, SolutionOutlined, SunOutlined, SwapOutlined, TeamOutlined, ToolOutlined, UserOutlined, DesktopOutlined } from '@ant-design/icons';
+  SafetyCertificateOutlined, ScanOutlined, SettingOutlined, SolutionOutlined, SunOutlined, SwapOutlined, TeamOutlined, ToolOutlined, UserOutlined, DesktopOutlined, ShopOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -49,6 +49,7 @@ export default function MainLayout() {
             key: 'assets-group', icon: <LaptopOutlined />, label: t('menu.assetsGroup'),
             children: [
               it('/assets', <LaptopOutlined />, t('menu.assets')),
+              it('/warehouse', <ShopOutlined />, t('menu.warehouse')),
               it('/operations', <SwapOutlined />, t('menu.operations')),
               it('/repairs', <ToolOutlined />, t('menu.repairs')),
               it('/inventory', <ScanOutlined />, t('menu.inventory'), can('inventory.view')),
@@ -81,7 +82,7 @@ export default function MainLayout() {
   const selected = useMemo(() => {
     const p = location.pathname;
     const keys = ['/admin/dictionaries', '/admin/custom-fields', '/admin/templates', '/admin/checklist-templates', '/admin/users', '/admin/roles', '/admin/audit',
-      '/admin/settings', '/admin/backup', '/admin/system', '/employees', '/assets', '/operations', '/repairs', '/inventory', '/stock', '/agents', '/licenses', '/software',
+      '/admin/settings', '/admin/backup', '/admin/system', '/employees', '/assets', '/warehouse', '/operations', '/repairs', '/inventory', '/stock', '/agents', '/licenses', '/software',
       '/access', '/onboarding', '/offboarding', '/documents', '/contracts', '/reports', '/import'];
     return [keys.find((k) => p.startsWith(k)) ?? '/'];
   }, [location.pathname]);
@@ -89,6 +90,7 @@ export default function MainLayout() {
   const quick: MenuProps['items'] = [
     can('employees.create') && { key: 'emp', label: t('quick.addEmployee'), onClick: () => navigate('/employees?new=1') },
     can('assets.create') && { key: 'asset', label: t('quick.addAsset'), onClick: () => navigate('/assets?new=1') },
+    can('assets.create') && { key: 'receipt', label: t('quick.receipt'), onClick: () => navigate('/operations/receipt') },
     can('assets.assign') && { key: 'issue', label: t('quick.issue'), onClick: () => navigate('/operations/issue') },
     can('assets.return') && { key: 'return', label: t('quick.return'), onClick: () => navigate('/operations/return') },
     can('assets.transfer') && { key: 'transfer', label: t('quick.transfer'), onClick: () => navigate('/operations/transfer') },
