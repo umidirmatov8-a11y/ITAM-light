@@ -34,6 +34,9 @@ Server одним файлом `ITAM-Setup.exe`, работает как слу�
 **Windows Server (рекомендуется):** запустите `ITAM-Setup.exe`, выберите «Установить встроенный PostgreSQL», задайте пароли и
 откройте адрес, показанный в конце установки. Подробно — [INSTALLATION.md](Documentation/INSTALLATION.md).
 
+**Обновление работающего сервера:** запустите `ITAM-Update.exe` — резервная копия, замена файлов, обновление базы,
+данные и настройки сохраняются ([INSTALLATION.md §5](Documentation/INSTALLATION.md#5-обновление)).
+
 **Docker (Linux):**
 
 ```bash
@@ -88,9 +91,9 @@ ITAM/
 cd ITAM
 (cd Frontend && npm ci && npm run build)
 dotnet test ITAM.slnx                       # интеграционным тестам нужен PostgreSQL: ITAM_TEST_PG="Host=...;Username=...;Password=..."
-pwsh Installer/build-installer.ps1           # Windows: ITAM-Setup.exe в Installer/Output
+pwsh Installer/build-installer.ps1           # Windows: ITAM-Setup.exe и ITAM-Update.exe в Installer/Output
 ```
 
 CI (`.github/workflows/itam.yml`): сборка фронтенда, юнит- и интеграционные тесты на PostgreSQL 16, проверка актуальности
 `migrations.sql`, сборка установщика на Windows, тихая установка со встроенным PostgreSQL, проверка службы, веб-интерфейса,
-входа и резервного копирования. Готовый `ITAM-Setup.exe` — в артефактах сборки.
+входа, резервного копирования и обновления пакетом `ITAM-Update.exe`. Готовые `ITAM-Setup.exe` и `ITAM-Update.exe` — в артефактах сборки.

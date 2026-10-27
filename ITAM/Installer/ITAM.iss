@@ -2,7 +2,8 @@
 ; Build:  iscc /DAppVersion=1.0.0 ITAM.iss      (see build-installer.ps1)
 ; Input:  ..\publish\server\  — self-contained win-x64 publish of ITAM.Server with wwwroot (SPA)
 ;         redist\pgsql\       — optional PostgreSQL binaries (EDB "binaries" zip extracted); enables the bundled DB option
-; Output: Output\ITAM-Setup.exe
+; Output: Output\ITAM-Setup.exe   — new installation or update of an existing one
+;         Output\ITAM-Update.exe  — iscc /DUpdateOnly: update package, refuses to run where ITAM is not installed
 
 #ifndef AppVersion
   #define AppVersion "1.0.0"
@@ -11,6 +12,12 @@
 #define ServiceName "ITAM"
 #define PgServiceName "ITAM-PostgreSQL"
 #define PublishDir "..\publish\server"
+#ifdef UpdateOnly
+  #define OutputName "ITAM-Update"
+#else
+  #define OutputName "ITAM-Setup"
+#endif
+#define UninstallKey "Software\Microsoft\Windows\CurrentVersion\Uninstall\{6C1E3A57-7E54-4A0B-9A7E-2F3B8C1D9E11}_is1"
 #ifexist "redist\pgsql\bin\pg_ctl.exe"
   #define BundlePg
 #endif
@@ -25,7 +32,7 @@ DefaultDirName={autopf}\ITAM
 DefaultGroupName=ITAM
 DisableProgramGroupPage=yes
 OutputDir=Output
-OutputBaseFilename=ITAM-Setup
+OutputBaseFilename={#OutputName}
 Compression=lzma2/ultra64
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -84,6 +91,8 @@ var
   ResultUrl: String;
   Upgrade: Boolean;
   InstallFailed: Boolean;
+  UpgradePage: TOutputMsgWizardPage;
+  PrevVersion: String;
 
 function SetEnvironmentVariable(lpName: String; lpValue: String): BOOL;
   external 'SetEnvironmentVariableW@kernel32.dll stdcall';
@@ -116,15 +125,45 @@ begin
   Result := Upgrade;
 end;
 
+function InstalledVersion: String;
+begin
+  Result := '';
+  if not RegQueryStringValue(HKLM64, '{#UninstallKey}', 'DisplayVersion', Result) then
+    RegQueryStringValue(HKLM32, '{#UninstallKey}', 'DisplayVersion', Result);
+end;
+
 function InitializeSetup: Boolean;
 begin
   // Captured once: setup itself creates the config file later.
   Upgrade := FileExists(DataRoot + '\config\itam.json');
+  PrevVersion := InstalledVersion;
   Result := True;
+#ifdef UpdateOnly
+  if not Upgrade then
+  begin
+    SuppressibleMsgBox('ITAM не установлен на этом компьютере (не найдена конфигурация ' + DataRoot + '\config\itam.json).' + #13#10#13#10 +
+      'ITAM-Update.exe только обновляет уже установленную систему. Для новой установки запустите ITAM-Setup.exe.', mbError, MB_OK, IDOK);
+    Result := False;
+  end;
+#endif
 end;
 
 procedure InitializeWizard;
+var Installed: String;
 begin
+  Installed := PrevVersion;
+  if Installed = '' then Installed := 'неизвестна';
+  UpgradePage := CreateOutputMsgPage(wpWelcome, 'Обновление ITAM', 'ITAM уже установлен на этом сервере — будет выполнено обновление',
+    'Установленная версия: ' + Installed + #13#10 + 'Новая версия: {#AppVersion}' + #13#10#13#10 +
+    'Что произойдёт:' + #13#10 +
+    '  1. Служба ITAM будет остановлена (веб-интерфейс недоступен несколько минут).' + #13#10 +
+    '  2. Будет создана резервная копия базы данных и файлов в ' + DataRoot + '\backups.' + #13#10 +
+    '  3. Файлы программы будут заменены, база данных обновлена до новой версии.' + #13#10 +
+    '  4. Служба ITAM будет запущена снова.' + #13#10#13#10 +
+    'Сохраняются: база данных, документы и файлы, настройки, пароли, адрес и порт веб-интерфейса. ' +
+    'Ничего вводить заново не нужно.' + #13#10#13#10 +
+    'Рекомендуется выполнять обновление, когда пользователи не работают в системе.');
+
   DbModePage := CreateInputOptionPage(wpSelectDir, 'База данных', 'Где будут храниться данные ITAM?',
     'Выберите вариант установки PostgreSQL.', True, False);
   if HasBundledPg then
@@ -187,6 +226,7 @@ end;
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   Result := False;
+  if PageID = UpgradePage.ID then Result := not IsUpgrade;
   // On upgrade the existing configuration and database are kept: only files are replaced and migrations applied.
   if IsUpgrade and ((PageID = DbModePage.ID) or (PageID = DbPage.ID) or (PageID = WebPage.ID) or (PageID = AdminPage.ID) or (PageID = OptionsPage.ID)) then
     Result := True;
@@ -272,7 +312,24 @@ begin
     '-NoProfile -Command "Stop-Service -Name ' + Name + ' -Force -ErrorAction SilentlyContinue"', Code);
 end;
 
+/// Backup of the database and files with the installed (old) version before anything is replaced.
+function BackupBeforeUpgrade: Boolean;
+var Code: Integer; Exe: String;
+begin
+  Exe := ExpandConstant('{app}\ITAM.Server.exe');
+  Result := True;
+  if not FileExists(Exe) then begin Log('No installed ITAM.Server.exe, backup skipped'); Exit; end;
+  if UseBundledPg then
+  begin
+    // The database must be running for pg_dump.
+    Run(ExpandConstant('{sys}\sc.exe'), 'start ' + PG_SERVICE, Code);
+    if Code <> 1056 then Sleep(5000);
+  end;
+  Result := Run(Exe, 'backup --data-root "' + DataRoot + '"', Code) and (Code = 0);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
+var Code: Integer;
 begin
   if WizardSilent and not Upgrade and ((Length(DbPage.Values[3]) < 8) or not StrongPassword(AdminPage.Values[1])) then
   begin
@@ -281,6 +338,15 @@ begin
   end;
   // Upgrade: stop the running services so files can be replaced.
   StopService(SERVICE_NAME);
+  if Upgrade and (ExpandConstant('{param:SkipBackup|0}') <> '1') and not BackupBeforeUpgrade then
+  begin
+    // Nothing has been changed yet: bring the old version back and abort.
+    Run(ExpandConstant('{sys}\sc.exe'), 'start ' + SERVICE_NAME, Code);
+    Result := 'Не удалось создать резервную копию перед обновлением, обновление отменено — ITAM продолжает работать в прежней версии.' + #13#10#13#10 +
+      'Подробности: ' + DataRoot + '\logs\install.log. Проверьте свободное место на диске и папку резервных копий ' +
+      '(Администрирование → Резервные копии). Обновить без резервной копии: параметр /SkipBackup=1.';
+    Exit;
+  end;
   if Upgrade and UseBundledPg then StopService(PG_SERVICE);
   Result := '';
 end;
@@ -401,7 +467,11 @@ end;
 
 procedure CurPageChanged(CurPageID: Integer);
 begin
-  if (CurPageID = wpFinished) and (ResultUrl <> '') then
+  if (CurPageID = wpFinished) and (ResultUrl <> '') and IsUpgrade then
+    WizardForm.FinishedLabel.Caption := 'ITAM обновлён до версии {#AppVersion} и запущен.' + #13#10#13#10 +
+      'Данные и настройки сохранены. Резервная копия, сделанная перед обновлением: ' + DataRoot + '\backups.' + #13#10#13#10 +
+      'Обновите страницу ITAM в браузере (Ctrl+F5).'
+  else if (CurPageID = wpFinished) and (ResultUrl <> '') then
     WizardForm.FinishedLabel.Caption := 'ITAM установлен и запущен как служба Windows.' + #13#10#13#10 +
       'Откройте в браузере:' + #13#10 + ResultUrl + #13#10#13#10 +
       'Данные и резервные копии: ' + DataRoot;
