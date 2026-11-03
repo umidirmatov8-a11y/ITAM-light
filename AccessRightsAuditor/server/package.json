@@ -8,9 +8,10 @@
     "start": "node dist/main.js",
     "dev": "tsx watch src/main.ts",
     "test": "vitest run",
-    "migrate": "tsx src/cli/migrate.ts",
-    "seed:demo": "tsx src/cli/seed-demo.ts",
-    "create-admin": "tsx src/cli/create-admin.ts"
+    "migrate": "node dist/cli/migrate.js",
+    "seed:demo": "node dist/cli/seed-demo.js",
+    "create-admin": "node dist/cli/create-admin.js",
+    "backup": "node dist/cli/backup.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -24,17 +25,16 @@
     "multer": "^2.5.0",
     "pdfkit": "^0.17.2",
     "pg": "^8.23.1",
-    "tsx": "^4.23.15",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.3.0",
     "@types/node": "^22.20.5",
     "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.1.0"
   }

@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFile } from 'node:child_process';
 import { Router } from 'express';
 import { z } from 'zod';
 import { one, q, tx } from '../../common/db';
@@ -10,6 +9,7 @@ import { logActivity } from '../../common/activity';
 import { getSettings, invalidateSettings } from '../../common/settings';
 import { hashPassword, requirePerm, validatePasswordStrength } from '../auth/auth';
 import { config } from '../../config';
+import { createBackup, dirSize } from '../../common/backup';
 
 export const adminRouter = Router();
 
@@ -150,36 +150,19 @@ adminRouter.get('/backups', requirePerm('backup.manage'), async (_req, res) => {
   if (!fs.existsSync(dir)) return res.json([]);
   res.json(fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort().reverse().map((name) => {
     const files = fs.readdirSync(path.join(dir, name));
-    return { name, files, size: files.reduce((s, f) => s + fs.statSync(path.join(dir, name, f)).size, 0) };
+    return { name, files, size: dirSize(path.join(dir, name)) };
   }));
 });
 
 adminRouter.post('/backups', requirePerm('backup.manage'), async (req, res) => {
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const dir = path.join(config.dataDir, 'backups', stamp);
-  fs.mkdirSync(dir, { recursive: true });
-  const dumpFile = path.join(dir, 'ara-db.dump');
-  const env = { ...process.env };
-  const args = ['--format=custom', '--no-owner', `--file=${dumpFile}`];
-  if (config.db.connectionString) args.push(`--dbname=${config.db.connectionString}`);
-  else {
-    args.push(`--host=${config.db.host}`, `--port=${config.db.port}`, `--username=${config.db.user}`, config.db.database);
-    if (config.db.password) env.PGPASSWORD = config.db.password;
-  }
   try {
-    await new Promise<void>((resolve, reject) => execFile(config.pgDumpPath, args, { env, timeout: 30 * 60 * 1000 }, (err, _o, stderr) => err ? reject(new Error(stderr || err.message)) : resolve()));
+    const r = await createBackup();
+    await logActivity(req, 'BACKUP_CREATED', { category: 'ADMIN', entityType: 'backup', entityId: r.name, after: { files: r.files } });
+    res.json(r);
   } catch (e: any) {
-    await logActivity(req, 'BACKUP_FAILED', { category: 'ADMIN', entityType: 'backup', entityId: stamp, after: { error: String(e.message).slice(0, 500) } });
+    await logActivity(req, 'BACKUP_FAILED', { category: 'ADMIN', entityType: 'backup', after: { error: String(e.message).slice(0, 500) } });
     throw badRequest(`Не удалось выполнить pg_dump: ${String(e.message).slice(0, 300)}. Укажите путь к pg_dump в ARA_PG_DUMP или используйте scripts/backup.ps1`);
   }
-  // Файловое хранилище (оригиналы импортов и отчёты) копируется рядом с дампом.
-  for (const sub of ['imports', 'reports']) {
-    const src = path.join(config.dataDir, sub);
-    if (fs.existsSync(src)) fs.cpSync(src, path.join(dir, sub), { recursive: true });
-  }
-  const files = fs.readdirSync(dir);
-  await logActivity(req, 'BACKUP_CREATED', { category: 'ADMIN', entityType: 'backup', entityId: stamp, after: { files } });
-  res.json({ name: stamp, files });
 });
 
 // ---------- Справка о системе ----------

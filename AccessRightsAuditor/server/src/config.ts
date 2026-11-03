@@ -3,7 +3,9 @@ import dotenv from 'dotenv';
 
 /** Корень проекта AccessRightsAuditor (одинаково для src/ и dist/). */
 export const ROOT_DIR = path.resolve(__dirname, '..', '..');
-dotenv.config({ path: path.join(ROOT_DIR, '.env'), quiet: true } as any);
+// В установленной версии (Windows) конфигурация лежит в %ProgramData%\ARA\config\ara.env — путь передаёт служба.
+export const ENV_FILE = process.env.ARA_ENV_FILE || path.join(ROOT_DIR, '.env');
+dotenv.config({ path: ENV_FILE, quiet: true } as any);
 
 const env = process.env;
 

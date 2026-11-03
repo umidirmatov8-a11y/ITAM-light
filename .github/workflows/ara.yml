@@ -1,0 +1,190 @@
+name: Access Rights Auditor
+
+on:
+  push:
+    # тег ara-vX.Y.Z публикует GitHub Release с ARA-Setup.exe
+    tags: ['ara-v*']
+    paths:
+      - 'AccessRightsAuditor/**'
+      - '.github/workflows/ara.yml'
+  pull_request:
+    paths:
+      - 'AccessRightsAuditor/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Build & test (Linux, PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ara
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    defaults:
+      run:
+        working-directory: AccessRightsAuditor
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: ara
+      ARA_DEMO_PASSWORD: DemoPass2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: AccessRightsAuditor/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Rules engine tests
+        run: npm test
+      - name: Demo data (migrations, import, two audits, comparison)
+        run: npm run seed:demo
+      - name: Server smoke test
+        run: |
+          node server/dist/main.js > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:3000/api/health && break; sleep 1; done
+          curl -sf -c c.txt -H 'X-ARA-Request: 1' -H 'Content-Type: application/json' -d '{"username":"auditor","password":"DemoPass2025"}' localhost:3000/api/auth/login > /dev/null
+          n=$(curl -sf -b c.txt localhost:3000/api/audits | python3 -c 'import json,sys; a=json.load(sys.stdin); print(sum(1 for x in a if x["status"]=="COMPLETED"))')
+          echo "Completed audits: $n"; test "$n" -ge 2
+          curl -sf -o /dev/null localhost:3000/ || (cat server.log; exit 1)
+
+  installer:
+    name: Windows installer (ARA-Setup.exe)
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: AccessRightsAuditor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+
+      - name: Build installer
+        run: |
+          $v = "${{ github.ref_name }}" -replace '^ara-v', ''
+          if ($v -notmatch '^\d+\.\d+\.\d+') { $v = "1.0.${{ github.run_number }}" }
+          .\installer\build-installer.ps1 -Version $v -SkipTests
+
+      - name: Silent install (bundled PostgreSQL, demo data)
+        run: |
+          $p = Start-Process .\installer\Output\ARA-Setup.exe -PassThru -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=install.log', '/AdminPassword=Admin12345a', '/Demo=1', '/TASKS=desktopicon')
+          $finished = $p.WaitForExit(20 * 60 * 1000)
+          if (Test-Path install.log) { Get-Content install.log -Tail 60 }
+          if (-not $finished) { throw "installer timeout" }
+          if ($p.ExitCode -ne 0) { throw "installer exit code $($p.ExitCode)" }
+
+      - name: Verify services, shortcuts and Web UI
+        run: |
+          Get-Service ARA, ARA-PostgreSQL | Format-Table Name, Status, StartType
+          if ((Get-Service ARA).Status -ne 'Running') { throw 'ARA service is not running' }
+          foreach ($f in "$env:ProgramFiles\Access Rights Auditor\ARA.url", "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Access Rights Auditor\Access Rights Auditor.lnk", "$env:PUBLIC\Desktop\Access Rights Auditor.lnk") {
+            if (-not (Test-Path $f)) { throw "missing: $f" }
+          }
+          $base = 'http://localhost:3000'
+          $html = (Invoke-WebRequest "$base/" -UseBasicParsing).Content
+          if ($html -notmatch '<div id="root"') { throw 'SPA is not served' }
+          $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          $h = @{ 'X-ARA-Request' = '1' }
+          $login = Invoke-RestMethod "$base/api/auth/login" -Method Post -WebSession $s -Headers $h -ContentType 'application/json' -Body '{"username":"admin","password":"Admin12345a"}'
+          if ($login.user.mustChangePassword) { throw 'admin password from the installer must not require a change' }
+          $audits = Invoke-RestMethod "$base/api/audits" -WebSession $s
+          $done = @($audits | Where-Object { $_.status -eq 'COMPLETED' })
+          "Completed demo audits: $($done.Count)"
+          if ($done.Count -lt 2) { throw 'demo data missing' }
+          $f = Invoke-RestMethod "$base/api/audits/$($done[0].id)/findings" -WebSession $s
+          "Findings: $($f.total)"
+          Invoke-WebRequest "$base/api/audits/$($done[0].id)/report.pdf" -WebSession $s -OutFile report.pdf -UseBasicParsing
+          if ((Get-Item report.pdf).Length -lt 5000) { throw 'PDF report too small' }
+          $b = Invoke-RestMethod "$base/api/admin/backups" -Method Post -WebSession $s -Headers $h
+          "Backup from UI: $($b.name) — $($b.files -join ', ')"
+          $acl = (Get-Acl "$env:ProgramData\ARA\config\ara.env").Access | ForEach-Object { $_.IdentityReference.Value }
+          "Config ACL: $($acl -join '; ')"
+          if ($acl -match 'Users|Пользователи') { throw 'config is readable by ordinary users' }
+
+      - name: Re-run setup = update (backup, data kept)
+        run: |
+          $before = @(Get-ChildItem "$env:ProgramData\ARA\data\backups" -Directory).Count
+          $p = Start-Process .\installer\Output\ARA-Setup.exe -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/LOG=update.log'
+          if (-not $p.WaitForExit(20 * 60 * 1000)) { throw 'update timeout' }
+          if (Test-Path update.log) { Get-Content update.log -Tail 30 }
+          if ($p.ExitCode -ne 0) { throw "update exit code $($p.ExitCode)" }
+          $after = @(Get-ChildItem "$env:ProgramData\ARA\data\backups" -Directory)
+          $after | Format-Table Name
+          if ($after.Count -le $before) { throw 'no backup before update' }
+          $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          Invoke-RestMethod http://localhost:3000/api/auth/login -Method Post -WebSession $s -Headers @{ 'X-ARA-Request' = '1' } -ContentType 'application/json' -Body '{"username":"admin","password":"Admin12345a"}' | Out-Null
+          $n = @((Invoke-RestMethod http://localhost:3000/api/audits -WebSession $s) | Where-Object { $_.status -eq 'COMPLETED' }).Count
+          if ($n -lt 2) { throw 'data lost after update' }
+          'Update OK'
+
+      - name: Silent uninstall (data kept by default)
+        run: |
+          $u = Get-ChildItem "$env:ProgramFiles\Access Rights Auditor\unins*.exe" | Select-Object -First 1
+          $p = Start-Process $u.FullName -PassThru -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          if (-not $p.WaitForExit(10 * 60 * 1000)) { throw 'uninstall timeout' }
+          Start-Sleep 5
+          if (Get-Service ARA -ErrorAction SilentlyContinue) { throw 'ARA service left after uninstall' }
+          if (Get-Service ARA-PostgreSQL -ErrorAction SilentlyContinue) { throw 'PostgreSQL service left after uninstall' }
+          if (-not (Test-Path "$env:ProgramData\ARA\pgdata\PG_VERSION")) { throw 'data must be kept unless the user agrees to delete it' }
+          'Uninstall OK'
+
+      - name: Diagnostics
+        if: failure()
+        continue-on-error: true
+        run: |
+          Get-ChildItem "$env:ProgramData\ARA\logs\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 80 }
+          Get-ChildItem "$env:ProgramData\ARA\pgdata\log\*" -ErrorAction SilentlyContinue | ForEach-Object { "== $_"; Get-Content $_ -Tail 40 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ARA-Setup
+          path: |
+            AccessRightsAuditor/installer/Output/ARA-Setup.exe
+            AccessRightsAuditor/installer/Output/ARA-Setup.exe.sha256
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/ara-v')
+    needs: installer
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ARA-Setup
+          path: dist
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd dist
+          tr -d '\r' < ARA-Setup.exe.sha256 | sha256sum -c -
+          version="${GITHUB_REF_NAME#ara-v}"
+          printf 'Access Rights Auditor %s — установщик для Windows 10/11 (x64).\n\nВключает Node.js, PostgreSQL 16 и службу Windows. Запустите ARA-Setup.exe от имени администратора.\n\n> Установщик без цифровой подписи: SmartScreen → «Подробнее» → «Выполнить в любом случае». Проверьте SHA-256.\n' "$version" > notes.md
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ARA-Setup.exe ARA-Setup.exe.sha256 --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" ARA-Setup.exe ARA-Setup.exe.sha256 --title "Access Rights Auditor $version" --notes-file notes.md --verify-tag --latest=false
+          fi
