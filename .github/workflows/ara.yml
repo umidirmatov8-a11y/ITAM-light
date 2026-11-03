@@ -2,6 +2,7 @@ name: Access Rights Auditor
 
 on:
   push:
+    branches: ['**']
     # тег ara-vX.Y.Z публикует GitHub Release с ARA-Setup.exe
     tags: ['ara-v*']
     paths:
