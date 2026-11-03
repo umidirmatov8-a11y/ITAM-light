@@ -363,6 +363,8 @@ begin
       Exit;
     end;
   end;
+  // Файлы PostgreSQL заблокированы работающей службой — останавливаем её до замены файлов.
+  if Upgrade and UpgradeBundledPg then StopService(PG_SERVICE);
 end;
 
 procedure InitBundledPostgres(const Port, SuperPassword: String);
@@ -533,7 +535,7 @@ begin
   if UpgradeBundledPg then
   begin
     Run(ExpandConstant('{sys}\sc.exe'), 'start ' + PG_SERVICE, Code);
-    Sleep(2000);
+    Sleep(3000);
   end;
   InstallService(ReadWebPort);
 end;
