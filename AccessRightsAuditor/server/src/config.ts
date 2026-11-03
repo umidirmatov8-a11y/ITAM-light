@@ -5,7 +5,9 @@ import dotenv from 'dotenv';
 export const ROOT_DIR = path.resolve(__dirname, '..', '..');
 // В установленной версии (Windows) конфигурация лежит в %ProgramData%\ARA\config\ara.env — путь передаёт служба.
 export const ENV_FILE = process.env.ARA_ENV_FILE || path.join(ROOT_DIR, '.env');
-dotenv.config({ path: ENV_FILE, quiet: true } as any);
+// Для установленной версии файл конфигурации важнее переменных окружения: на компьютере могут быть
+// заданы PGUSER/PGPASSWORD другой установки PostgreSQL.
+dotenv.config({ path: ENV_FILE, quiet: true, override: Boolean(process.env.ARA_ENV_FILE) } as any);
 
 const env = process.env;
 
