@@ -1,0 +1,8 @@
+﻿Табельный номер;ФИО;Учетная запись;Роль;Операция
+1005;Алимов Рустам Шухратович;r.alimov;CARD_OPER;
+1005;Алимов Рустам Шухратович;r.alimov;LIMIT_MGR;LIM.CHANGE
+1006;Каримова Нилуфар Бахтиёровна;n.karimova;LIMIT_APPR;
+1006;Каримова Нилуфар Бахтиёровна;n.karimova;LIMIT_MGR;LIM.CHANGE
+1011;Хасанов Бахтиёр Ильхомович;b.khasanov;CARD_OPER;
+1011;Хасанов Бахтиёр Ильхомович;b.khasanov;LIMIT_APPR;LIM.APPROVE
+1001;Иванов Иван Иванович;i.ivanov;CARD_OPER;CARD.VIEW

@@ -14,3 +14,6 @@ This repository contains:
 * **A.R.C.** — Adaptive Responsive Computer: локальный ретрофутуристический помощник для Windows
   (Electron/React + Python): русские команды, запуск программ и игр, менеджер разрешений A/B/C, офлайн-режим,
   установщик `ARC-Setup.exe`. See [`ARC/README.md`](ARC/README.md).
+* **Access Rights Auditor (ARA)** — локальное веб-приложение аудита банковских полномочий (Node.js/TypeScript + React +
+  PostgreSQL): импорт выгрузок XLSX/CSV, сверка с версионированной матрицей, SoD, исключения, история и сравнение снимков,
+  отчёты XLSX/PDF. See [`AccessRightsAuditor/README.md`](AccessRightsAuditor/README.md).

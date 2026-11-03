@@ -1,0 +1,10 @@
+﻿Код системы;Код подразделения;Код должности;Код роли;Код модуля;Код операции;Эффект;Критичность;Основание;Владелец;Дата начала;Дата окончания
+SMARTBANK;OPS;OPER;OPERATOR;;;ALLOW;;Приказ №45 от 10.01.2025;Владелец АБС;2025-01-01;
+SMARTBANK;OPS;CTRL;CONTROLLER;;;ALLOW;;Приказ №45 от 10.01.2025;Владелец АБС;2025-01-01;
+SMARTBANK;OPS;CHIEF;CHIEF;;;ALLOW;;Приказ №45 от 10.01.2025;Владелец АБС;2025-01-01;
+SMARTBANK;OPS;CHIEF;CONTROLLER;;;ALLOW;;Приказ №45 от 10.01.2025;Владелец АБС;2025-01-01;
+SMARTBANK;IT;ADMIN;SB_ADMIN;;;ALLOW;;Регламент ИТ-12;Департамент ИТ;2025-01-01;
+SMARTBANK;*;OPER;*;PAY;PAY.DELETE;DENY;CRITICAL;Политика ИБ п.4.2;Служба ИБ;2025-01-01;
+NCI;CARD;CARDSPEC;CARD_OPER;;;ALLOW;;Распоряжение №7-К;Владелец NCI;2025-01-01;
+NCI;CARD;CARDSPEC;LIMIT_MGR;;;ALLOW;;Распоряжение №7-К;Владелец NCI;2025-01-01;
+NCI;CARD;CHIEF;LIMIT_APPR;;;ALLOW;;Распоряжение №7-К;Владелец NCI;2025-01-01;

@@ -1,0 +1,20 @@
+﻿Код системы;Наименование системы;Код роли;Наименование роли;Код модуля;Наименование модуля;Код операции;Наименование операции;Риск
+SMARTBANK;Smart Bank (АБС);OPERATOR;Операционист;PAY;Платежи;PAY.CREATE;Создание платежа;MEDIUM
+SMARTBANK;Smart Bank (АБС);CONTROLLER;Контролёр платежей;PAY;Платежи;PAY.APPROVE;Утверждение платежа;HIGH
+SMARTBANK;Smart Bank (АБС);OPERATOR;Операционист;PAY;Платежи;PAY.VIEW;Просмотр платежей;LOW
+SMARTBANK;Smart Bank (АБС);CONTROLLER;Контролёр платежей;PAY;Платежи;PAY.VIEW;Просмотр платежей;LOW
+SMARTBANK;Smart Bank (АБС);CHIEF;Начальник отдела;PAY;Платежи;PAY.VIEW;Просмотр платежей;LOW
+SMARTBANK;Smart Bank (АБС);;;PAY;Платежи;PAY.DELETE;Удаление платежа;CRITICAL
+SMARTBANK;Smart Bank (АБС);OPERATOR;Операционист;ACC;Счета;ACC.OPEN;Открытие счёта;MEDIUM
+SMARTBANK;Smart Bank (АБС);OPERATOR;Операционист;ACC;Счета;ACC.VIEW;Просмотр счетов;LOW
+SMARTBANK;Smart Bank (АБС);CONTROLLER;Контролёр платежей;ACC;Счета;ACC.VIEW;Просмотр счетов;LOW
+SMARTBANK;Smart Bank (АБС);CHIEF;Начальник отдела;ACC;Счета;ACC.VIEW;Просмотр счетов;LOW
+SMARTBANK;Smart Bank (АБС);CHIEF;Начальник отдела;ACC;Счета;ACC.CLOSE;Закрытие счёта;HIGH
+SMARTBANK;Smart Bank (АБС);SB_ADMIN;Администратор АБС;CFG;Администрирование;CFG.USERS;Управление пользователями;CRITICAL
+NCI;NCI (карточный процессинг);CARD_OPER;Оператор карт;CARD;Карты;CARD.ISSUE;Выпуск карты;MEDIUM
+NCI;NCI (карточный процессинг);CARD_OPER;Оператор карт;CARD;Карты;CARD.BLOCK;Блокировка карты;MEDIUM
+NCI;NCI (карточный процессинг);CARD_OPER;Оператор карт;CARD;Карты;CARD.VIEW;Просмотр карт;LOW
+NCI;NCI (карточный процессинг);LIMIT_MGR;Менеджер лимитов;CARD;Карты;CARD.VIEW;Просмотр карт;LOW
+NCI;NCI (карточный процессинг);LIMIT_APPR;Утверждающий лимиты;CARD;Карты;CARD.VIEW;Просмотр карт;LOW
+NCI;NCI (карточный процессинг);LIMIT_MGR;Менеджер лимитов;LIM;Лимиты;LIM.CHANGE;Изменение лимитов;HIGH
+NCI;NCI (карточный процессинг);LIMIT_APPR;Утверждающий лимиты;LIM;Лимиты;LIM.APPROVE;Утверждение лимитов;HIGH
