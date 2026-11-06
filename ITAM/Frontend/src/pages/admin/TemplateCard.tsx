@@ -1,10 +1,10 @@
-import { Alert, Button, Card, Checkbox, Col, Form, Input, Modal, Row, Skeleton, Space, Table, Tag, Typography, Upload } from 'antd';
-import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Checkbox, Col, Form, Input, Modal, Popconfirm, Row, Skeleton, Space, Table, Tag, Tooltip, Typography, Upload } from 'antd';
+import { DeleteOutlined, DownloadOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, download, get, post, put } from '@/api/client';
+import { api, del, download, get, post, put } from '@/api/client';
 import { useApiMutation, useNotify } from '@/api/hooks';
 import { useAuth } from '@/app/auth';
 import { PageHeader } from '@/components/PageHeader';
@@ -20,6 +20,7 @@ export default function TemplateCard() {
   const { t } = useTranslation();
   const { can } = useAuth();
   const notify = useNotify();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [vOpen, setVOpen] = useState(false);
   const [file, setFile] = useState<File>();
@@ -28,6 +29,7 @@ export default function TemplateCard() {
   const manage = can('documents.templates.manage');
   const saveMeta = useApiMutation((v: any) => put(`/templates/${id}`, v), { invalidate: [['template', id], ['templates-admin']] });
   const activate = useApiMutation((vid: string) => post(`/templates/${id}/versions/${vid}/activate`), { invalidate: [['template', id], ['templates-admin']] });
+  const remove = useApiMutation(() => del(`/templates/${id}`), { invalidate: [['templates-admin'], ['templates']], onSuccess: () => navigate('/admin/templates') });
   const archive = useApiMutation((archived: boolean) => post(`/templates/${id}/archive?archived=${archived}`), { invalidate: [['template', id], ['templates-admin']] });
   const addVersion = useApiMutation(async () => {
     const fd = new FormData();
@@ -39,14 +41,24 @@ export default function TemplateCard() {
   if (q.isLoading || !q.data) return <Skeleton active />;
   const tpl = q.data;
   const active = tpl.versions.find((v) => v.isActive);
+  const usedCount = tpl.versions.reduce((n, v) => n + v.documentsGenerated, 0);
   const unknown = active ? active.placeholders.filter((p) => !tpl.availablePlaceholders.some((a) => a.key === p || (a.key.includes('<') && p.startsWith(a.key.split('<')[0])))) : [];
   return (
     <>
       <PageHeader crumbs={[{ title: t('menu.templates'), to: '/admin/templates' }, { title: tpl.name }]} title={tpl.name}
         tags={<>{tpl.isDefault && <Tag color="blue">{t('templates.default')}</Tag>}{tpl.isArchived && <Tag>{t('common.archived')}</Tag>}</>}
         extra={manage && <>
-          <Button type="primary" icon={<UploadOutlined />} onClick={() => setVOpen(true)}>{t('templates.newVersion')}</Button>
+          <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/admin/templates/${id}/editor`)}>{t('templateEditor.open')}</Button>
+          <Button icon={<UploadOutlined />} onClick={() => setVOpen(true)}>{t('templates.newVersion')}</Button>
           <Button onClick={() => archive.mutate(!tpl.isArchived)}>{tpl.isArchived ? t('common.restore') : t('common.archive')}</Button>
+          {usedCount > 0 ? (
+            <Tooltip title={t('templates.deleteUsed', { count: usedCount })}><Button danger icon={<DeleteOutlined />} disabled>{t('common.delete')}</Button></Tooltip>
+          ) : (
+            <Popconfirm title={t('templates.deleteConfirm', { name: tpl.name })} description={t('templates.deleteHint')} okButtonProps={{ danger: true, loading: remove.isPending }}
+              okText={t('common.delete')} onConfirm={() => remove.mutate(undefined)}>
+              <Button danger icon={<DeleteOutlined />}>{t('common.delete')}</Button>
+            </Popconfirm>
+          )}
         </>} />
       <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('templates.versioningHint')} />
       <Row gutter={16}>
@@ -62,6 +74,7 @@ export default function TemplateCard() {
                 { title: 'SHA-256', dataIndex: 'fileHash', render: (v) => <span className="itam-mono itam-muted">{v.slice(0, 10)}…</span> },
                 { key: 'a', render: (_, r) => <Space>
                   <Button size="small" icon={<DownloadOutlined />} onClick={() => download(`/templates/${id}/versions/${r.id}/download`).catch(notify.error)} />
+                  {manage && <Button size="small" icon={<EditOutlined />} title={t('templateEditor.openVersion')} onClick={() => navigate(`/admin/templates/${id}/editor?versionId=${r.id}`)} />}
                   {manage && !r.isActive && <Button size="small" onClick={() => activate.mutate(r.id)}>{t('templates.activate')}</Button>}
                 </Space> },
               ]} />

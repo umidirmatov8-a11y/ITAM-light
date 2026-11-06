@@ -29,6 +29,11 @@ public sealed class EmployeesController : ApiControllerBase
     [HttpPost, HasPermission(Permissions.EmployeesCreate)]
     public Task<EmployeeDto> Create([FromBody] EmployeeInput input) => _service.CreateAsync(input, Ct);
 
+    /// <summary>Creates an employee and issues equipment to them with an issue act (equipment is validated first).</summary>
+    [HttpPost("with-assets"), HasPermission(Permissions.EmployeesCreate)]
+    public Task<EmployeeWithAssetsResult> CreateWithAssets([FromBody] EmployeeWithAssetsRequest req, [FromServices] EmployeeHiringService hiring)
+        => hiring.CreateAsync(req, Ct);
+
     [HttpPut("{id:guid}"), HasPermission(Permissions.EmployeesEdit)]
     public Task<EmployeeDto> Update(Guid id, [FromBody] EmployeeInput input) => _service.UpdateAsync(id, input, Ct);
 

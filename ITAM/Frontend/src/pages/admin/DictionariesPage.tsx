@@ -23,18 +23,19 @@ const CF_ENTITY: Record<string, 'Location' | 'Department' | 'Software'> = { loca
 
 export const useDefinitions = () => useQuery<Definition[]>({ queryKey: ['lookup-definitions'], queryFn: () => get('/lookups'), staleTime: 10 * 60_000 });
 
-function FieldInput({ field, lookupKey }: { field: FieldDef; lookupKey: string }) {
+/** Form control of a dictionary field. Form.Item injects value/onChange: they must reach the actual input. */
+function FieldInput({ field, lookupKey, ...control }: { field: FieldDef; lookupKey: string; value?: any; onChange?: (v: any) => void; checked?: boolean }) {
   const { t } = useTranslation();
-  if (field.type === 'enum') return <Select allowClear={field.nullable} options={field.enumValues!.map((v) => ({ value: v, label: t(`dict.enum.${field.name}.${v}`, { defaultValue: t(`enums.${field.name}.${v}`, { defaultValue: v }) }) }))} />;
-  if (field.type === 'bool') return <Switch />;
-  if (field.type === 'number') return <InputNumber style={{ width: '100%' }} />;
+  if (field.type === 'enum') return <Select {...control} allowClear={field.nullable} placeholder={t('common.select')} options={field.enumValues!.map((v) => ({ value: v, label: t(`dict.enum.${field.name}.${v}`, { defaultValue: t(`enums.${field.name}.${v}`, { defaultValue: v }) }) }))} />;
+  if (field.type === 'bool') return <Switch checked={control.checked} onChange={control.onChange} />;
+  if (field.type === 'number') return <InputNumber {...control} style={{ width: '100%' }} />;
   if (field.type === 'ref') {
-    if (field.name === 'headEmployeeId') return <EmployeeSelect />;
+    if (field.name === 'headEmployeeId') return <EmployeeSelect {...control} />;
     const target = field.name === 'parentId' ? lookupKey : REF_LOOKUPS[field.name];
-    return target ? <LookupSelect lookup={target} /> : <Input />;
+    return target ? <LookupSelect {...control} lookup={target} /> : <Input {...control} />;
   }
-  if (field.name === 'color') return <ColorPickerInput />;
-  return <Input />;
+  if (field.name === 'color') return <ColorPickerInput {...control} />;
+  return <Input {...control} />;
 }
 
 function ColorPickerInput({ value, onChange }: { value?: string; onChange?: (v: string) => void }) {

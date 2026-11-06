@@ -1748,6 +1748,9 @@ namespace ITAM.Infrastructure.Persistence.Migrations
                     b.Property<string>("CreatedByName")
                         .HasColumnType("text");
 
+                    b.Property<string>("EditorModel")
+                        .HasColumnType("text");
+
                     b.Property<string>("FileHash")
                         .IsRequired()
                         .HasMaxLength(128)
