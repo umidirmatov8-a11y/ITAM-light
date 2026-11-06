@@ -36,6 +36,10 @@ public sealed partial class DocxTemplateRenderer : IDocumentRenderer
         return ms.ToArray();
     }
 
+    public byte[] BuildTemplate(Application.Documents.TemplateModel model) => TemplateModelDocx.Build(model);
+
+    public Application.Documents.TemplateModel ImportTemplate(byte[] docx) => TemplateModelDocx.Import(docx);
+
     public IReadOnlyList<string> ExtractPlaceholders(byte[] template)
     {
         using var ms = new MemoryStream(template);

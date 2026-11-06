@@ -82,7 +82,14 @@ public static class Placeholders
         new("Return.Date", "Дата возврата"),
         new("Transfer.Date", "Дата перемещения"),
         new("Responsible.FullName", "Ответственное лицо"),
+        new("Responsible.ShortName", "Ответственный: фамилия и инициалы"),
         new("Responsible.Position", "Должность ответственного"),
+    };
+
+    public static readonly PlaceholderInfo[] Receipt =
+    {
+        new("Receipt.Date", "Дата прихода"), new("Receipt.Warehouse", "Склад"), new("Receipt.Supplier", "Поставщик"),
+        new("Receipt.Contract", "Договор"), new("Receipt.Invoice", "Счёт / накладная"), new("Receipt.PurchaseDate", "Дата покупки"),
     };
 
     public static readonly PlaceholderInfo[] Repair =
@@ -110,6 +117,7 @@ public static class Placeholders
     {
         DocumentType.EquipmentIssue or DocumentType.EquipmentReturn or DocumentType.EquipmentTransfer or DocumentType.WriteOffAct
             => Common.Concat(Employee).Concat(Asset).Concat(Operation).Concat(Items).ToList(),
+        DocumentType.ReceiptAct => Common.Concat(Asset).Concat(Operation).Concat(Receipt).Concat(Items).ToList(),
         DocumentType.EquipmentRepair => Common.Concat(Employee).Concat(Asset).Concat(Repair).ToList(),
         DocumentType.EmployeeOnboarding or DocumentType.EmployeeOffboarding => Common.Concat(Employee).Concat(Checklist).Concat(Items).ToList(),
         DocumentType.InventoryAct => Common.Concat(Inventory).Concat(Items).ToList(),

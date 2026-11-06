@@ -38,8 +38,8 @@ public sealed class ReportService
         new ReportDefinition("inventory", "Инвентарная ведомость", "Все активы с текущим состоянием", Permissions.AssetsView, new[] { "regionId", "departmentId", "assetTypeId", "statusKind" }),
         new ReportDefinition("assets-at-date", "Состояние активов на дату", "Исторический срез: статус и владелец каждого актива на выбранную дату", Permissions.AssetsView, new[] { "asOf", "regionId", "assetTypeId" }),
         new ReportDefinition("employee-equipment", "Оборудование сотрудников", "Кому что выдано", Permissions.AssetsView, new[] { "regionId", "departmentId", "employeeId" }),
-        new ReportDefinition("regional-assets", "Активы по регионам", "Количество и стоимость активов по регионам и статусам", Permissions.AssetsView, Array.Empty<string>()),
-        new ReportDefinition("department-assets", "Активы по подразделениям", "Количество и стоимость активов по подразделениям", Permissions.AssetsView, new[] { "regionId" }),
+        new ReportDefinition("regional-assets", "Активы по регионам", "По каждому региону: типы оборудования (ноутбуки, мониторы…) и их количество по статусам — выдано, на складе, в ремонте и т.д., с итогами", Permissions.AssetsView, new[] { "regionId", "assetTypeId", "statusKind" }),
+        new ReportDefinition("department-assets", "Активы по подразделениям", "По каждому подразделению: типы оборудования и их количество по статусам, с итогами", Permissions.AssetsView, new[] { "regionId", "departmentId", "assetTypeId", "statusKind" }),
         new ReportDefinition("movements", "Движение активов", "Выдачи, возвраты, перемещения и смены статусов за период", Permissions.AssetsView, new[] { "from", "to", "regionId", "employeeId" }),
         new ReportDefinition("repairs", "Ремонты", "Ремонты за период со стоимостью", Permissions.AssetsView, new[] { "from", "to", "regionId" }),
         new ReportDefinition("licenses", "Лицензии", "Места, использование, сроки действия", Permissions.LicensesView, new[] { "regionId" }),
@@ -142,21 +142,15 @@ public sealed class ReportService
             }
             case "regional-assets":
             {
-                var data = await (await Assets()).GroupBy(a => new { Region = a.Region!.Name, a.Status!.Kind })
-                    .Select(g => new { g.Key.Region, g.Key.Kind, Count = g.Count(), Sum = g.Sum(a => a.PurchasePrice ?? 0) }).ToListAsync(ct);
-                var kinds = Enum.GetValues<AssetStateKind>();
-                var rows = data.GroupBy(d => d.Region).OrderBy(g => g.Key).Select(g => (IReadOnlyList<object?>)new object?[] { g.Key }
-                    .Concat(kinds.Select(k => (object?)g.Where(x => x.Kind == k).Sum(x => x.Count)))
-                    .Append(g.Sum(x => x.Count)).Append(finance ? g.Sum(x => x.Sum) : null).ToArray()).ToList();
-                return new TabularData(def.Title, new[] { "Регион" }.Concat(kinds.Select(KindName)).Append("Всего").Append("Стоимость").ToList(), rows);
+                var data = await (await Assets()).GroupBy(a => new { Group = a.Region!.Name, Type = a.AssetType!.Name, a.Status!.Kind })
+                    .Select(g => new MatrixCell(g.Key.Group, g.Key.Type, g.Key.Kind, g.Count(), g.Sum(a => a.PurchasePrice ?? 0))).ToListAsync(ct);
+                return TypeStatusMatrix(def.Title, "Регион", data, finance);
             }
             case "department-assets":
             {
-                var data = await (await Assets()).GroupBy(a => a.Department != null ? a.Department.Name : "— без подразделения —")
-                    .Select(g => new { g.Key, Count = g.Count(), Assigned = g.Count(a => a.EmployeeId != null), Sum = g.Sum(a => a.PurchasePrice ?? 0) })
-                    .OrderBy(g => g.Key).ToListAsync(ct);
-                return new TabularData(def.Title, new[] { "Подразделение", "Всего", "Выдано", "Стоимость" },
-                    data.Select(d => (IReadOnlyList<object?>)new object?[] { d.Key, d.Count, d.Assigned, finance ? d.Sum : null }).ToList());
+                var data = await (await Assets()).GroupBy(a => new { Group = a.Department != null ? a.Department.Name : NoDepartment, Type = a.AssetType!.Name, a.Status!.Kind })
+                    .Select(g => new MatrixCell(g.Key.Group, g.Key.Type, g.Key.Kind, g.Count(), g.Sum(a => a.PurchasePrice ?? 0))).ToListAsync(ct);
+                return TypeStatusMatrix(def.Title, "Подразделение", data, finance);
             }
             case "movements":
             {
@@ -281,6 +275,44 @@ public sealed class ReportService
             }
         }
         throw new NotFoundException("Отчёт", key);
+    }
+
+    private const string NoDepartment = "— без подразделения —";
+
+    private sealed record MatrixCell(string Group, string Type, AssetStateKind Kind, int Count, decimal Sum);
+
+    /// <summary>
+    /// Group (region/department) × asset type: one row per type inside each group, one column per status that occurs,
+    /// a subtotal row per group and a grand total ("выдано 12 ноутбуков, в ремонте 2 монитора…").
+    /// </summary>
+    private static TabularData TypeStatusMatrix(string title, string groupColumn, IReadOnlyList<MatrixCell> data, bool finance)
+    {
+        var kinds = Enum.GetValues<AssetStateKind>().Where(k => data.Any(d => d.Kind == k)).ToList();
+        if (kinds.Count == 0) kinds = new List<AssetStateKind> { AssetStateKind.Assigned, AssetStateKind.InStock, AssetStateKind.InRepair };
+        var columns = new List<string> { groupColumn, "Тип оборудования" };
+        columns.AddRange(kinds.Select(KindName));
+        columns.Add("Всего");
+        if (finance) columns.Add("Стоимость");
+
+        IReadOnlyList<object?> Row(string group, string type, IEnumerable<MatrixCell> cells)
+        {
+            var list = cells.ToList();
+            var row = new List<object?> { group, type };
+            row.AddRange(kinds.Select(k => (object?)list.Where(c => c.Kind == k).Sum(c => c.Count)));
+            row.Add(list.Sum(c => c.Count));
+            if (finance) row.Add(list.Sum(c => c.Sum));
+            return row;
+        }
+
+        var rows = new List<IReadOnlyList<object?>>();
+        foreach (var group in data.GroupBy(d => d.Group).OrderBy(g => g.Key == NoDepartment).ThenBy(g => g.Key, StringComparer.CurrentCulture))
+        {
+            foreach (var type in group.GroupBy(d => d.Type).OrderBy(g => g.Key, StringComparer.CurrentCulture))
+                rows.Add(Row(group.Key, type.Key, type));
+            rows.Add(Row(group.Key, "Итого", group));
+        }
+        if (rows.Count > 0) rows.Add(Row("ИТОГО", string.Empty, data));
+        return new TabularData(title, columns, rows);
     }
 
     public static string KindName(AssetStateKind k) => k switch

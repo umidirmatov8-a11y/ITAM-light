@@ -49,6 +49,10 @@ public interface IDocumentRenderer
     IReadOnlyList<string> ExtractPlaceholders(byte[] template);
     /// <summary>Plain text of a DOCX (used by the fallback PDF renderer and previews).</summary>
     DocumentContent ReadContent(byte[] docx);
+    /// <summary>Builds a DOCX template from the web editor's model.</summary>
+    byte[] BuildTemplate(Documents.TemplateModel model);
+    /// <summary>Converts a DOCX template into the editor's model (text, paragraphs, tables, signatures).</summary>
+    Documents.TemplateModel ImportTemplate(byte[] docx);
 }
 
 public sealed record DocumentContent(IReadOnlyList<DocumentBlock> Blocks);

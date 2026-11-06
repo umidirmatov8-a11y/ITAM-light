@@ -120,6 +120,34 @@ public sealed class TemplatesController : ApiControllerBase
         return File(stream, file.ContentType, $"{dto.Name} v{v.VersionNumber}.docx");
     }
 
+    /// <summary>Content of a version for the web editor (default: the active version).</summary>
+    [HttpGet("{id:guid}/editor"), HasPermission(Permissions.DocumentsView)]
+    public Task<TemplateEditorDto> Editor(Guid id, [FromQuery] Guid? versionId) => _service.GetEditorAsync(id, versionId, Ct);
+
+    /// <summary>Saves the editor content as a new template version.</summary>
+    [HttpPost("{id:guid}/editor"), HasPermission(Permissions.DocumentTemplatesManage)]
+    public Task<TemplateDto> SaveEditor(Guid id, [FromBody] TemplateEditorSaveRequest req) => _service.SaveFromEditorAsync(id, req, Ct);
+
+    /// <summary>Creates a template from the editor content.</summary>
+    [HttpPost("editor"), HasPermission(Permissions.DocumentTemplatesManage)]
+    public Task<TemplateDto> CreateFromEditor([FromBody] TemplateEditorCreateRequest req) => _service.CreateFromEditorAsync(req, Ct);
+
+    /// <summary>Preview of the editor content (PDF, or DOCX when PDF generation is off).</summary>
+    [HttpPost("editor/preview"), HasPermission(Permissions.DocumentTemplatesManage)]
+    public async Task<IActionResult> PreviewEditor([FromBody] TemplatePreviewRequest req)
+    {
+        var (content, type, name) = await _service.PreviewAsync(req.Model, Ct);
+        return File(content, type, name);
+    }
+
+    /// <summary>Deletes a template that has not been used to generate documents (otherwise 409: archive it instead).</summary>
+    [HttpDelete("{id:guid}"), HasPermission(Permissions.DocumentTemplatesManage)]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _service.DeleteAsync(id, Ct);
+        return Ok(new { success = true });
+    }
+
     [HttpPost("{id:guid}/archive"), HasPermission(Permissions.DocumentTemplatesManage)]
     public async Task<IActionResult> Archive(Guid id, [FromQuery] bool archived = true)
     {

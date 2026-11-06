@@ -2907,3 +2907,21 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261106202548_TemplateEditor') THEN
+    ALTER TABLE "DocumentTemplateVersions" ADD "EditorModel" text;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261106202548_TemplateEditor') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261106202548_TemplateEditor', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+

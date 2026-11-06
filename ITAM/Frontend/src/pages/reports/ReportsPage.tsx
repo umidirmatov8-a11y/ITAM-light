@@ -69,6 +69,7 @@ export default function ReportsPage() {
                   <Typography.Text strong>{data.data.title}</Typography.Text> <span className="itam-muted">({t('common.total', { count: data.data.rows.length })}{data.data.rows.length >= 1000 ? `, ${t('reports.previewLimit')}` : ''})</span>
                   <Table size="small" style={{ marginTop: 8 }} loading={data.isFetching} rowKey={(_, i) => String(i)} scroll={{ x: 'max-content' }} pagination={{ pageSize: 50 }}
                     dataSource={data.data.rows.map((r) => ({ ...r }))}
+                    rowClassName={(r: Record<number, unknown>) => (Object.values(r).some((v) => v === 'Итого' || v === 'ИТОГО') ? 'itam-total-row' : '')}
                     columns={data.data.columns.map((c, i) => ({ title: c, key: String(i), render: (_: unknown, row: Record<number, unknown>) => fmtCell(row[i]) }))} />
                 </>
               )}

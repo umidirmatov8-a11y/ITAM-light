@@ -1,19 +1,31 @@
-import { Alert, Checkbox, Col, DatePicker, Drawer, Form, Input, Row, Button, Space, Divider } from 'antd';
+import { Alert, App, Checkbox, Col, DatePicker, Drawer, Form, Input, Row, Button, Space, Divider } from 'antd';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { post, put } from '@/api/client';
 import { useApiMutation } from '@/api/hooks';
-import type { Employee } from '@/api/types';
+import { useAuth } from '@/app/auth';
+import { AssetPicker } from '@/components/AssetPicker';
+import { DocumentOptions } from '@/components/OperationCommon';
+import { useNavigate } from 'react-router-dom';
+import type { Employee, OperationResult } from '@/api/types';
 import { CustomFieldsFormItems } from '@/components/CustomFields';
 import { EmployeeSelect, LookupSelect } from '@/components/Selects';
 import { dayjs, toApiDate, toApiDateTime } from '@/utils/format';
 
 export function EmployeeForm({ open, employee, onClose, onSaved }: { open: boolean; employee?: Employee; onClose: () => void; onSaved?: (e: Employee) => void }) {
   const { t } = useTranslation();
+  const { can } = useAuth();
+  const { modal } = App.useApp();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
+  const withAssets = Form.useWatch('issueAssets', form) as boolean | undefined;
   const regionId = Form.useWatch('regionId', form);
   const watched = Form.useWatch([], form);
   const orgChanged = !!employee && !!watched && (['departmentId', 'positionId', 'regionId', 'locationId', 'managerId'] as const).some((k) => (watched[k] ?? null) !== ((employee as any)[k] ?? null));
+
+  useEffect(() => {
+    if (withAssets && form.getFieldValue('generateDocument') === undefined) form.setFieldValue('generateDocument', true);
+  }, [withAssets, form]);
 
   useEffect(() => {
     if (!open) return;
@@ -23,10 +35,22 @@ export function EmployeeForm({ open, employee, onClose, onSaved }: { open: boole
 
   const save = useApiMutation(
     (v: any) => {
-      const body = { ...v, hireDate: toApiDate(v.hireDate), orgChangeEffectiveAt: toApiDateTime(v.orgChangeEffectiveAt), version: employee?.version };
-      return employee ? put<Employee>(`/employees/${employee.id}`, body) : post<Employee>('/employees', body);
+      const { issueAssets, assetIds, accessories, issueComment, generateDocument, templateId, ...rest } = v;
+      const body = { ...rest, hireDate: toApiDate(v.hireDate), orgChangeEffectiveAt: toApiDateTime(v.orgChangeEffectiveAt), version: employee?.version };
+      if (employee) return put<Employee>(`/employees/${employee.id}`, body);
+      if (!issueAssets || !assetIds?.length) return post<Employee>('/employees', body);
+      return post<{ employee: Employee; issue?: OperationResult; issueError?: string }>('/employees/with-assets', {
+        employee: body, assetIds, accessories, comment: issueComment, generateDocument: !!generateDocument, templateId,
+      }).then((r) => {
+        if (r.issueError) modal.warning({ title: t('employees.createdIssueFailed'), content: r.issueError, okText: t('employees.issueNow'), onOk: () => navigate(`/operations/issue?employeeId=${r.employee.id}`) });
+        else if (r.issue) modal.success({
+          title: t('employees.createdWithAssets', { count: r.issue.assetCount, number: r.issue.number }),
+          okText: t('operations.openAct'), onOk: () => navigate(`/operations/${r.issue!.batchId}`),
+        });
+        return r.employee;
+      });
     },
-    { invalidate: [['employees'], ['employee', employee?.id]], onSuccess: (e) => { onSaved?.(e); onClose(); } },
+    { invalidate: [['employees'], ['employee', employee?.id], ['assets']], onSuccess: (e) => { onSaved?.(e); onClose(); } },
   );
 
   return (
@@ -65,6 +89,22 @@ export function EmployeeForm({ open, employee, onClose, onSaved }: { open: boole
         <Form.Item name="comment" label={t('common.comment')}><Input.TextArea rows={2} /></Form.Item>
         <CustomFieldsFormItems entity="Employee" />
         {!employee && <Form.Item name="startOnboarding" valuePropName="checked" initialValue><Checkbox>{t('employees.startOnboarding')}</Checkbox></Form.Item>}
+        {!employee && can('assets.assign') && (
+          <>
+            <Divider orientation="left" plain>{t('employees.equipment')}</Divider>
+            <Form.Item name="issueAssets" valuePropName="checked" extra={t('employees.issueAssetsHint')}><Checkbox>{t('employees.issueAssets')}</Checkbox></Form.Item>
+            {withAssets && (
+              <>
+                <Form.Item name="assetIds" label={t('operations.assets')} rules={[{ required: true, type: 'array', min: 1, message: t('operations.noAssets') }]}>
+                  <AssetPicker filters={{ assigned: false }} />
+                </Form.Item>
+                <Form.Item name="accessories" label={t('operations.accessories')}><Input placeholder={t('operations.accessoriesPlaceholder')} /></Form.Item>
+                <Form.Item name="issueComment" label={t('employees.issueComment')}><Input /></Form.Item>
+                <DocumentOptions type="EquipmentIssue" />
+              </>
+            )}
+          </>
+        )}
       </Form>
     </Drawer>
   );

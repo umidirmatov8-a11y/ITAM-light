@@ -24,6 +24,8 @@ public class DocumentTemplateVersion : Entity, ITenantEntity
     public string? ChangeNote { get; set; }
     /// <summary>jsonb array of placeholders detected in the DOCX.</summary>
     public string? Placeholders { get; set; }
+    /// <summary>jsonb structure of a version built in the web template editor (null for uploaded DOCX).</summary>
+    public string? EditorModel { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid? CreatedById { get; set; }

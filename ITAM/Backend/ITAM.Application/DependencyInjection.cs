@@ -43,6 +43,7 @@ public static class DependencyInjection
 
         services.AddScoped<LookupService>();
         services.AddScoped<EmployeeService>();
+        services.AddScoped<Employees.EmployeeHiringService>();
         services.AddScoped<ChecklistService>();
         services.AddScoped<AssetService>();
         services.AddScoped<AssetTemporalStore>();

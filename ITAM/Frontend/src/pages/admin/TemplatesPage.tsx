@@ -1,10 +1,10 @@
-import { Button, Card, Checkbox, Form, Input, Modal, Table, Tag, Upload } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Popconfirm, Table, Tag, Upload } from 'antd';
+import { DeleteOutlined, EditOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, get } from '@/api/client';
+import { api, del, get } from '@/api/client';
 import { useApiMutation } from '@/api/hooks';
 import { useAuth } from '@/app/auth';
 import { PageHeader } from '@/components/PageHeader';
@@ -21,6 +21,8 @@ export default function TemplatesPage() {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File>();
   const [form] = Form.useForm();
+  const manage = can('documents.templates.manage');
+  const remove = useApiMutation((id: string) => del(`/templates/${id}`), { invalidate: [['templates-admin'], ['templates']] });
   const q = useQuery<Tpl[]>({ queryKey: ['templates-admin'], queryFn: () => get('/templates', { includeArchived: true }) });
   const create = useApiMutation(async (v: any) => {
     const fd = new FormData();
@@ -31,7 +33,12 @@ export default function TemplatesPage() {
   return (
     <>
       <PageHeader title={t('menu.templates')} crumbs={[{ title: t('menu.admin') }, { title: t('menu.templates') }]}
-        extra={can('documents.templates.manage') && <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setFile(undefined); setOpen(true); }}>{t('templates.new')}</Button>} />
+        extra={manage && (
+          <Dropdown menu={{ items: [
+            { key: 'editor', icon: <EditOutlined />, label: t('templateEditor.createInEditor'), onClick: () => navigate('/admin/templates/new/editor') },
+            { key: 'upload', icon: <UploadOutlined />, label: t('templateEditor.uploadDocx'), onClick: () => { form.resetFields(); setFile(undefined); setOpen(true); } },
+          ] }}><Button type="primary" icon={<PlusOutlined />}>{t('templates.new')}</Button></Dropdown>
+        )} />
       <Card>
         <Table<Tpl> rowKey="id" size="small" loading={q.isLoading} dataSource={q.data} pagination={false} rowClassName={(r) => (r.isArchived ? 'itam-cancelled' : '')}
           columns={[
@@ -42,6 +49,17 @@ export default function TemplatesPage() {
             { title: t('templates.default'), dataIndex: 'isDefault', render: (v) => v && <Tag color="blue">{t('templates.default')}</Tag> },
             { title: t('common.updatedAt'), dataIndex: 'updatedAt', render: fmtDateTime },
             { title: t('common.description'), dataIndex: 'description' },
+            ...(manage ? [{
+              key: 'actions', width: 96, render: (_: unknown, r: Tpl) => (
+                <span style={{ whiteSpace: 'nowrap' }}>
+                  <Button size="small" type="text" icon={<EditOutlined />} title={t('templateEditor.open')} onClick={() => navigate(`/admin/templates/${r.id}/editor`)} />
+                  <Popconfirm title={t('templates.deleteConfirm', { name: r.name })} description={t('templates.deleteHint')} okText={t('common.delete')}
+                    okButtonProps={{ danger: true }} onConfirm={() => remove.mutate(r.id)}>
+                    <Button size="small" type="text" danger icon={<DeleteOutlined />} title={t('common.delete')} />
+                  </Popconfirm>
+                </span>
+              ),
+            }] : []),
           ]} />
       </Card>
       <Modal open={open} title={t('templates.new')} onCancel={() => setOpen(false)} onOk={() => form.submit()} confirmLoading={create.isPending} okButtonProps={{ disabled: !file }}>

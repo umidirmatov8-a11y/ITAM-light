@@ -23,3 +23,20 @@ html[data-theme='dark'] body { background: #0b1220; }
 .itam-cancelled { text-decoration: line-through; opacity: .6; }
 .itam-public { max-width: 520px; margin: 40px auto; padding: 0 16px; }
 @media print { .ant-layout-sider, .itam-header, .itam-no-print { display: none !important; } .itam-content { padding: 0; } }
+
+/* Template editor */
+.itam-insert { display: flex; justify-content: center; margin: 4px 0; opacity: .55; transition: opacity .15s; }
+.itam-insert:hover { opacity: 1; }
+.itam-block { margin-bottom: 4px; }
+.itam-edit-table { border-collapse: collapse; width: 100%; }
+.itam-edit-table td, .itam-edit-table th { padding: 2px; vertical-align: top; }
+.itam-ph-item { padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+.itam-ph-item:hover { background: rgba(59,130,246,.12); }
+.itam-paper { background: #fff; color: #111; padding: 28px 30px; border: 1px solid #d9d9d9; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,.08); min-height: 400px; }
+.itam-paper mark.itam-ph { background: #e6f0ff; color: #1d4ed8; padding: 0 2px; border-radius: 3px; }
+.itam-paper-table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; table-layout: fixed; font-family: "Times New Roman", Times, serif; }
+.itam-paper-table td { border: 1px solid #555; padding: 3px 5px; vertical-align: top; word-break: break-word; }
+.itam-paper-table-plain td { border: none; }
+.itam-row-repeat td { background: repeating-linear-gradient(45deg, rgba(59,130,246,.06), rgba(59,130,246,.06) 6px, transparent 6px, transparent 12px); }
+.itam-pagebreak { border-top: 1px dashed #999; color: #999; font-size: 11px; text-align: center; margin: 12px 0; }
+.itam-total-row td { font-weight: 600; background: rgba(127,127,127,.08); }

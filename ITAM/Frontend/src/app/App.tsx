@@ -49,6 +49,7 @@ const DictionariesPage = lazy(() => import('@/pages/admin/DictionariesPage'));
 const CustomFieldsPage = lazy(() => import('@/pages/admin/CustomFieldsPage'));
 const TemplatesPage = lazy(() => import('@/pages/admin/TemplatesPage'));
 const TemplateCard = lazy(() => import('@/pages/admin/TemplateCard'));
+const TemplateEditorPage = lazy(() => import('@/pages/admin/TemplateEditorPage'));
 const ChecklistTemplatesPage = lazy(() => import('@/pages/admin/ChecklistTemplatesPage'));
 const UsersPage = lazy(() => import('@/pages/admin/UsersPage'));
 const RolesPage = lazy(() => import('@/pages/admin/RolesPage'));
@@ -155,6 +156,7 @@ export default function App() {
             <Route path="admin/custom-fields" element={<Guard perm="customfields.manage"><CustomFieldsPage /></Guard>} />
             <Route path="admin/templates" element={<Guard perm="documents.view"><TemplatesPage /></Guard>} />
             <Route path="admin/templates/:id" element={<Guard perm="documents.view"><TemplateCard /></Guard>} />
+            <Route path="admin/templates/:id/editor" element={<Guard perm="documents.templates.manage"><TemplateEditorPage /></Guard>} />
             <Route path="admin/checklist-templates" element={<Guard perm="checklists.templates.manage"><ChecklistTemplatesPage /></Guard>} />
             <Route path="admin/users" element={<Guard perm="users.manage"><UsersPage /></Guard>} />
             <Route path="admin/roles" element={<Guard perm="roles.manage"><RolesPage /></Guard>} />
