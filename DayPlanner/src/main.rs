@@ -7,6 +7,7 @@ mod edge;
 mod model;
 mod platform;
 mod report;
+mod tray;
 mod ui;
 
 use eframe::egui;
@@ -24,21 +25,50 @@ pub struct Shared {
     pub pinned: AtomicBool,
     /// Панель сейчас показана (хотя бы частично).
     pub open: AtomicBool,
+    /// Просьба показать панель без наведения на край (запуск программы).
+    pub show_request: AtomicBool,
 }
 
-fn main() -> eframe::Result {
+fn main() {
+    // У программы нет консоли: без этого паника выглядела бы как «ничего не произошло».
+    std::panic::set_hook(Box::new(|info| platform::report_failure(&info.to_string())));
+
     if !platform::single_instance() {
-        return Ok(());
+        return; // уже запущена — работающий экземпляр покажет панель
     }
     let store = Arc::new(Mutex::new(model::Store::load(
         &platform::data_dir().join("tasks.json"),
     )));
+    // При входе в Windows (ключ автозапуска) панель не показываем; при запуске
+    // вручную она выезжает сама — сразу видно, что программа работает.
+    let autostart = std::env::args().any(|a| a == "--autostart");
     let shared = Arc::new(Shared {
         pinned: AtomicBool::new(false),
         // Вне Windows панель — обычное окно, оно всегда «открыто».
         open: AtomicBool::new(!cfg!(windows)),
+        show_request: AtomicBool::new(!autostart),
     });
 
+    #[cfg_attr(not(windows), allow(unused_mut))]
+    let mut result = run(None, &store, &shared);
+    // Запасной вариант для машин, где DirectX-отрисовка не поднялась.
+    #[cfg(windows)]
+    if let Err(first) = &result {
+        let first = first.to_string();
+        result = run(Some(eframe::Renderer::Glow), &store, &shared)
+            .map_err(|second| eframe::Error::AppCreation(format!("{first}; {second}").into()));
+    }
+    if let Err(e) = result {
+        platform::report_failure(&format!("Не удалось создать окно: {e}"));
+        std::process::exit(1);
+    }
+}
+
+fn run(
+    renderer: Option<eframe::Renderer>,
+    store: &Arc<Mutex<model::Store>>,
+    shared: &Arc<Shared>,
+) -> eframe::Result {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("DayPlanner")
         .with_inner_size(PANEL_SIZE)
@@ -50,10 +80,14 @@ fn main() -> eframe::Result {
             .with_taskbar(false)
             .with_position([0.0, -4000.0]); // до первого кадра держим за экраном
     }
-    let options = eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
         viewport,
         ..Default::default()
     };
+    if let Some(renderer) = renderer {
+        options.renderer = renderer;
+    }
+    let (store, shared) = (store.clone(), shared.clone());
 
     eframe::run_native(
         "DayPlanner",
@@ -61,9 +95,11 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             ui::apply_style(&cc.egui_ctx);
             let hwnd = window_handle(cc);
+            // Значок в трее; без него программа всё равно работает.
+            let tray = tray::create().ok();
             let (ctx, st, sh) = (cc.egui_ctx.clone(), store.clone(), shared.clone());
             std::thread::spawn(move || background(ctx, st, sh, hwnd));
-            Ok(Box::new(ui::PlannerApp::new(store, shared)))
+            Ok(Box::new(ui::PlannerApp::new(store, shared, tray)))
         }),
     )
 }
@@ -94,6 +130,7 @@ fn background(
     let mut last_pos = (i32::MIN, i32::MIN);
     let mut prev_foreground = 0isize;
     let mut was_open = false;
+    let mut quit_at: Option<Instant> = None;
     if hwnd != 0 {
         platform::style_panel(hwnd);
     }
@@ -112,6 +149,29 @@ fn background(
                 let _ = s.save();
                 ctx.request_repaint();
             }
+        }
+
+        // Значок в трее, повторный запуск программы, первый показ после старта.
+        let mut show = shared.show_request.swap(false, Ordering::Relaxed);
+        show |= platform::show_requested();
+        while let Some(action) = tray::poll() {
+            match action {
+                tray::Action::Show => show = true,
+                tray::Action::Quit if quit_at.is_none() => {
+                    quit_at = Some(now);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    ctx.request_repaint();
+                }
+                tray::Action::Quit => {}
+            }
+        }
+        // Окно обязано закрыться само (тогда значок убирается из трея аккуратно);
+        // если этого не случилось — завершаем процесс принудительно. Задачи уже на диске.
+        if quit_at.is_some_and(|t| now.duration_since(t) > Duration::from_millis(1500)) {
+            std::process::exit(0);
+        }
+        if show && hwnd != 0 {
+            trigger.force_open(started.elapsed().as_millis() as u64);
         }
 
         let mut moving = false;

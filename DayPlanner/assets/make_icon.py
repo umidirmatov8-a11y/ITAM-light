@@ -33,3 +33,7 @@ if __name__ == "__main__":
     out = Path(__file__).with_name("icon.ico")
     draw().save(out, sizes=[(n, n) for n in (16, 20, 24, 32, 40, 48, 64, 128, 256)])
     print(out, out.stat().st_size, "bytes")
+    # Значок для области уведомлений: «сырые» RGBA 32x32, вшиваются в программу.
+    tray = Path(__file__).with_name("tray_rgba.bin")
+    tray.write_bytes(draw().resize((32, 32), Image.LANCZOS).tobytes())
+    print(tray, tray.stat().st_size, "bytes")

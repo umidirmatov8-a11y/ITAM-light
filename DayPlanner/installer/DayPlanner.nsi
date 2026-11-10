@@ -82,7 +82,8 @@ Section "DayPlanner" SecMain
 SectionEnd
 
 Section "Запускать вместе с Windows" SecAutostart
-  WriteRegStr HKCU "${RUN_KEY}" "${APP}" '"$INSTDIR\${APP}.exe"'
+  ; --autostart: при входе в Windows панель не выезжает сама, только значок в трее.
+  WriteRegStr HKCU "${RUN_KEY}" "${APP}" '"$INSTDIR\${APP}.exe" --autostart'
 SectionEnd
 
 Section /o "Ярлык на рабочем столе" SecDesktop

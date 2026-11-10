@@ -7,6 +7,8 @@ pub const DWELL_MS: u64 = 160;
 pub const LEAVE_MS: u64 = 350;
 /// Длительность выезда/скрытия.
 pub const ANIM_MS: f32 = 340.0;
+/// Сколько мс панель, открытая не от края (при запуске, из трея), ждёт курсор.
+pub const SHOW_HOLD_MS: u64 = 5000;
 /// Запас вокруг панели, в пределах которого курсор считается «на панели».
 const MARGIN: i32 = 14;
 
@@ -55,9 +57,20 @@ pub struct Trigger {
     blocked: bool,
     edge_since: Option<u64>,
     away_since: Option<u64>,
+    /// До этого момента панель не скрывается, даже если курсор далеко.
+    hold_until: u64,
 }
 
 impl Trigger {
+    /// Открывает панель без наведения на край: при запуске программы, по значку в трее,
+    /// при повторном запуске. Панель ждёт курсор `SHOW_HOLD_MS`, а дальше ведёт себя как обычно.
+    pub fn force_open(&mut self, now_ms: u64) {
+        self.open = true;
+        self.edge_since = None;
+        self.away_since = None;
+        self.hold_until = now_ms + SHOW_HOLD_MS;
+    }
+
     /// Возвращает, должна ли панель быть открыта.
     pub fn update(&mut self, i: &Input) -> bool {
         let (x, y) = i.cursor;
@@ -88,8 +101,12 @@ impl Trigger {
                 right: i.panel.right + MARGIN,
                 bottom: i.panel.bottom + MARGIN,
             };
+            let on_panel = near.contains(x, y);
+            if on_panel {
+                self.hold_until = 0; // курсор пришёл — дальше обычные правила
+            }
             // Зажатая кнопка (выделение текста, протяжка значения) панель не закрывает.
-            if near.contains(x, y) || i.lmb || i.pinned {
+            if on_panel || i.lmb || i.pinned || i.now_ms < self.hold_until {
                 self.away_since = None;
             } else {
                 let since = *self.away_since.get_or_insert(i.now_ms);
@@ -266,6 +283,25 @@ mod tests {
             i.edge_free = false;
             assert!(!t.update(&i));
         }
+    }
+
+    #[test]
+    fn forced_open_waits_for_cursor_then_closes_normally() {
+        let mut t = Trigger::default();
+        t.force_open(1000);
+        assert!(
+            t.update(&inp(1010, (100, 900), false)),
+            "курсор далеко, но панель ждёт"
+        );
+        assert!(t.update(&inp(1000 + SHOW_HOLD_MS - 1, (100, 900), false)));
+        t.update(&inp(1000 + SHOW_HOLD_MS, (100, 900), false));
+        assert!(!t.update(&inp(1000 + SHOW_HOLD_MS + LEAVE_MS, (100, 900), false)));
+
+        // Курсор зашёл на панель — ожидание снято, уход закрывает её как обычно.
+        t.force_open(20_000);
+        t.update(&inp(20_100, (900, 300), false));
+        t.update(&inp(20_200, (100, 900), false));
+        assert!(!t.update(&inp(20_200 + LEAVE_MS, (100, 900), false)));
     }
 
     #[test]
