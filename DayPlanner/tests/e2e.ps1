@@ -55,39 +55,39 @@ try {
         if ($r.T -ne 0) { throw "Panel must be open ($why), but rect is top=$($r.T) bottom=$($r.B)" }
         "OK open: $why (height=$($r.B))"
     }
-    function Move($x, $y, $ms = 1500) { [W]::SetCursorPos($x, $y) | Out-Null; Start-Sleep -Milliseconds $ms }
+    function MoveCursor($x, $y, $ms = 1500) { [W]::SetCursorPos($x, $y) | Out-Null; Start-Sleep -Milliseconds $ms }
 
-    Move 300 500
+    MoveCursor 300 500
     Assert-Hidden 'cursor away from the top edge'
 
-    Move $mid 0 60
-    Move 300 500 800
+    MoveCursor $mid 0 60
+    MoveCursor 300 500 800
     Assert-Hidden 'edge touched for a moment only'
 
-    Move $mid 0
+    MoveCursor $mid 0
     Assert-Open 'cursor rests on the top edge'
     $r = Rect
-    Move $mid ([int]($r.B / 2))
+    MoveCursor $mid ([int]($r.B / 2))
     Assert-Open 'cursor is over the panel'
-    Move 5 ($r.B + 200)
+    MoveCursor 5 ($r.B + 200)
     Assert-Hidden 'cursor left the panel'
 
     # Перетаскивание: кнопка зажата — панель не выезжает ни во время, ни сразу после.
-    Move 300 500 300
+    MoveCursor 300 500 300
     [W]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)   # LEFTDOWN
     try {
-        Move $mid 200 200
-        Move $mid 0
+        MoveCursor $mid 200 200
+        MoveCursor $mid 0
         Assert-Hidden 'dragging with the left button held down'
     } finally {
         [W]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)   # LEFTUP
     }
     Start-Sleep -Milliseconds 1500
     Assert-Hidden 'button released at the edge after a drag'
-    Move 300 500 500
-    Move $mid 0
+    MoveCursor 300 500 500
+    MoveCursor $mid 0
     Assert-Open 'edge works again after the drag is over'
-    Move 5 900
+    MoveCursor 5 900
     Assert-Hidden 'closed again'
 
     if (-not (Test-Path $report)) { throw "Report not created: $report" }
