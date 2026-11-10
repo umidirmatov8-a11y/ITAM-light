@@ -51,4 +51,5 @@ makensis /DVERSION=1.0.0 installer\DayPlanner.nsi
 | `src/report.rs` | текст отчёта и расписание (23:59, пропущенные дни) |
 | `src/platform.rs` | Win32: курсор, кнопка мыши, положение окна |
 | `src/ui.rs` | интерфейс (egui) |
+| `assets/icon.ico` | значок exe и установщика (рисуется скриптом `assets/make_icon.py`) |
 | `src/main.rs` | запуск и фоновый поток, который двигает панель и пишет отчёты |

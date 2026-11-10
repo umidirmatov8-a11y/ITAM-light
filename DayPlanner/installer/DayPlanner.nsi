@@ -15,6 +15,10 @@ Unicode true
   !define OUTFILE "..\dist\DayPlanner-Setup-${VERSION}.exe"
 !endif
 
+!ifndef ICON
+  !define ICON "..\assets\icon.ico"
+!endif
+
 !define APP "DayPlanner"
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP}"
 !define RUN_KEY "Software\Microsoft\Windows\CurrentVersion\Run"
@@ -33,6 +37,8 @@ VIAddVersionKey "FileDescription" "Установка планировщика �
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "LegalCopyright" ""
 
+!define MUI_ICON "${ICON}"
+!define MUI_UNICON "${ICON}"
 !define MUI_ABORTWARNING
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP}.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "Запустить DayPlanner"

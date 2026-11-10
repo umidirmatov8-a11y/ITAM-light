@@ -27,6 +27,22 @@ jobs:
       - name: Build (release)
         run: cargo build --release --locked
 
+      - name: EXE has an embedded icon
+        run: |
+          Add-Type @"
+          using System; using System.Runtime.InteropServices;
+          public static class Res {
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
+            [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr FindResourceW(IntPtr module, IntPtr name, IntPtr type);
+          }
+          "@
+          $exe = (Resolve-Path target\release\DayPlanner.exe).Path
+          $module = [Res]::LoadLibraryExW($exe, [IntPtr]::Zero, 2)   # LOAD_LIBRARY_AS_DATAFILE
+          if ($module -eq [IntPtr]::Zero) { throw "Cannot load $exe" }
+          # RT_GROUP_ICON = 14, значок записан под номером 1
+          if ([Res]::FindResourceW($module, [IntPtr]1, [IntPtr]14) -eq [IntPtr]::Zero) { throw "No icon resource in $exe" }
+          "Icon resource found"
+
       - name: End-to-end on Windows (top edge, drag guard, report in C:\worksheet)
         run: ./tests/e2e.ps1 -Exe target\release\DayPlanner.exe
 
