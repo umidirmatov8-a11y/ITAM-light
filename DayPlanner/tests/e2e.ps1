@@ -9,7 +9,7 @@ using System;
 using System.Runtime.InteropServices;
 public static class W {
     public struct RECT { public int L, T, R, B; }
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindowW(string cls, string title);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindowW(IntPtr cls, string title);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] public static extern int GetSystemMetrics(int i);
@@ -38,7 +38,7 @@ try {
     for ($i = 0; $i -lt 60 -and $hwnd -eq [IntPtr]::Zero; $i++) {
         Start-Sleep -Milliseconds 500
         if ($app.HasExited) { throw "DayPlanner exited with code $($app.ExitCode)" }
-        $hwnd = [W]::FindWindowW($null, 'DayPlanner')
+        $hwnd = [W]::FindWindowW([IntPtr]::Zero, 'DayPlanner')
     }
     if ($hwnd -eq [IntPtr]::Zero) { throw 'Panel window not found' }
     Start-Sleep -Seconds 2
