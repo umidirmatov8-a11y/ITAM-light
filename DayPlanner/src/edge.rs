@@ -35,8 +35,12 @@ pub struct Input {
     pub cursor: (i32, i32),
     /// Зажата ли левая кнопка мыши (перетаскивание окна, выделение и т.п.).
     pub lmb: bool,
-    /// Экран, у верхнего края которого живёт панель.
+    /// Монитор, у верхнего края которого открывается панель: пока она скрыта —
+    /// тот, где сейчас курсор; пока показана — тот, где она открылась.
     pub screen: Rect,
+    /// Над курсором нет другого монитора, то есть верх монитора — настоящий край,
+    /// в который курсор упирается, а не граница между экранами, стоящими друг над другом.
+    pub edge_free: bool,
     /// Видимая сейчас часть панели на экране.
     pub panel: Rect,
     /// Панель закреплена — не скрывать.
@@ -57,7 +61,7 @@ impl Trigger {
     /// Возвращает, должна ли панель быть открыта.
     pub fn update(&mut self, i: &Input) -> bool {
         let (x, y) = i.cursor;
-        let at_edge = y <= i.screen.top && x >= i.screen.left && x < i.screen.right;
+        let at_edge = i.edge_free && y <= i.screen.top && x >= i.screen.left && x < i.screen.right;
 
         if !self.open {
             if at_edge && i.lmb {
@@ -80,7 +84,7 @@ impl Trigger {
         } else {
             let near = Rect {
                 left: i.panel.left - MARGIN,
-                top: i.screen.top - 10_000,
+                top: i.panel.top - MARGIN,
                 right: i.panel.right + MARGIN,
                 bottom: i.panel.bottom + MARGIN,
             };
@@ -177,6 +181,7 @@ mod tests {
             cursor,
             lmb,
             screen: SCREEN,
+            edge_free: true,
             panel: PANEL,
             pinned: false,
         }
@@ -226,6 +231,41 @@ mod tests {
         t.update(&inp(0, (900, 0), false));
         t.update(&inp(50, (900, 0), true)); // нажали на заголовок развёрнутого окна
         assert!(!t.update(&inp(500, (900, 0), false)));
+    }
+
+    #[test]
+    fn opens_on_second_monitor_top_edge() {
+        // Второй монитор справа от основного и ниже его на 200 px.
+        let second = Rect {
+            left: 1920,
+            top: 200,
+            right: 3840,
+            bottom: 1280,
+        };
+        let mut t = Trigger::default();
+        let mut i = inp(0, (2500, 200), false);
+        i.screen = second;
+        assert!(!t.update(&i));
+        i.now_ms = DWELL_MS;
+        assert!(t.update(&i), "верхний край второго монитора тоже горячий");
+    }
+
+    #[test]
+    fn border_between_stacked_monitors_is_not_an_edge() {
+        // Монитор стоит под другим: его верх — проходная граница, а не край.
+        let lower = Rect {
+            left: 0,
+            top: 1080,
+            right: 1920,
+            bottom: 2160,
+        };
+        let mut t = Trigger::default();
+        for ms in (0..2000).step_by(10) {
+            let mut i = inp(ms, (900, 1080), false);
+            i.screen = lower;
+            i.edge_free = false;
+            assert!(!t.update(&i));
+        }
     }
 
     #[test]

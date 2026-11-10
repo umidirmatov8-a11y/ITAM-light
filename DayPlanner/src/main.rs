@@ -15,6 +15,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 pub const PANEL_SIZE: [f32; 2] = [760.0, 580.0];
+/// Место скрытой панели: вне любого монитора (как у свёрнутых окон Windows).
+const PARKED: (i32, i32) = (-32000, -32000);
 
 /// Состояние, общее для интерфейса и фонового потока.
 pub struct Shared {
@@ -87,7 +89,8 @@ fn background(
     let mut slide = edge::Slide::default();
     let mut last_tick = Instant::now();
     let mut last_schedule: Option<Instant> = None;
-    let mut last_size = (0, 0);
+    let mut last_clip = (0, 0, i32::MAX);
+    let mut home = platform::monitor_at(0, 0);
     let mut last_pos = (i32::MIN, i32::MIN);
     let mut prev_foreground = 0isize;
     let mut was_open = false;
@@ -114,23 +117,25 @@ fn background(
         let mut moving = false;
         if let Some(rect) = platform::window_rect(hwnd).filter(|_| hwnd != 0) {
             let (w, h) = (rect.width(), rect.height());
-            if (w, h) != last_size {
-                last_size = (w, h);
-                platform::round_bottom_corners(hwnd, w, h, 18);
+            let cursor = platform::cursor();
+            // Пока панель полностью скрыта, она «переезжает» на монитор, где курсор;
+            // показанная панель остаётся на том мониторе, где открылась.
+            if !was_open && !slide.is_moving() {
+                home = platform::monitor_at(cursor.0, cursor.1);
             }
-            let screen = platform::screen();
-            let x = screen.left + (screen.width() - w) / 2;
+            let x = home.left + (home.width() - w) / 2;
             let shown = (slide.position() * h as f32).round() as i32;
             let want_open = trigger.update(&edge::Input {
                 now_ms: started.elapsed().as_millis() as u64,
-                cursor: platform::cursor(),
+                cursor,
                 lmb: platform::lmb_down(),
-                screen,
+                screen: home,
+                edge_free: !platform::on_any_monitor(cursor.0, home.top - 1),
                 panel: edge::Rect {
                     left: x,
-                    top: screen.top,
+                    top: home.top,
                     right: x + w,
-                    bottom: screen.top + shown,
+                    bottom: home.top + shown,
                 },
                 pinned: shared.pinned.load(Ordering::Relaxed),
             });
@@ -142,16 +147,27 @@ fn background(
             }
             let p = slide.step(want_open, dt_ms);
             moving = slide.is_moving();
-            // Полностью скрытая панель уходит за край с запасом.
-            let y = if p <= 0.0 {
-                screen.top - h - 40
+            let hidden_top = ((1.0 - p) * h as f32).round() as i32;
+            // Полностью скрытая панель лежит за пределами всех мониторов.
+            let pos = if p <= 0.0 {
+                PARKED
             } else {
-                screen.top - ((1.0 - p) * h as f32).round() as i32
+                (x, home.top - hidden_top)
             };
-            if (x, y) != last_pos {
-                last_pos = (x, y);
-                platform::move_window(hwnd, x, y);
+            // При выезде сначала обрезаем, потом двигаем; при скрытии — наоборот,
+            // чтобы над краем монитора никогда не показалась лишняя полоса.
+            let clip = (w, h, hidden_top);
+            if clip != last_clip && hidden_top >= last_clip.2 {
+                platform::clip_panel(hwnd, w, h, 18, hidden_top);
             }
+            if pos != last_pos {
+                last_pos = pos;
+                platform::move_window(hwnd, pos.0, pos.1);
+            }
+            if clip != last_clip && hidden_top < last_clip.2 {
+                platform::clip_panel(hwnd, w, h, 18, hidden_top);
+            }
+            last_clip = clip;
             if !want_open && !moving && shared.open.swap(false, Ordering::Relaxed) {
                 // Возвращаем фокус окну, с которым работали до открытия панели.
                 if platform::foreground() == hwnd && prev_foreground != 0 {
