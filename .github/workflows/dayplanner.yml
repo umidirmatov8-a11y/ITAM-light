@@ -1,0 +1,92 @@
+name: DayPlanner (Windows)
+
+on:
+  push:
+    paths:
+      - 'DayPlanner/**'
+      - '.github/workflows/dayplanner.yml'
+  pull_request:
+    paths:
+      - 'DayPlanner/**'
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: DayPlanner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests
+        run: cargo test --locked
+
+      - name: Build (release)
+        run: cargo build --release --locked
+
+      - name: EXE has an embedded icon
+        run: |
+          Add-Type @"
+          using System; using System.Runtime.InteropServices;
+          public static class Res {
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
+            [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr FindResourceW(IntPtr module, IntPtr name, IntPtr type);
+          }
+          "@
+          $exe = (Resolve-Path target\release\DayPlanner.exe).Path
+          $module = [Res]::LoadLibraryExW($exe, [IntPtr]::Zero, 2)   # LOAD_LIBRARY_AS_DATAFILE
+          if ($module -eq [IntPtr]::Zero) { throw "Cannot load $exe" }
+          # RT_GROUP_ICON = 14, значок записан под номером 1
+          if ([Res]::FindResourceW($module, [IntPtr]1, [IntPtr]14) -eq [IntPtr]::Zero) { throw "No icon resource in $exe" }
+          "Icon resource found"
+
+      - name: End-to-end on Windows (top edge, drag guard, report in C:\worksheet)
+        run: ./tests/e2e.ps1 -Exe target\release\DayPlanner.exe
+
+      - name: Build installer (NSIS)
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            choco install nsis -y --no-progress
+            $env:PATH += ";${env:ProgramFiles(x86)}\NSIS"
+          }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          makensis /DVERSION=1.0.0 installer\DayPlanner.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Installer end-to-end (silent install, files, autostart, uninstall)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = (Get-ChildItem dist\DayPlanner-Setup-*.exe | Select-Object -First 1).FullName
+          $dir = Join-Path $env:RUNNER_TEMP 'Day Planner'
+          $p = Start-Process $setup -ArgumentList '/S', "/D=$dir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Setup exit code $($p.ExitCode)" }
+          foreach ($f in 'DayPlanner.exe', 'Uninstall.exe') {
+            if (-not (Test-Path (Join-Path $dir $f))) { throw "Missing after install: $f" }
+          }
+          $run = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run').DayPlanner
+          if ($run -notmatch 'DayPlanner\.exe') { throw "Autostart entry missing: $run" }
+
+          # Программа запускается и не падает; второй экземпляр сразу завершается.
+          $env:DAYPLANNER_DATA_DIR = Join-Path $env:RUNNER_TEMP 'dp-data'
+          $env:DAYPLANNER_REPORT_DIR = Join-Path $env:RUNNER_TEMP 'dp-reports'
+          $app = Start-Process (Join-Path $dir 'DayPlanner.exe') -PassThru
+          Start-Sleep -Seconds 6
+          if ($app.HasExited) { throw "DayPlanner exited with code $($app.ExitCode)" }
+          $second = Start-Process (Join-Path $dir 'DayPlanner.exe') -PassThru
+          if (-not $second.WaitForExit(10000)) { $second.Kill(); throw "Second instance did not exit" }
+
+          $p = Start-Process (Join-Path $dir 'Uninstall.exe') -ArgumentList '/S', "_?=$dir" -Wait -PassThru
+          if (Test-Path (Join-Path $dir 'DayPlanner.exe')) { throw "DayPlanner.exe not removed" }
+          if (Get-Process DayPlanner -ErrorAction SilentlyContinue) { throw "DayPlanner still running" }
+          "Install / run / uninstall OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DayPlanner-Setup
+          path: |
+            DayPlanner/dist/DayPlanner-Setup-*.exe
+            DayPlanner/target/release/DayPlanner.exe

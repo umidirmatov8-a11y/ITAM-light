@@ -14,3 +14,5 @@ This repository contains:
 * **A.R.C.** — Adaptive Responsive Computer: локальный ретрофутуристический помощник для Windows
   (Electron/React + Python): русские команды, запуск программ и игр, менеджер разрешений A/B/C, офлайн-режим,
   установщик `ARC-Setup.exe`. See [`ARC/README.md`](ARC/README.md).
+* **DayPlanner** — планировщик задач на день для Windows (Rust/egui): панель выезжает от верхнего края экрана,
+  ежедневный отчёт в `C:\worksheet`, установщик `DayPlanner-Setup.exe`. See [`DayPlanner/README.md`](DayPlanner/README.md).
