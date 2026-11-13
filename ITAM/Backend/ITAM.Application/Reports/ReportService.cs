@@ -17,6 +17,10 @@ public sealed record ReportDefinition(string Key, string Title, string Descripti
 
 public sealed class ReportParameters
 {
+    /// <summary>Columns to keep (by title, in the report's order); empty: all columns.</summary>
+    public List<string>? Columns { get; set; }
+    /// <summary>Columns to drop (by title). Applied after <see cref="Columns"/>; at least one column always stays.</summary>
+    public List<string>? ExcludeColumns { get; set; }
     public Guid? RegionId { get; set; }
     public Guid? DepartmentId { get; set; }
     public Guid? AssetTypeId { get; set; }
@@ -31,6 +35,26 @@ public sealed class ReportParameters
 
 public sealed class ReportService
 {
+    /// <summary>Keeps only the requested columns (by title). Unknown titles are ignored; nothing matched: all columns.</summary>
+    public static TabularData SelectColumns(TabularData data, IReadOnlyCollection<string>? columns, IReadOnlyCollection<string>? exclude = null)
+    {
+        if (exclude is { Count: > 0 })
+        {
+            var drop = new HashSet<string>(exclude.Select(c => c.Trim()), StringComparer.OrdinalIgnoreCase);
+            var rest = data.Columns.Where(c => !drop.Contains(c)).ToList();
+            if (rest.Count > 0) data = SelectColumns(data, rest);
+        }
+        if (columns is null || columns.Count == 0) return data;
+        var wanted = new HashSet<string>(columns.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()), StringComparer.OrdinalIgnoreCase);
+        var keep = data.Columns.Select((c, i) => (c, i)).Where(x => wanted.Contains(x.c)).Select(x => x.i).ToList();
+        if (keep.Count == 0) return data;
+        return data with
+        {
+            Columns = keep.Select(i => data.Columns[i]).ToList(),
+            Rows = data.Rows.Select(r => (IReadOnlyList<object?>)keep.Select(i => i < r.Count ? r[i] : null).ToList()).ToList(),
+        };
+    }
+
     private const int MaxRows = 100_000;
 
     public static readonly IReadOnlyList<ReportDefinition> Definitions = new[]

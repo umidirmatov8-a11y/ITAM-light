@@ -90,7 +90,7 @@ public static class Permissions
         [AssetsView] = ("Активы", "Просмотр активов"),
         [AssetsCreate] = ("Активы", "Создание активов"),
         [AssetsEdit] = ("Активы", "Редактирование активов"),
-        [AssetsDelete] = ("Активы", "Удаление (архивирование) активов"),
+        [AssetsDelete] = ("Активы", "Удаление ошибочно добавленных активов"),
         [AssetsAssign] = ("Активы", "Выдача активов"),
         [AssetsReturn] = ("Активы", "Возврат активов"),
         [AssetsTransfer] = ("Активы", "Перемещение активов"),
@@ -168,7 +168,7 @@ public static class BuiltInRoles
         {
             Permissions.EmployeesView, Permissions.EmployeesCreate, Permissions.EmployeesEdit, Permissions.OrgView,
             Permissions.AssetsView, Permissions.AssetsCreate, Permissions.AssetsEdit, Permissions.AssetsAssign, Permissions.AssetsReturn,
-            Permissions.AssetsTransfer, Permissions.AssetsRepair, Permissions.AssetsStatus, Permissions.AssetsBackdate, Permissions.AssetsBulk,
+            Permissions.AssetsTransfer, Permissions.AssetsRepair, Permissions.AssetsStatus, Permissions.AssetsBackdate, Permissions.AssetsBulk, Permissions.AssetsDelete,
             Permissions.AssetsFinanceView, Permissions.LicensesView, Permissions.LicensesManage, Permissions.SoftwareView, Permissions.SoftwareManage,
             Permissions.ChecklistsView, Permissions.ChecklistsManage, Permissions.DocumentsView, Permissions.DocumentsGenerate, Permissions.DocumentsSign,
             Permissions.FilesUpload, Permissions.InventoryView, Permissions.InventoryManage, Permissions.StockView, Permissions.StockManage,

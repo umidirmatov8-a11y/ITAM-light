@@ -1,5 +1,5 @@
-import { Button, Card, Col, DatePicker, Dropdown, Empty, InputNumber, List, Row, Space, Table, Typography } from 'antd';
-import { DownloadOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Badge, Button, Card, Checkbox, Col, DatePicker, Dropdown, Empty, InputNumber, List, Popover, Row, Space, Table, Typography } from 'antd';
+import { DownloadOutlined, PlayCircleOutlined, TableOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,15 @@ const fmtCell = (v: unknown) => {
   return String(v);
 };
 
+/** Hidden columns per report, remembered in this browser (new columns of a report stay visible). */
+const HIDDEN_KEY = 'itam.reports.hiddenColumns';
+const loadHidden = (): Record<string, string[]> => {
+  try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '{}') ?? {}; } catch { return {}; }
+};
+const saveHidden = (v: Record<string, string[]>) => {
+  try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(v)); } catch { /* storage unavailable */ }
+};
+
 export default function ReportsPage() {
   const { t } = useTranslation();
   const notify = useNotify();
@@ -30,6 +39,16 @@ export default function ReportsPage() {
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [run, setRun] = useState(0);
   const data = useQuery<Data>({ queryKey: ['report', current?.key, params, run], queryFn: () => get(`/reports/${current!.key}`, params), enabled: !!current && run > 0 });
+  const [hiddenAll, setHiddenAll] = useState<Record<string, string[]>>(loadHidden);
+  const hidden = (current && hiddenAll[current.key]) || [];
+  const setHidden = (cols: string[]) => {
+    if (!current) return;
+    const next = { ...hiddenAll, [current.key]: cols };
+    setHiddenAll(next);
+    saveHidden(next);
+  };
+  const columns = data.data?.columns ?? [];
+  const visible = columns.map((c, i) => ({ c, i })).filter((x) => !hidden.includes(x.c));
   const set = (k: string) => (v: unknown) => setParams((p) => ({ ...p, [k]: v }));
   const has = (p: string) => current?.parameters.includes(p);
   return (
@@ -49,7 +68,23 @@ export default function ReportsPage() {
           {!current ? <Card><Empty description={t('reports.choose')} /></Card> : (
             <Card title={current.title} extra={<Space>
               <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => setRun((r) => r + 1)}>{t('reports.run')}</Button>
-              <Dropdown menu={{ items: ['xlsx', 'pdf', 'csv'].map((f) => ({ key: f, label: f.toUpperCase(), onClick: () => download(`/reports/${current.key}/export`, { ...params, format: f }).catch(notify.error) })) }}>
+              <Popover trigger="click" placement="bottomRight" title={t('reports.columns')} content={columns.length === 0 ? (
+                <Typography.Text type="secondary">{t('reports.columnsRunFirst')}</Typography.Text>
+              ) : (
+                <div style={{ maxWidth: 320 }}>
+                  <Space style={{ marginBottom: 8 }}>
+                    <Button size="small" onClick={() => setHidden([])}>{t('reports.columnsAll')}</Button>
+                  </Space>
+                  <Checkbox.Group style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 360, overflowY: 'auto' }}
+                    value={columns.filter((c) => !hidden.includes(c))}
+                    onChange={(v) => { const shown = v as string[]; if (shown.length) setHidden(columns.filter((c) => !shown.includes(c))); }}
+                    options={columns.map((c) => ({ label: c, value: c }))} />
+                  <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0, fontSize: 12 }}>{t('reports.columnsHint')}</Typography.Paragraph>
+                </div>
+              )}>
+                <Badge dot={hidden.length > 0}><Button icon={<TableOutlined />}>{t('reports.columns')}</Button></Badge>
+              </Popover>
+              <Dropdown menu={{ items: ['xlsx', 'pdf', 'csv'].map((f) => ({ key: f, label: f.toUpperCase(), onClick: () => download(`/reports/${current.key}/export`, { ...params, excludeColumns: hidden.length ? hidden : undefined, format: f }).catch(notify.error) })) }}>
                 <Button icon={<DownloadOutlined />}>{t('common.export')}</Button>
               </Dropdown>
             </Space>}>
@@ -70,7 +105,7 @@ export default function ReportsPage() {
                   <Table size="small" style={{ marginTop: 8 }} loading={data.isFetching} rowKey={(_, i) => String(i)} scroll={{ x: 'max-content' }} pagination={{ pageSize: 50 }}
                     dataSource={data.data.rows.map((r) => ({ ...r }))}
                     rowClassName={(r: Record<number, unknown>) => (Object.values(r).some((v) => v === 'Итого' || v === 'ИТОГО') ? 'itam-total-row' : '')}
-                    columns={data.data.columns.map((c, i) => ({ title: c, key: String(i), render: (_: unknown, row: Record<number, unknown>) => fmtCell(row[i]) }))} />
+                    columns={visible.map(({ c, i }) => ({ title: c, key: String(i), render: (_: unknown, row: Record<number, unknown>) => fmtCell(row[i]) }))} />
                 </>
               )}
             </Card>

@@ -78,8 +78,11 @@ const en = {
   },
   notifications: { title: 'Notifications', unread: 'Unread only', markRead: 'Mark read', markAll: 'Mark all read', runRules: 'Check now' },
   employees: {
-    equipment: 'Equipment', issueAssets: 'Issue equipment right away', issueAssetsHint: 'The employee is created and the selected equipment is issued at once with an issue act.',
-    issueComment: 'Issue comment', createdWithAssets: 'Employee created, {{count}} assets issued (act {{number}})',
+    equipment: 'Equipment', issueAssets: 'Issue equipment right away', issueAssetsHint: 'The employee is created and the selected equipment is assigned at once — with or without an issue act.',
+    issueComment: 'Issue comment', createdWithAssets: 'Employee created, {{count}} assets issued (operation {{number}}, act generated)',
+    createdWithAssetsNoAct: 'Employee created, {{count}} assets assigned (operation {{number}}, no act)', openOperation: 'Open operation',
+    issueMode: 'Paperwork', issueWithAct: 'Issue with an equipment issue act', issueWithoutAct: 'Assign without an issue act (e.g. the employee already has the equipment)',
+    issueDate: 'Issue date', issueDateHint: 'Optional. Default: now; a past date requires the backdating permission.',
     createdIssueFailed: 'The employee was created, but the equipment could not be issued', issueNow: 'Go to issue',
     new: 'New employee', edit: 'Edit employee', number: 'Personnel no.', numberAuto: 'Generated automatically',
     fullName: 'Full name', lastName: 'Last name', firstName: 'First name', middleName: 'Middle name', position: 'Position', office: 'Office / location',
@@ -120,7 +123,8 @@ const en = {
     assignedSince: 'Assigned since', returnBy: 'Return by {{date}}', lastInventory: 'Last stocktaking', stateAt: 'State at date',
     stateAfter: 'State after event', event: 'Event', historyHint: 'History is ordered by actual event dates. Backdated operations are marked.',
     searchHint: 'Inventory no., serial no., name, model', downloadQr: 'Download QR', printQr: 'Print QR', printLabel: 'Print label',
-    printLabels: 'Print labels', deleteConfirm: 'Delete the asset?', deleteHint: 'Only assets without operations can be deleted. Otherwise write off or archive.',
+    printLabels: 'Print labels', deleteConfirm: 'Delete the asset?', deleteManyConfirm: 'Delete the selected assets ({{count}})?', deleted: 'Assets deleted: {{count}}',
+    deleteHint: 'For assets added by mistake. Only assets without operations (issue, transfer, repair) can be deleted; cancelled operations do not count. The inventory number is released. Otherwise write off or archive.',
     actions: { issue: 'Issue', return: 'Return', transfer: 'Transfer', repair: 'Repair', status: 'Change status' },
   },
   operations: {
@@ -196,6 +200,8 @@ const en = {
     generated: 'Document generated', signature: 'Signature', signatureMethod: 'Signature method', signedAt: 'Signed at',
     employeeSignature: 'Employee signature', responsibleSignature: 'Responsible signature', uploadScan: 'Upload scan', downloadScan: 'Scan',
     void: 'Void', showVoided: 'Show voided', registryHint: 'Registry of all generated documents', searchHint: 'Number, employee, inventory no.',
+    delete: 'Delete document', deleted: 'Document deleted', deleteConfirm: 'Delete document {{number}}?',
+    deleteHint: 'The document and its files (DOCX, PDF, scan) will be deleted permanently. The audit log keeps a record: number, who deleted it, when and why. To keep an invalid document, use "Void" instead.',
   },
   files: { upload: 'Upload file', uploaded: 'File uploaded', description: 'Description', empty: 'No files' },
   templates: {
@@ -208,6 +214,8 @@ const en = {
 
     deleteConfirm: 'Delete template “{{name}}”?', deleteHint: 'The template and all its versions will be deleted permanently.',
     deleteUsed: '{{count}} documents were generated from this template. It cannot be deleted — archive it instead.',
+    deleteVersion: 'Delete version', deleteVersionConfirm: 'Delete version {{v}}?', deleteVersionHint: 'The version file will be deleted permanently.',
+    versionDeleted: 'Version deleted', versionUsed: 'Documents generated from this version: {{count}}. It cannot be deleted — archive it instead.',
   },
   templateEditor: {
     title: 'Template editor', newTitle: 'New template in the editor', crumb: 'Editor', open: 'Editor', openVersion: 'Open version in the editor',
@@ -310,7 +318,8 @@ const en = {
     statuses: { Running: 'Running', Completed: 'Completed', Failed: 'Failed' },
   },
   system: { version: 'Version', framework: 'Runtime', os: 'OS', database: 'Database', dataRoot: 'Data folder', serverTime: 'Server time' },
-  reports: { list: 'Reports', choose: 'Choose a report on the left', run: 'Run', asOf: 'As of', days: 'Days', previewLimit: 'Only the first rows are shown — export for the full report' },
+  reports: {
+    columns: 'Columns', columnsAll: 'Show all', columnsRunFirst: 'Run the report first, then choose the columns.', columnsHint: 'The choice is remembered for the report and applies to Excel, PDF and CSV export.', list: 'Reports', choose: 'Choose a report on the left', run: 'Run', asOf: 'As of', days: 'Days', previewLimit: 'Only the first rows are shown — export for the full report' },
   import: {
     steps: { upload: 'File', preview: 'Preview', mapping: 'Mapping', validation: 'Validation', done: 'Done' },
     entities: { employees: 'Employees', assets: 'Assets', departments: 'Departments', locations: 'Locations' },

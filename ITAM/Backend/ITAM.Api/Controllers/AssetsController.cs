@@ -113,6 +113,10 @@ public sealed class AssetsController : ApiControllerBase
         return File(codes.LabelsPdf(labels, org), "application/pdf", "labels.pdf");
     }
 
+    /// <summary>Deletes assets entered by mistake (all or nothing; 409 if any of them has history).</summary>
+    [HttpPost("bulk-delete"), HasPermission(Permissions.AssetsDelete)]
+    public async Task<IActionResult> BulkDelete([FromBody] LabelsRequest req) => Ok(new { deleted = await _service.DeleteManyAsync(req.AssetIds ?? new(), Ct) });
+
     [HttpPost("bulk-edit"), HasPermission(Permissions.AssetsBulk)]
     public Task<BulkResultDto> BulkEdit([FromBody] AssetBulkEditRequest req) => _service.BulkEditAsync(req, Ct);
 }

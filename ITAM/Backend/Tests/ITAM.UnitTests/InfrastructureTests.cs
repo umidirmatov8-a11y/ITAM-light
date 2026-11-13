@@ -122,3 +122,43 @@ public class CodeTests
         Assert.NotEqual(Code128.Encode("ABC-124"), bars);
     }
 }
+
+public class BackupRestoreListTests
+{
+    private const string Toc = """
+        ;
+        ; Archive created at 2026-11-13 17:38:23 UTC
+        ;
+        6; 2615 2200 SCHEMA - public itam
+        2; 3079 24578 EXTENSION - pg_trgm 
+        4147; 0 0 COMMENT - EXTENSION pg_trgm 
+        313; 1255 25693 FUNCTION public itam_auditlogs_immutable() itam
+        222; 1259 24600 TABLE public Assets itam
+        223; 1259 24610 TABLE public __EFMigrationsHistory itam
+        4100; 0 24600 TABLE DATA public Assets itam
+        3900; 1259 24700 INDEX public IX_Assets_InventoryNumber_trgm itam
+        """;
+
+    [Fact]
+    public void Extensions_and_public_schema_are_left_out_of_the_restore_list()
+    {
+        var (list, tables) = ITAM.Infrastructure.Backups.PgBackupEngine.FilterToc(Toc);
+        var active = list.Where(l => l.Length > 0 && !l.StartsWith(';')).ToList();
+        Assert.DoesNotContain(active, l => l.Contains("EXTENSION"));
+        Assert.DoesNotContain(active, l => l.Contains("SCHEMA - public"));
+        Assert.Contains(active, l => l.Contains("TABLE DATA public Assets"));
+        Assert.Contains(active, l => l.Contains("INDEX public IX_Assets_InventoryNumber_trgm"));
+        Assert.Contains(list, l => l == ";2; 3079 24578 EXTENSION - pg_trgm ");
+        Assert.Equal(new[] { "Assets", "__EFMigrationsHistory" }, tables.OrderBy(t => t, StringComparer.Ordinal));
+    }
+}
+
+public class PgToolVersionTests
+{
+    [Theory]
+    [InlineData("pg_restore (PostgreSQL) 16.4", 16)]
+    [InlineData("pg_dump (PostgreSQL) 17.2 (Ubuntu 17.2-1.pgdg24.04+1)\n", 17)]
+    [InlineData("pg_restore (PostgreSQL) 18beta1", 18)]
+    public void Major_version_is_read_from_tool_output(string output, int major)
+        => Assert.Equal(major, ITAM.Infrastructure.Backups.PgBackupEngine.ParseMajor(output));
+}

@@ -1,4 +1,4 @@
-import { Alert, App, Checkbox, Col, DatePicker, Drawer, Form, Input, Row, Button, Space, Divider } from 'antd';
+import { Alert, App, Checkbox, Col, DatePicker, Drawer, Form, Input, Radio, Row, Button, Space, Divider } from 'antd';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { post, put } from '@/api/client';
@@ -23,9 +23,14 @@ export function EmployeeForm({ open, employee, onClose, onSaved }: { open: boole
   const watched = Form.useWatch([], form);
   const orgChanged = !!employee && !!watched && (['departmentId', 'positionId', 'regionId', 'locationId', 'managerId'] as const).some((k) => (watched[k] ?? null) !== ((employee as any)[k] ?? null));
 
+  const issueMode = Form.useWatch('issueMode', form) as 'act' | 'noAct' | undefined;
+  const canDocs = can('documents.generate');
   useEffect(() => {
-    if (withAssets && form.getFieldValue('generateDocument') === undefined) form.setFieldValue('generateDocument', true);
-  }, [withAssets, form]);
+    if (withAssets && !form.getFieldValue('issueMode')) form.setFieldValue('issueMode', canDocs ? 'act' : 'noAct');
+  }, [withAssets, form, canDocs]);
+  useEffect(() => {
+    if (issueMode) form.setFieldValue('generateDocument', issueMode === 'act');
+  }, [issueMode, form]);
 
   useEffect(() => {
     if (!open) return;
@@ -35,17 +40,18 @@ export function EmployeeForm({ open, employee, onClose, onSaved }: { open: boole
 
   const save = useApiMutation(
     (v: any) => {
-      const { issueAssets, assetIds, accessories, issueComment, generateDocument, templateId, ...rest } = v;
+      const { issueAssets, issueMode: mode, issueDate, assetIds, accessories, issueComment, generateDocument, templateId, ...rest } = v;
       const body = { ...rest, hireDate: toApiDate(v.hireDate), orgChangeEffectiveAt: toApiDateTime(v.orgChangeEffectiveAt), version: employee?.version };
       if (employee) return put<Employee>(`/employees/${employee.id}`, body);
       if (!issueAssets || !assetIds?.length) return post<Employee>('/employees', body);
       return post<{ employee: Employee; issue?: OperationResult; issueError?: string }>('/employees/with-assets', {
-        employee: body, assetIds, accessories, comment: issueComment, generateDocument: !!generateDocument, templateId,
+        employee: body, assetIds, accessories, comment: issueComment, generateDocument: mode === 'act' && !!generateDocument, templateId,
+        effectiveAt: issueDate ? toApiDateTime(issueDate) : undefined,
       }).then((r) => {
         if (r.issueError) modal.warning({ title: t('employees.createdIssueFailed'), content: r.issueError, okText: t('employees.issueNow'), onOk: () => navigate(`/operations/issue?employeeId=${r.employee.id}`) });
         else if (r.issue) modal.success({
-          title: t('employees.createdWithAssets', { count: r.issue.assetCount, number: r.issue.number }),
-          okText: t('operations.openAct'), onOk: () => navigate(`/operations/${r.issue!.batchId}`),
+          title: t(r.issue.documentId ? 'employees.createdWithAssets' : 'employees.createdWithAssetsNoAct', { count: r.issue.assetCount, number: r.issue.number }),
+          okText: t('employees.openOperation'), onOk: () => navigate(`/operations/${r.issue!.batchId}`),
         });
         return r.employee;
       });
@@ -100,7 +106,20 @@ export function EmployeeForm({ open, employee, onClose, onSaved }: { open: boole
                 </Form.Item>
                 <Form.Item name="accessories" label={t('operations.accessories')}><Input placeholder={t('operations.accessoriesPlaceholder')} /></Form.Item>
                 <Form.Item name="issueComment" label={t('employees.issueComment')}><Input /></Form.Item>
-                <DocumentOptions type="EquipmentIssue" />
+                <Form.Item name="issueMode" label={t('employees.issueMode')}>
+                  <Radio.Group>
+                    <Space direction="vertical">
+                      {canDocs && <Radio value="act">{t('employees.issueWithAct')}</Radio>}
+                      <Radio value="noAct">{t('employees.issueWithoutAct')}</Radio>
+                    </Space>
+                  </Radio.Group>
+                </Form.Item>
+                {issueMode === 'noAct' && (
+                  <Form.Item name="issueDate" label={t('employees.issueDate')} extra={t('employees.issueDateHint')}>
+                    <DatePicker showTime style={{ width: 260 }} format="DD.MM.YYYY HH:mm" />
+                  </Form.Item>
+                )}
+                {issueMode === 'act' && <DocumentOptions type="EquipmentIssue" hideToggle />}
               </>
             )}
           </>

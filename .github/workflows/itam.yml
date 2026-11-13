@@ -53,6 +53,18 @@ jobs:
       - name: Unit tests
         run: dotnet test Backend/Tests/ITAM.UnitTests -c Release --no-build --logger "trx;LogFileName=unit.trx" --results-directory TestResults
 
+      - name: PostgreSQL 16 client tools (backup/restore tests match the server version)
+        run: |
+          . /etc/os-release
+          echo "Runner: $PRETTY_NAME; preinstalled: $(ls -d /usr/lib/postgresql/*/ 2>/dev/null | tr '\n' ' ')"
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          /usr/lib/postgresql/16/bin/pg_restore --version
+
       - name: Integration tests (real PostgreSQL)
         env:
           ITAM_TEST_PG: Host=localhost;Port=5432;Username=postgres;Password=postgres
@@ -140,6 +152,24 @@ jobs:
           & "$env:ProgramFiles\ITAM\ITAM.Server.exe" backup --data-root "$env:ProgramData\ITAM"
           if ($LASTEXITCODE) { throw "backup failed" }
           Get-ChildItem "$env:ProgramData\ITAM\backups" | Format-Table Name, Length
+
+      - name: Restore from backup (application database role)
+        run: |
+          $backup = Get-ChildItem "$env:ProgramData\ITAM\backups\*.zip" | Sort-Object LastWriteTime | Select-Object -Last 1
+          Stop-Service ITAM
+          & "$env:ProgramFiles\ITAM\ITAM.Server.exe" restore $backup.FullName --yes --data-root "$env:ProgramData\ITAM"
+          if ($LASTEXITCODE) { throw "restore failed" }
+          Start-Service ITAM
+          $ok = $false
+          for ($i = 0; $i -lt 30 -and -not $ok; $i++) {
+            try { $r = Invoke-WebRequest http://localhost:8080/health -UseBasicParsing; $ok = $r.StatusCode -eq 200 } catch { Start-Sleep 2 }
+          }
+          if (-not $ok) { Get-Content "$env:ProgramData\ITAM\logs\*.log" -Tail 80; throw "ITAM did not start after restore" }
+          $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          Invoke-RestMethod http://localhost:8080/api/auth/login -Method Post -WebSession $s -ContentType 'application/json' -Body '{"userName":"admin","password":"Admin12345!"}' | Out-Null
+          $assets = Invoke-RestMethod http://localhost:8080/api/assets -WebSession $s
+          "Assets after restore: $($assets.total)"
+          if ($assets.total -lt 1) { throw "data missing after restore" }
 
       - name: Windows agent end-to-end
         run: |

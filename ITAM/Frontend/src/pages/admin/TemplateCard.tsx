@@ -12,7 +12,7 @@ import { EnumSelect } from '@/components/Selects';
 import { DOCUMENT_TYPES } from '@/utils/enums';
 import { fmtDateTime } from '@/utils/format';
 
-interface Version { id: string; versionNumber: number; fileId: string; fileName: string; fileHash: string; changeNote?: string; isActive: boolean; createdAt: string; createdByName?: string; placeholders: string[]; documentsGenerated: number }
+interface Version { id: string; versionNumber: number; fileId: string; fileName: string; fileHash: string; changeNote?: string; isActive: boolean; createdAt: string; createdByName?: string; placeholders: string[]; documentsGenerated: number; isArchived: boolean }
 interface Tpl { id: string; name: string; code?: string; description?: string; documentType: string; isDefault: boolean; isArchived: boolean; versions: Version[]; availablePlaceholders: { key: string; description: string }[] }
 
 export default function TemplateCard() {
@@ -30,6 +30,9 @@ export default function TemplateCard() {
   const saveMeta = useApiMutation((v: any) => put(`/templates/${id}`, v), { invalidate: [['template', id], ['templates-admin']] });
   const activate = useApiMutation((vid: string) => post(`/templates/${id}/versions/${vid}/activate`), { invalidate: [['template', id], ['templates-admin']] });
   const remove = useApiMutation(() => del(`/templates/${id}`), { invalidate: [['templates-admin'], ['templates']], onSuccess: () => navigate('/admin/templates') });
+  const removeVersion = useApiMutation((vid: string) => del(`/templates/${id}/versions/${vid}`), { invalidate: [['template', id], ['templates-admin']], success: t('templates.versionDeleted') });
+  const archiveVersion = useApiMutation(({ vid, archived }: { vid: string; archived: boolean }) => post(`/templates/${id}/versions/${vid}/archive?archived=${archived}`),
+    { invalidate: [['template', id], ['templates-admin']] });
   const archive = useApiMutation((archived: boolean) => post(`/templates/${id}/archive?archived=${archived}`), { invalidate: [['template', id], ['templates-admin']] });
   const addVersion = useApiMutation(async () => {
     const fd = new FormData();
@@ -62,20 +65,29 @@ export default function TemplateCard() {
         </>} />
       <Alert type="info" showIcon style={{ marginBottom: 16 }} message={t('templates.versioningHint')} />
       <Row gutter={16}>
-        <Col xs={24} xl={14}>
+        <Col xs={24} xl={16}>
           <Card title={t('templates.versions')} style={{ marginBottom: 16 }}>
-            <Table<Version> rowKey="id" size="small" dataSource={tpl.versions} pagination={false}
+            <Table<Version> rowKey="id" size="small" dataSource={tpl.versions} pagination={false} scroll={{ x: true }}
+              rowClassName={(r) => (r.isArchived ? 'itam-row-archived' : '')}
               columns={[
-                { title: t('templates.version'), dataIndex: 'versionNumber', render: (v, r) => <Space>v{v}{r.isActive && <Tag color="green">{t('templates.active')}</Tag>}</Space> },
+                { title: t('templates.version'), dataIndex: 'versionNumber', render: (v, r) => <Tooltip title={`SHA-256: ${r.fileHash}`}><Space size={4} wrap>v{v}{r.isActive && <Tag color="green">{t('templates.active')}</Tag>}{r.isArchived && <Tag>{t('common.archived')}</Tag>}</Space></Tooltip> },
                 { title: t('common.createdAt'), dataIndex: 'createdAt', render: fmtDateTime },
                 { title: t('common.createdBy'), dataIndex: 'createdByName' },
                 { title: t('templates.changeNote'), dataIndex: 'changeNote' },
                 { title: t('templates.generated'), dataIndex: 'documentsGenerated' },
-                { title: 'SHA-256', dataIndex: 'fileHash', render: (v) => <span className="itam-mono itam-muted">{v.slice(0, 10)}…</span> },
-                { key: 'a', render: (_, r) => <Space>
+                { key: 'a', fixed: 'right', render: (_, r) => <Space size={4} wrap={false}>
                   <Button size="small" icon={<DownloadOutlined />} onClick={() => download(`/templates/${id}/versions/${r.id}/download`).catch(notify.error)} />
                   {manage && <Button size="small" icon={<EditOutlined />} title={t('templateEditor.openVersion')} onClick={() => navigate(`/admin/templates/${id}/editor?versionId=${r.id}`)} />}
-                  {manage && !r.isActive && <Button size="small" onClick={() => activate.mutate(r.id)}>{t('templates.activate')}</Button>}
+                  {manage && !r.isActive && !r.isArchived && <Button size="small" onClick={() => activate.mutate(r.id)}>{t('templates.activate')}</Button>}
+                  {manage && !r.isActive && <Button size="small" onClick={() => archiveVersion.mutate({ vid: r.id, archived: !r.isArchived })}>{r.isArchived ? t('common.restore') : t('common.archive')}</Button>}
+                  {manage && !r.isActive && (r.documentsGenerated > 0 ? (
+                    <Tooltip title={t('templates.versionUsed', { count: r.documentsGenerated })}><Button size="small" danger icon={<DeleteOutlined />} disabled /></Tooltip>
+                  ) : (
+                    <Popconfirm title={t('templates.deleteVersionConfirm', { v: r.versionNumber })} description={t('templates.deleteVersionHint')}
+                      okText={t('common.delete')} okButtonProps={{ danger: true, loading: removeVersion.isPending }} onConfirm={() => removeVersion.mutate(r.id)}>
+                      <Button size="small" danger icon={<DeleteOutlined />} title={t('templates.deleteVersion')} />
+                    </Popconfirm>
+                  ))}
                 </Space> },
               ]} />
           </Card>
@@ -86,7 +98,7 @@ export default function TemplateCard() {
             </Card>
           )}
         </Col>
-        <Col xs={24} xl={10}>
+        <Col xs={24} xl={8}>
           {manage && (
             <Card title={t('templates.properties')} style={{ marginBottom: 16 }}>
               <Form form={form} layout="vertical" initialValues={tpl} onFinish={(v) => saveMeta.mutate(v)}>

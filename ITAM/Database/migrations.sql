@@ -2925,3 +2925,21 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261113174239_TemplateVersionArchive') THEN
+    ALTER TABLE "DocumentTemplateVersions" ADD "IsArchived" boolean NOT NULL DEFAULT FALSE;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261113174239_TemplateVersionArchive') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261113174239_TemplateVersionArchive', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+

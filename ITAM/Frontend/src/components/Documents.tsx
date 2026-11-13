@@ -1,9 +1,9 @@
 import { Button, DatePicker, Dropdown, Form, Input, Modal, Select, Space, Table, Tag, Tooltip, Upload } from 'antd';
-import { DownloadOutlined, EyeOutlined, FileAddOutlined, MoreOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownloadOutlined, EyeOutlined, FileAddOutlined, MoreOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { download, get, openInline, post, put, upload, type Paged } from '@/api/client';
+import { del, download, get, openInline, post, put, upload, type Paged } from '@/api/client';
 import { useApiMutation, useNotify } from '@/api/hooks';
 import { useAuth } from '@/app/auth';
 import type { DocumentItem, DocumentType } from '@/api/types';
@@ -56,6 +56,11 @@ export function DocumentsTable({ filter }: { filter?: Record<string, unknown> })
   const voidMut = useApiMutation((reason: string) => post(`/documents/${voidDoc!.id}/void`, { reason }), { invalidate: [['documents']], onSuccess: () => setVoidDoc(undefined) });
   const scan = useApiMutation(({ id, file }: { id: string; file: File }) => upload(`/documents/${id}/scan`, file), { invalidate: [['documents']] });
   const [voidReason, setVoidReason] = useState('');
+  const [deleteDoc, setDeleteDoc] = useState<DocumentItem>();
+  const [deleteReason, setDeleteReason] = useState('');
+  const deleteMut = useApiMutation(() => del(`/documents/${deleteDoc!.id}?reason=${encodeURIComponent(deleteReason)}`), {
+    invalidate: [['documents'], ['template'], ['templates-admin']], success: t('documents.deleted'), onSuccess: () => { setDeleteDoc(undefined); setDeleteReason(''); },
+  });
 
   return (
     <>
@@ -85,6 +90,7 @@ export function DocumentsTable({ filter }: { filter?: Record<string, unknown> })
                     <Upload showUploadList={false} beforeUpload={(file) => { scan.mutate({ id: r.id, file }); return false; }}>{t('documents.uploadScan')}</Upload>
                   ) },
                   can('documents.generate') && !r.isVoided && { key: 'void', danger: true, label: t('documents.void'), onClick: () => setVoidDoc(r) },
+                  can('system.admin') && { key: 'delete', danger: true, icon: <DeleteOutlined />, label: t('documents.delete'), onClick: () => setDeleteDoc(r) },
                 ].filter(Boolean) as never }}>
                   <Button size="small" icon={<MoreOutlined />} />
                 </Dropdown>
@@ -102,6 +108,11 @@ export function DocumentsTable({ filter }: { filter?: Record<string, unknown> })
       </Modal>
       <Modal open={!!voidDoc} title={t('documents.void')} onCancel={() => setVoidDoc(undefined)} onOk={() => voidMut.mutate(voidReason)} okButtonProps={{ danger: true, disabled: !voidReason }}>
         <Input.TextArea rows={3} placeholder={t('common.reason')} value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
+      </Modal>
+      <Modal open={!!deleteDoc} title={t('documents.deleteConfirm', { number: deleteDoc?.number })} onCancel={() => setDeleteDoc(undefined)}
+        onOk={() => deleteMut.mutate(undefined)} okText={t('common.delete')} okButtonProps={{ danger: true }} confirmLoading={deleteMut.isPending}>
+        <p>{t('documents.deleteHint')}</p>
+        <Input.TextArea rows={2} placeholder={t('common.reason')} value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)} />
       </Modal>
     </>
   );
