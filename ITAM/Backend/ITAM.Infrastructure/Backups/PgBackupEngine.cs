@@ -46,7 +46,7 @@ public sealed class PgBackupEngine : IBackupEngine
         {
             var cs = new NpgsqlConnectionStringBuilder(_paths.ConnectionString);
             var dump = Path.Combine(work, "database.dump");
-            await RunAsync(FindTool("pg_dump"), new[]
+            await RunAsync(await FindToolAsync("pg_dump", ct), new[]
             {
                 "-h", cs.Host ?? "localhost", "-p", cs.Port.ToString(), "-U", cs.Username ?? "postgres",
                 "-F", "c", "-Z", "6", "--no-owner", "--no-privileges", "-f", dump, cs.Database ?? "itam"
@@ -101,7 +101,7 @@ public sealed class PgBackupEngine : IBackupEngine
                     "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid()", conn);
                 await cmd.ExecuteNonQueryAsync(ct);
             }
-            var pgRestore = FindTool("pg_restore");
+            var pgRestore = await FindToolAsync("pg_restore", ct);
             // The archive's table of contents without the database-level objects the application role does not own:
             // extensions (pg_trgm is created by the installer as superuser) and the public schema. With them in the list,
             // "--clean" fails with "must be owner of extension pg_trgm".
@@ -214,24 +214,79 @@ public sealed class PgBackupEngine : IBackupEngine
         }
     }
 
-    private string FindTool(string name)
+    /// <summary>
+    /// Finds pg_dump/pg_restore of the same major version as the database server: newer tools write settings an older
+    /// server rejects (pg_restore 17 → "unrecognized configuration parameter transaction_timeout" on PostgreSQL 16) and
+    /// archives older tools cannot read. Order: Backup:PgBinPath, bundled PostgreSQL, installed versions, PATH.
+    /// </summary>
+    private async Task<string> FindToolAsync(string name, CancellationToken ct)
     {
         var exe = OperatingSystem.IsWindows() ? name + ".exe" : name;
         var candidates = new List<string>();
         if (!string.IsNullOrWhiteSpace(_paths.PgBinPath)) candidates.Add(Path.Combine(_paths.PgBinPath, exe));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "..", "pgsql", "bin", exe));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "pgsql", "bin", exe));
+        var versions = new[] { "18", "17", "16", "15", "14", "13" };
         if (OperatingSystem.IsWindows())
-            foreach (var v in new[] { "17", "16", "15", "14" })
+            foreach (var v in versions)
                 candidates.Add(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PostgreSQL", v, "bin", exe));
         else
-            foreach (var v in new[] { "17", "16", "15", "14" })
+            foreach (var v in versions)
                 candidates.Add($"/usr/lib/postgresql/{v}/bin/{exe}");
         foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator))
             if (!string.IsNullOrWhiteSpace(dir)) candidates.Add(Path.Combine(dir, exe));
-        return candidates.Select(Path.GetFullPath).FirstOrDefault(File.Exists)
-               ?? throw new Domain.Common.BusinessException("PG_TOOLS_NOT_FOUND",
-                   $"Не найден {exe}. Укажите путь к каталогу bin PostgreSQL в настройке Backup:PgBinPath");
+        var found = candidates.Select(Path.GetFullPath).Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (found.Count == 0)
+            throw new Domain.Common.BusinessException("PG_TOOLS_NOT_FOUND",
+                $"Не найден {exe}. Укажите путь к каталогу bin PostgreSQL в настройке Backup:PgBinPath");
+
+        int? server = null;
+        try
+        {
+            await using var conn = new NpgsqlConnection(_paths.ConnectionString);
+            await conn.OpenAsync(ct);
+            server = conn.PostgreSqlVersion.Major;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.LogWarning(ex, "PostgreSQL server version is unknown; using the first {Tool} found", exe);
+        }
+        if (server is null || found.Count == 1) return found[0];
+
+        var withVersion = new List<(string path, int major)>();
+        foreach (var path in found)
+            if (await ToolMajorAsync(path, ct) is { } major) withVersion.Add((path, major));
+        var choice = withVersion.FirstOrDefault(t => t.major == server).path
+                     ?? withVersion.Where(t => t.major > server).OrderBy(t => t.major).Select(t => t.path).FirstOrDefault()
+                     ?? found[0];
+        if (withVersion.All(t => t.major != server))
+            _log.LogWarning("No {Tool} of PostgreSQL {Server} found; using {Choice}", exe, server, choice);
+        return choice;
+    }
+
+    /// <summary>Major version from "pg_restore (PostgreSQL) 16.4".</summary>
+    private static async Task<int?> ToolMajorAsync(string tool, CancellationToken ct)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo(tool) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+            psi.ArgumentList.Add("--version");
+            using var proc = Process.Start(psi);
+            if (proc is null) return null;
+            var output = await proc.StandardOutput.ReadToEndAsync(ct);
+            await proc.WaitForExitAsync(ct);
+            return ParseMajor(output);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    public static int? ParseMajor(string versionOutput)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(versionOutput, @"\)\s+(\d+)(?:\.\d+)?");
+        return m.Success && int.TryParse(m.Groups[1].Value, out var major) ? major : null;
     }
 
     private async Task<string> RunAsync(string tool, IEnumerable<string> args, string? password, CancellationToken ct)

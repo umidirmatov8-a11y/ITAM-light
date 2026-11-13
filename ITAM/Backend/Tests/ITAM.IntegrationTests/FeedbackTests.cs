@@ -167,7 +167,7 @@ public class FeedbackTests
         var gone = await Assert.ThrowsAsync<ApiException>(() => c2.GetAsync($"/api/assets/{after.Id()}"));
         Assert.Equal(HttpStatusCode.NotFound, gone.Status);
         var list = (await c2.GetAsync("/api/admin/backups")).AsArray();
-        Assert.Contains(list, b => b!.Id() == backup.Id() && b["status"]!.GetValue<string>() == "Completed");
+        Assert.Contains(list, b => b!.Id() == backup.Id() && b!["status"]!.GetValue<string>() == "Completed");
         Assert.Contains(list, b => b!["kind"]!.GetValue<string>() == "PreRestore" && b["status"]!.GetValue<string>() == "Completed");
         Assert.DoesNotContain(list, b => b!["status"]!.GetValue<string>() == "Running");
     }

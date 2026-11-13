@@ -74,4 +74,6 @@ sc start ITAM
 
 `pg_dump` и `pg_restore` берутся из встроенного PostgreSQL (`C:\Program Files\ITAM\pgsql\bin`), из параметра
 `Backup:PgBinPath` в `itam.json`, из `C:\Program Files\PostgreSQL\*\bin` или из `PATH`. Версия утилит должна быть не ниже
-версии сервера PostgreSQL.
+версии сервера PostgreSQL. Если найдено несколько версий PostgreSQL, ITAM выбирает утилиты той же основной версии,
+что и сервер базы данных (иначе — ближайшую более новую): `pg_restore` новой версии передаёт старому серверу параметры,
+которых он не знает (например, `transaction_timeout` для PostgreSQL 16).

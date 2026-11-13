@@ -152,3 +152,13 @@ public class BackupRestoreListTests
         Assert.Equal(new[] { "Assets", "__EFMigrationsHistory" }, tables.OrderBy(t => t, StringComparer.Ordinal));
     }
 }
+
+public class PgToolVersionTests
+{
+    [Theory]
+    [InlineData("pg_restore (PostgreSQL) 16.4", 16)]
+    [InlineData("pg_dump (PostgreSQL) 17.2 (Ubuntu 17.2-1.pgdg24.04+1)\n", 17)]
+    [InlineData("pg_restore (PostgreSQL) 18beta1", 18)]
+    public void Major_version_is_read_from_tool_output(string output, int major)
+        => Assert.Equal(major, ITAM.Infrastructure.Backups.PgBackupEngine.ParseMajor(output));
+}
