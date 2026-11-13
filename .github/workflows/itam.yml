@@ -53,6 +53,12 @@ jobs:
       - name: Unit tests
         run: dotnet test Backend/Tests/ITAM.UnitTests -c Release --no-build --logger "trx;LogFileName=unit.trx" --results-directory TestResults
 
+      - name: PostgreSQL 16 client tools (backup/restore tests match the server version)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          ls /usr/lib/postgresql/*/bin/pg_restore
+
       - name: Integration tests (real PostgreSQL)
         env:
           ITAM_TEST_PG: Host=localhost;Port=5432;Username=postgres;Password=postgres

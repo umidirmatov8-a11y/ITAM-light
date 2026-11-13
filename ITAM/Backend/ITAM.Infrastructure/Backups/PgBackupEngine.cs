@@ -102,6 +102,8 @@ public sealed class PgBackupEngine : IBackupEngine
                 await cmd.ExecuteNonQueryAsync(ct);
             }
             var pgRestore = await FindToolAsync("pg_restore", ct);
+            var serverMajor = await ServerMajorAsync(ct);
+            var toolMajor = await ToolMajorAsync(pgRestore, ct);
             // The archive's table of contents without the database-level objects the application role does not own:
             // extensions (pg_trgm is created by the installer as superuser) and the public schema. With them in the list,
             // "--clean" fails with "must be owner of extension pg_trgm".
@@ -110,12 +112,21 @@ public sealed class PgBackupEngine : IBackupEngine
             var listFile = Path.Combine(work, "restore.list");
             await File.WriteAllLinesAsync(listFile, list, ct);
             await EnsureExtensionsAsync(toc, ct);
-            await RunAsync(pgRestore, new[]
+            try
             {
-                "-h", cs.Host ?? "localhost", "-p", cs.Port.ToString(), "-U", cs.Username ?? "postgres",
-                "--clean", "--if-exists", "--no-owner", "--no-privileges", "--single-transaction", "-L", listFile,
-                "-d", cs.Database ?? "itam", dump
-            }, cs.Password, ct);
+                await RunAsync(pgRestore, new[]
+                {
+                    "-h", cs.Host ?? "localhost", "-p", cs.Port.ToString(), "-U", cs.Username ?? "postgres",
+                    "--clean", "--if-exists", "--no-owner", "--no-privileges", "--single-transaction", "-L", listFile,
+                    "-d", cs.Database ?? "itam", dump
+                }, cs.Password, ct);
+            }
+            catch (Domain.Common.BusinessException ex) when (serverMajor is not null && toolMajor is not null && toolMajor != serverMajor)
+            {
+                throw new Domain.Common.BusinessException("BACKUP_TOOL_FAILED",
+                    $"{ex.Message}\nВерсия pg_restore ({toolMajor}) не совпадает с версией сервера PostgreSQL ({serverMajor}). " +
+                    $"Установите утилиты PostgreSQL {serverMajor} или укажите каталог bin нужной версии в настройке Backup:PgBinPath.");
+            }
             NpgsqlConnection.ClearAllPools();
             await DropTablesMissingFromBackupAsync(tables, ct);
 
@@ -240,17 +251,7 @@ public sealed class PgBackupEngine : IBackupEngine
             throw new Domain.Common.BusinessException("PG_TOOLS_NOT_FOUND",
                 $"Не найден {exe}. Укажите путь к каталогу bin PostgreSQL в настройке Backup:PgBinPath");
 
-        int? server = null;
-        try
-        {
-            await using var conn = new NpgsqlConnection(_paths.ConnectionString);
-            await conn.OpenAsync(ct);
-            server = conn.PostgreSqlVersion.Major;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _log.LogWarning(ex, "PostgreSQL server version is unknown; using the first {Tool} found", exe);
-        }
+        var server = await ServerMajorAsync(ct);
         if (server is null || found.Count == 1) return found[0];
 
         var withVersion = new List<(string path, int major)>();
@@ -262,6 +263,21 @@ public sealed class PgBackupEngine : IBackupEngine
         if (withVersion.All(t => t.major != server))
             _log.LogWarning("No {Tool} of PostgreSQL {Server} found; using {Choice}", exe, server, choice);
         return choice;
+    }
+
+    private async Task<int?> ServerMajorAsync(CancellationToken ct)
+    {
+        try
+        {
+            await using var conn = new NpgsqlConnection(_paths.ConnectionString);
+            await conn.OpenAsync(ct);
+            return conn.PostgreSqlVersion.Major;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.LogWarning(ex, "PostgreSQL server version is unknown");
+            return null;
+        }
     }
 
     /// <summary>Major version from "pg_restore (PostgreSQL) 16.4".</summary>
