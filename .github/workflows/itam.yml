@@ -141,6 +141,24 @@ jobs:
           if ($LASTEXITCODE) { throw "backup failed" }
           Get-ChildItem "$env:ProgramData\ITAM\backups" | Format-Table Name, Length
 
+      - name: Restore from backup (application database role)
+        run: |
+          $backup = Get-ChildItem "$env:ProgramData\ITAM\backups\*.zip" | Sort-Object LastWriteTime | Select-Object -Last 1
+          Stop-Service ITAM
+          & "$env:ProgramFiles\ITAM\ITAM.Server.exe" restore $backup.FullName --yes --data-root "$env:ProgramData\ITAM"
+          if ($LASTEXITCODE) { throw "restore failed" }
+          Start-Service ITAM
+          $ok = $false
+          for ($i = 0; $i -lt 30 -and -not $ok; $i++) {
+            try { $r = Invoke-WebRequest http://localhost:8080/health -UseBasicParsing; $ok = $r.StatusCode -eq 200 } catch { Start-Sleep 2 }
+          }
+          if (-not $ok) { Get-Content "$env:ProgramData\ITAM\logs\*.log" -Tail 80; throw "ITAM did not start after restore" }
+          $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+          Invoke-RestMethod http://localhost:8080/api/auth/login -Method Post -WebSession $s -ContentType 'application/json' -Body '{"userName":"admin","password":"Admin12345!"}' | Out-Null
+          $assets = Invoke-RestMethod http://localhost:8080/api/assets -WebSession $s
+          "Assets after restore: $($assets.total)"
+          if ($assets.total -lt 1) { throw "data missing after restore" }
+
       - name: Windows agent end-to-end
         run: |
           $base = 'http://localhost:8080'

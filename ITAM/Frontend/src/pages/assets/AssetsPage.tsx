@@ -1,4 +1,4 @@
-import { Button, Checkbox, DatePicker, Dropdown, Form, Input, Modal } from 'antd';
+import { App, Button, Checkbox, DatePicker, Dropdown, Form, Input, Modal } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
@@ -19,6 +19,7 @@ export default function AssetsPage() {
   const { t } = useTranslation();
   const { can } = useAuth();
   const notify = useNotify();
+  const { modal } = App.useApp();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [filters, setFilters] = useState<Record<string, unknown>>({
@@ -39,6 +40,13 @@ export default function AssetsPage() {
     assetIds: selected, setResponsible: v.setResponsible, responsibleEmployeeId: v.responsibleEmployeeId, setWarranty: v.setWarranty,
     warrantyExpiration: toApiDate(v.warrantyExpiration), setSupplier: v.setSupplier, supplierId: v.supplierId,
   }), { invalidate: [['assets']], onSuccess: () => { setBulkEdit(false); setSelected([]); } });
+  const deleteMutation = useApiMutation(() => post<{ deleted: number }>('/assets/bulk-delete', { assetIds: selected }), {
+    invalidate: [['assets']], success: false, onSuccess: (r) => { setSelected([]); notify.success(t('assets.deleted', { count: r.deleted })); },
+  });
+  const confirmDelete = () => modal.confirm({
+    title: t('assets.deleteManyConfirm', { count: selected.length }), content: t('assets.deleteHint'),
+    okText: t('common.delete'), okButtonProps: { danger: true }, onOk: () => deleteMutation.mutateAsync(undefined),
+  });
 
   const columns: DataColumn<AssetListItem>[] = [
     { key: 'inventoryNumber', title: t('assets.inventoryNumber'), dataIndex: 'inventoryNumber', sorter: true, alwaysVisible: true, render: (v, r) => <Link className="itam-mono" to={`/assets/${r.id}`}>{v}</Link> },
@@ -91,6 +99,8 @@ export default function AssetsPage() {
             can('assets.transfer') && { key: 'transfer', label: t('assets.actions.transfer'), onClick: () => navigate(`/operations/transfer?assetIds=${selected.join(',')}`) },
             can('assets.status') && { key: 'status', label: t('bulk.changeStatus'), onClick: () => setBulkStatus(true) },
             can('assets.bulk') && { key: 'edit', label: t('bulk.edit'), onClick: () => setBulkEdit(true) },
+            can('assets.delete') && { type: 'divider' },
+            can('assets.delete') && { key: 'delete', danger: true, label: t('common.delete'), onClick: confirmDelete },
           ].filter(Boolean) as never }}>
             <Button>{t('bulk.actions', { count: selected.length })}</Button>
           </Dropdown>

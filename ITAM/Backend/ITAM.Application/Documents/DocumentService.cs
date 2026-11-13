@@ -6,6 +6,7 @@ using ITAM.Application.Operations;
 using ITAM.Domain.Common;
 using ITAM.Domain.Entities;
 using ITAM.Domain.Enums;
+using ITAM.Domain.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace ITAM.Application.Documents;
@@ -555,5 +556,21 @@ public sealed class DocumentService : IDocumentGenerator
         d.VoidReason = reason;
         _audit.Log("document.void", nameof(GeneratedDocument), d.Id, d.Number, null, new { voided = true }, reason);
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Deletes a document (super administrator only): it disappears from the registry and from operation/employee/asset
+    /// cards, its files are removed from the storage. The audit log keeps the number, the reason and who deleted it.
+    /// </summary>
+    public async Task DeleteAsync(Guid id, string? reason, CancellationToken ct)
+    {
+        if (!_user.Has(Permissions.SystemAdmin)) throw new ForbiddenException("Удалять документы может только суперадминистратор");
+        var d = await LoadAsync(id, ct);
+        var files = new[] { d.DocxFileId, d.PdfFileId, d.SignedScanFileId }.Where(f => f is not null).Select(f => f!.Value).Distinct().ToList();
+        _db.GeneratedDocuments.Remove(d);
+        _audit.Log("document.delete", nameof(GeneratedDocument), d.Id, d.Number,
+            new { d.Number, d.Title, type = d.DocumentType.ToString(), d.SourceType, d.SourceId, d.EmployeeId, d.TemplateVersionNumber }, null, reason);
+        await _db.SaveChangesAsync(ct);
+        foreach (var f in files) await _files.DeleteAsync(f, ct);
     }
 }

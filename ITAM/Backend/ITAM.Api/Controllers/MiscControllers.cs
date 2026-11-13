@@ -85,7 +85,7 @@ public sealed class ReportsController : ApiControllerBase
     [HttpGet("{key}")]
     public async Task<TabularData> Run(string key, [FromQuery] ReportParameters p)
     {
-        var data = await _service.RunAsync(key, p, Ct);
+        var data = ReportService.SelectColumns(await _service.RunAsync(key, p, Ct), p.Columns, p.ExcludeColumns);
         return data with { Rows = data.Rows.Take(1000).ToList() };
     }
 
@@ -93,7 +93,7 @@ public sealed class ReportsController : ApiControllerBase
     public async Task<IActionResult> Export(string key, [FromQuery] ReportParameters p, [FromQuery] string? format)
     {
         EnsurePermission(Permissions.ExportRun);
-        return Export(await _service.RunAsync(key, p, Ct), format, "report-" + key);
+        return Export(ReportService.SelectColumns(await _service.RunAsync(key, p, Ct), p.Columns, p.ExcludeColumns), format, "report-" + key);
     }
 }
 

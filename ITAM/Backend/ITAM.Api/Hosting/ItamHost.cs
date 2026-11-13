@@ -24,7 +24,8 @@ public static class ItamHost
     /// <summary>Runtime data root: config "Itam:DataRoot" / ITAM_DATA_ROOT → %ProgramData%\ITAM (service or installed config) → {app}/data.</summary>
     public static string ResolveDataRoot(IConfiguration config)
     {
-        var configured = config["Itam:DataRoot"] ?? Environment.GetEnvironmentVariable("ITAM_DATA_ROOT");
+        var configured = config["Itam:DataRoot"];
+        if (string.IsNullOrWhiteSpace(configured)) configured = Environment.GetEnvironmentVariable("ITAM_DATA_ROOT");
         if (!string.IsNullOrWhiteSpace(configured)) return Path.GetFullPath(configured);
         if (OperatingSystem.IsWindows())
         {

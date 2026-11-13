@@ -1,5 +1,5 @@
 import { Alert, Button, Card, Col, DatePicker, Descriptions, Dropdown, Image, Modal, Row, Skeleton, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd';
-import { EditOutlined, FieldTimeOutlined, MoreOutlined, PrinterOutlined, RollbackOutlined, SendOutlined, SwapOutlined, ToolOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, FieldTimeOutlined, MoreOutlined, PrinterOutlined, RollbackOutlined, SendOutlined, SwapOutlined, ToolOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -78,12 +78,12 @@ export default function AssetCard() {
           {can('assets.transfer') && !terminal && <Button icon={<SwapOutlined />} onClick={() => navigate(`/operations/transfer?assetIds=${id}`)}>{t('assets.actions.transfer')}</Button>}
           {can('assets.repair') && !terminal && kind !== 'InRepair' && <Button icon={<ToolOutlined />} onClick={() => setRepair(true)}>{t('assets.actions.repair')}</Button>}
           {can('assets.edit') && <Button icon={<EditOutlined />} onClick={() => setEdit(true)}>{t('common.edit')}</Button>}
+          {can('assets.delete') && kind !== 'Assigned' && <Button danger icon={<DeleteOutlined />} onClick={() => Modal.confirm({ title: t('assets.deleteConfirm'), content: t('assets.deleteHint'), okText: t('common.delete'), okButtonProps: { danger: true }, onOk: () => remove.mutateAsync(undefined) })}>{t('common.delete')}</Button>}
           <Button icon={<PrinterOutlined />} onClick={printQr}>{t('assets.printQr')}</Button>
           <Dropdown menu={{ items: [
             can('assets.status') && { key: 'status', label: t('assets.actions.status'), onClick: () => navigate(`/operations/status?assetIds=${id}`) },
             { key: 'label', label: t('assets.printLabel'), onClick: () => download('/assets/labels', undefined, 'post', { assetIds: [id] }).catch(notify.error) },
             { key: 'qr', label: t('assets.downloadQr'), onClick: () => download(`/assets/${id}/qr`).catch(notify.error) },
-            can('assets.delete') && { key: 'del', danger: true, label: t('common.delete'), onClick: () => Modal.confirm({ title: t('assets.deleteConfirm'), content: t('assets.deleteHint'), onOk: () => remove.mutateAsync(undefined) }) },
           ].filter(Boolean) as never }}>
             <Button icon={<MoreOutlined />} />
           </Dropdown>

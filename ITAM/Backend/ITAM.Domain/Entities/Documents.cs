@@ -27,6 +27,8 @@ public class DocumentTemplateVersion : Entity, ITenantEntity
     /// <summary>jsonb structure of a version built in the web template editor (null for uploaded DOCX).</summary>
     public string? EditorModel { get; set; }
     public bool IsActive { get; set; }
+    /// <summary>Archived version: kept for the documents generated from it, cannot be activated or opened as a base.</summary>
+    public bool IsArchived { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid? CreatedById { get; set; }
     public string? CreatedByName { get; set; }

@@ -15,7 +15,7 @@ public sealed record TemplateDto(Guid Id, string Name, string? Code, string? Des
     Guid? ActiveVersionId, IReadOnlyList<TemplateVersionDto> Versions, IReadOnlyList<PlaceholderInfo> AvailablePlaceholders);
 
 public sealed record TemplateVersionDto(Guid Id, int VersionNumber, Guid FileId, string FileName, string FileHash, string? ChangeNote, bool IsActive,
-    DateTime CreatedAt, string? CreatedByName, IReadOnlyList<string> Placeholders, int DocumentsGenerated);
+    DateTime CreatedAt, string? CreatedByName, IReadOnlyList<string> Placeholders, int DocumentsGenerated, bool IsArchived);
 
 public sealed class TemplateMetaInput
 {
@@ -60,7 +60,7 @@ public sealed class DocumentTemplateService
             .Select(v => new { v, v.File!.FileName, Count = _db.GeneratedDocuments.Count(d => d.TemplateVersionId == v.Id) }).ToListAsync(ct);
         return new TemplateDto(t.Id, t.Name, t.Code, t.Description, t.DocumentType, t.IsDefault, t.IsArchived, t.ActiveVersionId,
             versions.Select(x => new TemplateVersionDto(x.v.Id, x.v.VersionNumber, x.v.FileId, x.FileName, x.v.FileHash, x.v.ChangeNote, x.v.IsActive,
-                x.v.CreatedAt, x.v.CreatedByName, Json.Deserialize<List<string>>(x.v.Placeholders) ?? new List<string>(), x.Count)).ToList(),
+                x.v.CreatedAt, x.v.CreatedByName, Json.Deserialize<List<string>>(x.v.Placeholders) ?? new List<string>(), x.Count, x.v.IsArchived)).ToList(),
             Placeholders.For(t.DocumentType));
     }
 
@@ -148,6 +148,8 @@ public sealed class DocumentTemplateService
         var t = await _db.DocumentTemplates.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Шаблон", id);
         var versions = await _db.DocumentTemplateVersions.Where(v => v.TemplateId == id).ToListAsync(ct);
         var target = versions.FirstOrDefault(v => v.Id == versionId) ?? throw new NotFoundException("Версия шаблона", versionId);
+        if (target.IsArchived)
+            throw new BusinessException("VERSION_ARCHIVED", $"Версия {target.VersionNumber} в архиве — сначала верните её из архива");
         var old = versions.FirstOrDefault(v => v.IsActive)?.VersionNumber;
         foreach (var v in versions) v.IsActive = v.Id == versionId;
         t.ActiveVersionId = versionId;
@@ -239,11 +241,61 @@ public sealed class DocumentTemplateService
                 $"По шаблону «{t.Name}» уже сформировано документов: {used}. Удалить его нельзя — документы ссылаются на версию шаблона. " +
                 "Отправьте шаблон в архив: он перестанет предлагаться при формировании документов.");
         var fileIds = versions.Select(v => v.FileId).ToList();
+        await DetachDeletedDocumentsAsync(versionIds, ct);
+        foreach (var d in await _db.GeneratedDocuments.IgnoreQueryFilters().Where(d => d.IsDeleted && d.TemplateId == id).ToListAsync(ct)) d.TemplateId = null;
         _db.DocumentTemplateVersions.RemoveRange(versions);
         _db.DocumentTemplates.Remove(t);
         _audit.Log("template.delete", nameof(DocumentTemplate), t.Id, t.Name, new { type = t.DocumentType.ToString(), versions = versions.Count }, null);
         await _db.SaveChangesAsync(ct);
         foreach (var fileId in fileIds) await _files.DeleteAsync(fileId, ct);
+    }
+
+    /// <summary>
+    /// Deletes a template version. Not allowed for the active version (activate another one first) or for a version
+    /// documents were generated from (archive it instead).
+    /// </summary>
+    public async Task<TemplateDto> DeleteVersionAsync(Guid id, Guid versionId, CancellationToken ct)
+    {
+        var t = await _db.DocumentTemplates.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Шаблон", id);
+        var v = await _db.DocumentTemplateVersions.FirstOrDefaultAsync(x => x.Id == versionId && x.TemplateId == id, ct)
+                ?? throw new NotFoundException("Версия шаблона", versionId);
+        if (v.IsActive || t.ActiveVersionId == v.Id)
+            throw new ConflictException(ErrorCodes.HasDependencies, $"Версия {v.VersionNumber} активна. Сначала сделайте активной другую версию.");
+        var used = await _db.GeneratedDocuments.CountAsync(d => d.TemplateVersionId == v.Id, ct);
+        if (used > 0)
+            throw new ConflictException(ErrorCodes.HasDependencies,
+                $"По версии {v.VersionNumber} сформировано документов: {used}. Удалить её нельзя — отправьте версию в архив.");
+        await DetachDeletedDocumentsAsync(new[] { v.Id }, ct);
+        _db.DocumentTemplateVersions.Remove(v);
+        _audit.Log("template.version.delete", nameof(DocumentTemplate), t.Id, t.Name, new { version = v.VersionNumber, hash = v.FileHash }, null);
+        await _db.SaveChangesAsync(ct);
+        await _files.DeleteAsync(v.FileId, ct);
+        return await GetAsync(id, ct);
+    }
+
+    /// <summary>Archives (or restores) a version. The active version cannot be archived.</summary>
+    public async Task<TemplateDto> ArchiveVersionAsync(Guid id, Guid versionId, bool archived, CancellationToken ct)
+    {
+        var t = await _db.DocumentTemplates.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Шаблон", id);
+        var v = await _db.DocumentTemplateVersions.FirstOrDefaultAsync(x => x.Id == versionId && x.TemplateId == id, ct)
+                ?? throw new NotFoundException("Версия шаблона", versionId);
+        if (archived && (v.IsActive || t.ActiveVersionId == v.Id))
+            throw new ConflictException(ErrorCodes.HasDependencies, $"Версия {v.VersionNumber} активна. Сначала сделайте активной другую версию.");
+        if (v.IsArchived != archived)
+        {
+            v.IsArchived = archived;
+            _audit.Log(archived ? "template.version.archive" : "template.version.unarchive", nameof(DocumentTemplate), t.Id, t.Name, null, new { version = v.VersionNumber });
+            await _db.SaveChangesAsync(ct);
+        }
+        return await GetAsync(id, ct);
+    }
+
+    /// <summary>Deleted (soft) documents keep the version number but stop referencing a version that is being removed.</summary>
+    private async Task DetachDeletedDocumentsAsync(IReadOnlyCollection<Guid> versionIds, CancellationToken ct)
+    {
+        var docs = await _db.GeneratedDocuments.IgnoreQueryFilters()
+            .Where(d => d.IsDeleted && d.TemplateVersionId != null && versionIds.Contains(d.TemplateVersionId.Value)).ToListAsync(ct);
+        foreach (var d in docs) d.TemplateVersionId = null;
     }
 
     public async Task ArchiveAsync(Guid id, bool archived, CancellationToken ct)

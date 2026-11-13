@@ -127,8 +127,21 @@ public sealed class BackupService
         var userName = _user.UserName;
         var pre = await CreateAsync(BackupKind.PreRestore, ct);
         if (pre.Status != BackupStatus.Completed) throw new BusinessException("PRE_RESTORE_BACKUP_FAILED", "Не удалось создать страховочную копию перед восстановлением: " + pre.Error);
+        // The registry of backups describes files on disk, not the restored data: keep the current one (with the safety copy).
+        var registry = await _db.Backups.AsNoTracking().ToListAsync(ct);
         await _engine.RestoreAsync(path, ct);
         _settings.Invalidate();
+        try
+        {
+            if (_db is DbContext context) context.ChangeTracker.Clear();
+            await _db.Backups.ExecuteDeleteAsync(ct);
+            _db.Backups.AddRange(registry);
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.LogWarning(ex, "The backup registry could not be carried over after the restore");
+        }
         // The audit log itself was restored; record the restore in the restored database.
         await _audit.LogNowAsync("backup.restore", nameof(Backup), null, fileName, null, new { preRestoreBackup = pre.FileName }, null, true, userName, null, ct);
     }

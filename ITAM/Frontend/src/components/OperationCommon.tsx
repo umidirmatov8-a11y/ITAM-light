@@ -25,7 +25,8 @@ export function EffectiveAtField({ name = 'effectiveAt', label }: { name?: strin
   );
 }
 
-export function DocumentOptions({ type }: { type: DocumentType }) {
+/** hideToggle: the document is always generated (the caller decides), only the template is chosen. */
+export function DocumentOptions({ type, hideToggle }: { type: DocumentType; hideToggle?: boolean }) {
   const { t } = useTranslation();
   const { can } = useAuth();
   const form = Form.useFormInstance();
@@ -34,7 +35,7 @@ export function DocumentOptions({ type }: { type: DocumentType }) {
   if (!can('documents.generate')) return null;
   return (
     <Space align="start" wrap>
-      <Form.Item name="generateDocument" valuePropName="checked"><Checkbox>{t('operations.generateDocument')}</Checkbox></Form.Item>
+      <Form.Item name="generateDocument" valuePropName="checked" hidden={hideToggle}><Checkbox>{t('operations.generateDocument')}</Checkbox></Form.Item>
       {generate && (
         <Form.Item name="templateId" style={{ minWidth: 280 }}>
           <Select allowClear placeholder={t('documents.defaultTemplate')} options={(templates.data ?? []).map((tp) => ({ value: tp.id, label: `${tp.name} (v${tp.activeVersion ?? '-'})` }))} />

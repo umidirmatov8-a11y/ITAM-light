@@ -390,17 +390,69 @@ public sealed class AssetService
     }
 
     /// <summary>Soft delete is allowed only for assets without operational history; otherwise use archive status.</summary>
+    /// <summary>Events that do not count as history when deciding whether an asset may be deleted (created by mistake).</summary>
+    private static readonly AssetEventType[] NonBlockingEvents =
+        { AssetEventType.Created, AssetEventType.Updated, AssetEventType.DocumentGenerated, AssetEventType.AttachmentAdded, AssetEventType.AgentInventory };
+
+    /// <summary>
+    /// Deletes an asset entered by mistake. Allowed while it has no real history: no active (non-cancelled) operations,
+    /// assignments, repairs or licenses. Cancelled operations do not block deletion. The inventory number is released
+    /// so that the asset can be entered again with the same number.
+    /// </summary>
     public async Task DeleteAsync(Guid id, CancellationToken ct)
     {
         var asset = await LoadVisibleAsync(id, ct);
-        var hasHistory = await _db.AssetEvents.AnyAsync(e => e.AssetId == id && e.EventType != AssetEventType.Created && e.EventType != AssetEventType.Updated, ct)
-                         || await _db.Assignments.AnyAsync(e => e.AssetId == id, ct)
-                         || await _db.Repairs.AnyAsync(e => e.AssetId == id, ct)
-                         || await _db.LicenseAssignments.AnyAsync(e => e.AssetId == id, ct);
-        if (hasHistory)
-            throw new ConflictException(ErrorCodes.HasDependencies, "У актива есть история операций — удаление запрещено. Используйте статус «Архив» или списание.");
+        var reason = await DeleteBlockerAsync(asset, ct);
+        if (reason is not null)
+            throw new ConflictException(ErrorCodes.HasDependencies, $"{asset.InventoryNumber}: {reason}. Отмените операции актива или используйте списание / статус «Архив».");
+        ReleaseNumber(asset);
         _db.Assets.Remove(asset);
         await _db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Deletes several assets at once (all or nothing).</summary>
+    public async Task<int> DeleteManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) throw new ValidationFailedException("Не выбраны активы");
+        if (ids.Count > 500) throw new ValidationFailedException("Не более 500 активов за раз");
+        var errors = new List<string>();
+        var assets = new List<Asset>();
+        foreach (var id in ids.Distinct())
+        {
+            var asset = await LoadVisibleAsync(id, ct);
+            if (await DeleteBlockerAsync(asset, ct) is { } reason) errors.Add($"{asset.InventoryNumber}: {reason}");
+            else assets.Add(asset);
+        }
+        if (errors.Count > 0)
+            throw new ConflictException(ErrorCodes.HasDependencies, "Удаление невозможно — " + string.Join("; ", errors.Take(10)) + (errors.Count > 10 ? $" и ещё {errors.Count - 10}" : ""));
+        foreach (var asset in assets)
+        {
+            ReleaseNumber(asset);
+            _db.Assets.Remove(asset);
+        }
+        await _db.SaveChangesAsync(ct);
+        return assets.Count;
+    }
+
+    private async Task<string?> DeleteBlockerAsync(Asset asset, CancellationToken ct)
+    {
+        var id = asset.Id;
+        if (asset.EmployeeId is not null) return "актив выдан сотруднику";
+        if (await _db.AssetEvents.AnyAsync(e => e.AssetId == id && !e.IsCancelled && e.EventType != AssetEventType.OperationCancelled
+                                                && !NonBlockingEvents.Contains(e.EventType), ct))
+            return "у актива есть история операций";
+        if (await _db.Assignments.AnyAsync(e => e.AssetId == id && !e.IsCancelled, ct)) return "актив выдавался сотрудникам";
+        if (await _db.Repairs.AnyAsync(e => e.AssetId == id, ct)) return "по активу есть ремонты";
+        if (await _db.LicenseAssignments.AnyAsync(e => e.AssetId == id && e.RevokedAt == null, ct)) return "на активе назначены лицензии";
+        return null;
+    }
+
+    /// <summary>The unique inventory number of a deleted asset gets a suffix so that the number can be used again.</summary>
+    private static void ReleaseNumber(Asset asset)
+    {
+        var suffix = "~del-" + Guid.NewGuid().ToString("N")[..8];
+        var number = asset.InventoryNumber.Length + suffix.Length > 64 ? asset.InventoryNumber[..(64 - suffix.Length)] : asset.InventoryNumber;
+        asset.InventoryNumber = number + suffix;
     }
 
     public async Task<IReadOnlyList<AssetEventDto>> HistoryAsync(Guid id, CancellationToken ct)

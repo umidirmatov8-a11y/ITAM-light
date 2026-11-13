@@ -40,3 +40,4 @@ html[data-theme='dark'] body { background: #0b1220; }
 .itam-row-repeat td { background: repeating-linear-gradient(45deg, rgba(59,130,246,.06), rgba(59,130,246,.06) 6px, transparent 6px, transparent 12px); }
 .itam-pagebreak { border-top: 1px dashed #999; color: #999; font-size: 11px; text-align: center; margin: 12px 0; }
 .itam-total-row td { font-weight: 600; background: rgba(127,127,127,.08); }
+.itam-row-archived td { opacity: .6; }

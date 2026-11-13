@@ -62,6 +62,14 @@ public sealed class DocumentsController : ApiControllerBase
 
     public sealed record VoidRequest(string Reason);
 
+    /// <summary>Deletes a document — super administrator only (system.admin).</summary>
+    [HttpDelete("{id:guid}"), HasPermission(Permissions.SystemAdmin)]
+    public async Task<IActionResult> Delete(Guid id, [FromQuery] string? reason)
+    {
+        await _service.DeleteAsync(id, reason, Ct);
+        return Ok(new { success = true });
+    }
+
     [HttpPost("{id:guid}/void"), HasPermission(Permissions.DocumentsGenerate)]
     public async Task<IActionResult> Void(Guid id, [FromBody] VoidRequest req)
     {
@@ -110,6 +118,14 @@ public sealed class TemplatesController : ApiControllerBase
 
     [HttpPost("{id:guid}/versions/{versionId:guid}/activate"), HasPermission(Permissions.DocumentTemplatesManage)]
     public Task<TemplateDto> Activate(Guid id, Guid versionId) => _service.ActivateAsync(id, versionId, Ct);
+
+    /// <summary>Deletes a version that is not active and has no generated documents (otherwise 409: archive it).</summary>
+    [HttpDelete("{id:guid}/versions/{versionId:guid}"), HasPermission(Permissions.DocumentTemplatesManage)]
+    public Task<TemplateDto> DeleteVersion(Guid id, Guid versionId) => _service.DeleteVersionAsync(id, versionId, Ct);
+
+    /// <summary>Archives (archived=false: restores) a version that is not active.</summary>
+    [HttpPost("{id:guid}/versions/{versionId:guid}/archive"), HasPermission(Permissions.DocumentTemplatesManage)]
+    public Task<TemplateDto> ArchiveVersion(Guid id, Guid versionId, [FromQuery] bool archived = true) => _service.ArchiveVersionAsync(id, versionId, archived, Ct);
 
     [HttpGet("{id:guid}/versions/{versionId:guid}/download"), HasPermission(Permissions.DocumentsView)]
     public async Task<IActionResult> DownloadVersion(Guid id, Guid versionId)
