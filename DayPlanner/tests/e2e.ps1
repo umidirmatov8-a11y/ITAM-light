@@ -32,6 +32,7 @@ Remove-Item Env:DAYPLANNER_REPORT_DIR -ErrorAction SilentlyContinue   # наст
 $report = "C:\worksheet\Отчет_$stamp.txt"
 Remove-Item $report -ErrorAction SilentlyContinue
 
+[W]::SetCursorPos(5, 700) | Out-Null   # в стороне и от края, и от места панели
 $app = Start-Process $Exe -PassThru
 try {
     $hwnd = [IntPtr]::Zero
@@ -41,7 +42,7 @@ try {
         $hwnd = [W]::FindWindowW([IntPtr]::Zero, 'DayPlanner')
     }
     if ($hwnd -eq [IntPtr]::Zero) { throw 'Panel window not found' }
-    Start-Sleep -Seconds 2
+    Start-Sleep -Milliseconds 1500
 
     $mid = [int]([W]::GetSystemMetrics(0) / 2)
     function Rect { $r = New-Object W+RECT; [W]::GetWindowRect($hwnd, [ref]$r) | Out-Null; $r }
@@ -56,6 +57,21 @@ try {
         "OK open: $why (height=$($r.B))"
     }
     function MoveCursor($x, $y, $ms = 1500) { [W]::SetCursorPos($x, $y) | Out-Null; Start-Sleep -Milliseconds $ms }
+
+    # Запуск вручную: панель выезжает сама, ждёт курсор и прячется.
+    Assert-Open 'shown right after a manual start'
+    Start-Sleep -Seconds 7
+    Assert-Hidden 'hidden again when the cursor never came'
+
+    # Повторный запуск не создаёт второй процесс, а показывает панель работающего.
+    $second = Start-Process $Exe -PassThru
+    if (-not $second.WaitForExit(10000)) { $second.Kill(); throw 'Second instance did not exit' }
+    Start-Sleep -Milliseconds 1500
+    Assert-Open 'second launch shows the panel of the running instance'
+    $r = Rect
+    MoveCursor ([int](($r.L + $r.R) / 2)) ([int]($r.B / 2)) 500
+    MoveCursor 5 ($r.B + 100)
+    Assert-Hidden 'cursor visited the panel and left'
 
     MoveCursor 300 500
     Assert-Hidden 'cursor away from the top edge'

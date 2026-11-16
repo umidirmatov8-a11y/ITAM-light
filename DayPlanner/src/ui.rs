@@ -76,6 +76,8 @@ pub struct PlannerApp {
     minute: u32,
     confirm: Option<(Confirm, Instant)>,
     status: Option<(String, Instant)>,
+    /// Значок в трее: живёт, пока жива программа.
+    _tray: Option<Box<dyn std::any::Any>>,
 }
 
 fn now() -> NaiveDateTime {
@@ -114,7 +116,11 @@ fn two_digits(ui: &mut egui::Ui, value: &mut u32, max: u32) {
 }
 
 impl PlannerApp {
-    pub fn new(store: Arc<Mutex<Store>>, shared: Arc<Shared>) -> Self {
+    pub fn new(
+        store: Arc<Mutex<Store>>,
+        shared: Arc<Shared>,
+        tray: Option<Box<dyn std::any::Any>>,
+    ) -> Self {
         let (date, hour) = default_due(now());
         PlannerApp {
             store,
@@ -125,6 +131,7 @@ impl PlannerApp {
             minute: 0,
             confirm: None,
             status: None,
+            _tray: tray,
         }
     }
 

@@ -20,7 +20,8 @@ winresource = "0.1"
 
 # Windows: DirectX через wgpu (работает и без видеодрайвера, через WARP).
 [target.'cfg(windows)'.dependencies]
-eframe = { version = "0.37", default-features = false, features = ["wgpu"] }
+eframe = { version = "0.37", default-features = false, features = ["wgpu", "glow"] }
+tray-icon = "0.26"
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",
